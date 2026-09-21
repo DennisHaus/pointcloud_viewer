@@ -1,12 +1,13 @@
 "use strict";
 
 const CONFIG = {
-  catalogEndpoint: "/api/catalog",
-  tokenEndpoint: "/api/admin/installation-token",
+  catalogUrl:
+    "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/catalog.json",
 
-  // 95 MiB safety limit below GitHub's 100 MiB limit.
+  repositoryUrl:
+    "https://github.com/YOUR_USERNAME/YOUR_REPOSITORY",
+
   maxUploadBytes: 95 * 1024 * 1024,
-
   defaultPointBudget: 3000000
 };
 
@@ -31,7 +32,6 @@ async function initialize() {
   initializeViewer();
   bindEvents();
 
-  await loadSession();
   await loadCatalog();
 
   renderLibrary();
@@ -127,11 +127,32 @@ async function logout() {
 async function loadCatalog() {
   try {
     const response = await fetch(
-      `${CONFIG.catalogEndpoint}?t=${Date.now()}`,
+      `${CONFIG.catalogUrl}?t=${Date.now()}`,
       {
         cache: "no-store"
       }
     );
+
+    if (!response.ok) {
+      throw new Error(
+        `Catalog request failed with HTTP ${response.status}.`
+      );
+    }
+
+    const data = await response.json();
+
+    const scans = Array.isArray(data)
+      ? data
+      : Array.isArray(data.scans)
+        ? data.scans
+        : [];
+
+    state.catalog = scans.map(normalizeScan);
+  } catch (error) {
+    state.catalog = [];
+    setStatus(error.message, "error");
+  }
+}
 
     if (!response.ok) {
       throw new Error("Could not load scan catalog.");
@@ -1282,11 +1303,6 @@ function bindEvents() {
   $("downloadScan").addEventListener(
     "click",
     downloadActiveScan
-  );
-
-  $("deleteScan").addEventListener(
-    "click",
-    deleteActiveScan
   );
 
   $("colorMode").addEventListener("change", () => {
