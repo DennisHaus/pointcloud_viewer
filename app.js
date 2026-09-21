@@ -1,54 +1,14 @@
 "use strict";
 
-/*
-  COPC Point Cloud Viewer
-
-  Important:
-  - This frontend stores and loads optimized .copc.laz files only.
-  - Permanent GitHub storage requires a backend or GitHub App endpoint.
-  - Set CONFIG.uploadEndpoint when that endpoint exists.
-*/
-
 const CONFIG = {
-  // Optional catalog file. The application continues if it does not exist.
-  catalogUrl: "./catalog.json",
+  catalogEndpoint: "/api/catalog",
+  tokenEndpoint: "/api/admin/installation-token",
 
-  // Leave empty during frontend-only testing.
-  // Example later:
-  // uploadEndpoint: "https://your-api.example.com/upload"
-  uploadEndpoint: "",
-
-  // 95 MiB gives a small safety margin below GitHub's 100 MB file limit.
+  // 95 MiB safety limit below GitHub's 100 MiB limit.
   maxUploadBytes: 95 * 1024 * 1024,
 
   defaultPointBudget: 3000000
 };
-
-/*
-  Default demo catalog.
-
-  Replace this with your own catalog entries or create catalog.json.
-
-  Each scan should point to one optimized COPC file:
-  {
-    id: "scan-001",
-    name: "Warehouse Scan",
-    url: "./data/warehouse.copc.laz",
-    sizeBytes: 73400320,
-    pointCount: 12800000,
-    crs: "EPSG:26910"
-  }
-*/
-const DEFAULT_CATALOG = [
-  {
-    id: "demo-lion",
-    name: "Lion Takanawa COPC Demo",
-    url: "https://raw.githubusercontent.com/potree/potree/develop/pointclouds/lion_takanawa.copc.laz",
-    sizeBytes: 0,
-    pointCount: 0,
-    crs: "Unknown"
-  }
-];
 
 const state = {
   catalog: [],
@@ -56,8 +16,9 @@ const state = {
   activeScan: null,
   activeCloud: null,
   activeBounds: null,
-  sectionVolume: null,
-  sectionCreated: false
+  admin: null,
+  github: null,
+  sectionVolume: null
 };
 
 let viewer = null;
@@ -67,14 +28,10 @@ const $ = (id) => document.getElementById(id);
 document.addEventListener("DOMContentLoaded", initialize);
 
 async function initialize() {
-  if (typeof Potree === "undefined") {
-    setStatus("Potree failed to load.", "error");
-    return;
-  }
-
   initializeViewer();
-  bindInterfaceEvents();
+  bindEvents();
 
+  await loadSession();
   await loadCatalog();
 
   renderLibrary();
@@ -87,13 +44,16 @@ async function initialize() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* VIEWER INITIALIZATION                                                      */
+/* VIEWER                                                                     */
 /* -------------------------------------------------------------------------- */
 
 function initializeViewer() {
-  viewer = new Potree.Viewer($("viewer"));
+  if (typeof Potree === "undefined") {
+    setStatus("Potree failed to load.", "error");
+    return;
+  }
 
-  window.viewer = viewer;
+  viewer = new Potree.Viewer($("potree_render_area"));
 
   viewer.setEDLEnabled(true);
   viewer.setFOV(60);
@@ -108,58 +68,106 @@ function initializeViewer() {
 }
 
 /* -------------------------------------------------------------------------- */
+/* AUTHENTICATION                                                             */
+/* -------------------------------------------------------------------------- */
+
+async function loadSession() {
+  try {
+    const response = await fetch("/api/admin/session", {
+      cache: "no-store"
+    });
+
+    const data = await response.json();
+
+    state.admin = data.authenticated
+      ? {
+          login: data.login
+        }
+      : null;
+
+    renderAuthentication();
+  } catch (error) {
+    state.admin = null;
+    renderAuthentication();
+  }
+}
+
+function renderAuthentication() {
+  const authenticated = Boolean(state.admin);
+
+  $("loginLink").classList.toggle("hidden", authenticated);
+  $("logoutButton").classList.toggle("hidden", !authenticated);
+  $("uploadButton").classList.toggle("hidden", !authenticated);
+  $("adminSection").classList.toggle("hidden", !authenticated);
+
+  if (authenticated) {
+    $("adminBadge").textContent = `Admin: ${state.admin.login}`;
+    $("adminBadge").classList.remove("hidden");
+  } else {
+    $("adminBadge").classList.add("hidden");
+  }
+}
+
+async function logout() {
+  await fetch("/api/auth/logout", {
+    method: "POST"
+  });
+
+  state.admin = null;
+  state.github = null;
+
+  renderAuthentication();
+  setStatus("Logged out", "success");
+}
+
+/* -------------------------------------------------------------------------- */
 /* CATALOG                                                                    */
 /* -------------------------------------------------------------------------- */
 
 async function loadCatalog() {
-  const catalogEntries = [];
-
   try {
-    const response = await fetch(CONFIG.catalogUrl, {
-      cache: "no-store"
-    });
-
-    if (response.ok) {
-      const json = await response.json();
-      const entries = Array.isArray(json) ? json : json.scans;
-
-      if (Array.isArray(entries)) {
-        catalogEntries.push(...entries);
+    const response = await fetch(
+      `${CONFIG.catalogEndpoint}?t=${Date.now()}`,
+      {
+        cache: "no-store"
       }
+    );
+
+    if (!response.ok) {
+      throw new Error("Could not load scan catalog.");
     }
+
+    const data = await response.json();
+
+    const scans = Array.isArray(data)
+      ? data
+      : Array.isArray(data.scans)
+        ? data.scans
+        : [];
+
+    state.catalog = scans.map(normalizeScan);
   } catch (error) {
-    /*
-      catalog.json is optional during this first stage.
-      The default demo catalog will be used if it does not exist.
-    */
+    state.catalog = [];
+    setStatus(error.message, "error");
   }
-
-  const byId = new Map();
-
-  DEFAULT_CATALOG.forEach((scan) => {
-    byId.set(scan.id, normalizeScan(scan));
-  });
-
-  catalogEntries.forEach((scan) => {
-    if (scan && scan.id) {
-      byId.set(scan.id, normalizeScan(scan));
-    }
-  });
-
-  state.catalog = Array.from(byId.values());
 }
 
 function normalizeScan(scan) {
   return {
-    id: String(scan.id || createId()),
-    name: String(scan.name || scan.filename || "Unnamed COPC scan"),
-    url: scan.url || scan.copcUrl || "",
+    id: String(scan.id || ""),
+    name: String(
+      scan.name ||
+      scan.filename ||
+      scan.id ||
+      "Unnamed COPC scan"
+    ),
     filename: scan.filename || "",
-    sizeBytes: Number(scan.sizeBytes || scan.size || 0),
-    pointCount: Number(scan.pointCount || scan.points || 0),
-    crs: scan.crs || scan.coordinateSystem || "Unknown",
-    localFile: scan.localFile || null,
-    localOnly: Boolean(scan.localOnly)
+    path: scan.path || "",
+    url: scan.url || "",
+    sizeBytes: Number(scan.sizeBytes || 0),
+    pointCount: Number(scan.pointCount || 0),
+    crs: scan.crs || "Unknown",
+    uploadedAt: scan.uploadedAt || ""
   };
 }
 
@@ -174,12 +182,14 @@ function renderLibrary() {
 
   list.replaceChildren();
 
-  const visibleScans = state.catalog.filter((scan) => {
-    return scan.name.toLowerCase().includes(query);
-  });
-
   $("scanCount").textContent =
-    `${state.catalog.length} ${state.catalog.length === 1 ? "scan" : "scans"}`;
+    `${state.catalog.length} ${
+      state.catalog.length === 1 ? "scan" : "scans"
+    }`;
+
+  const visibleScans = state.catalog.filter((scan) =>
+    scan.name.toLowerCase().includes(query)
+  );
 
   if (visibleScans.length === 0) {
     empty.classList.remove("hidden");
@@ -190,10 +200,14 @@ function renderLibrary() {
 
   visibleScans.forEach((scan) => {
     const card = document.createElement("button");
+
     card.type = "button";
     card.className = "scan-card";
 
-    if (state.activeScan && state.activeScan.id === scan.id) {
+    if (
+      state.activeScan &&
+      state.activeScan.id === scan.id
+    ) {
       card.classList.add("active");
     }
 
@@ -209,19 +223,14 @@ function renderLibrary() {
     name.textContent = scan.name;
     name.title = scan.name;
 
-    const stateDot = document.createElement("div");
-    stateDot.className = "scan-state";
+    const scanState = document.createElement("div");
+    scanState.className = "scan-state";
 
     if (state.loadedClouds.has(scan.id)) {
-      stateDot.classList.add("loaded");
+      scanState.classList.add("loaded");
     }
 
-    if (scan.loading) {
-      stateDot.classList.remove("loaded");
-      stateDot.classList.add("loading");
-    }
-
-    header.append(icon, name, stateDot);
+    header.append(icon, name, scanState);
 
     const metadata = document.createElement("div");
     metadata.className = "scan-meta";
@@ -235,7 +244,6 @@ function renderLibrary() {
       : "Size unknown";
 
     metadata.append(format, size);
-
     card.append(header, metadata);
 
     card.addEventListener("click", () => {
@@ -251,7 +259,10 @@ function renderLibrary() {
 /* -------------------------------------------------------------------------- */
 
 async function loadScan(scan) {
-  if (!scan) return;
+  if (!scan || !scan.url) {
+    setStatus("This scan has no valid COPC URL.", "error");
+    return;
+  }
 
   if (state.loadedClouds.has(scan.id)) {
     setActiveScan(scan);
@@ -259,57 +270,28 @@ async function loadScan(scan) {
     return;
   }
 
-  if (scan.loading) {
-    return;
-  }
-
-  scan.loading = true;
-  renderLibrary();
-
   showLoading(`Loading ${scan.name}...`);
   setViewerStatus("Loading point cloud", "loading");
   setStatus(`Loading ${scan.name}...`, "loading");
 
   try {
-    let event;
-
-    if (scan.localFile) {
-      if (
-        typeof Potree.loadLocalCopc !== "function"
-      ) {
-        throw new Error(
-          "Local COPC loader is unavailable. Load the local COPC adapter script."
-        );
-      }
-
-      event = await Potree.loadLocalCopc(
-        scan.localFile,
-        scan.localFile.name
-      );
-    } else {
-      if (!scan.url) {
-        throw new Error("This scan does not have a COPC URL.");
-      }
-
-      event = await loadRemoteCopc(scan.url, scan.name);
-    }
+    const event = await loadRemoteCopc(
+      scan.url,
+      scan.name
+    );
 
     const cloud = event.pointcloud || event;
 
     if (!cloud) {
-      throw new Error("No point cloud was returned by Potree.");
+      throw new Error("Potree returned no point cloud.");
     }
 
     cloud.name = scan.name;
 
     viewer.scene.addPointCloud(cloud);
-
     configurePointCloud(cloud);
 
     state.loadedClouds.set(scan.id, cloud);
-
-    scan.loading = false;
-    scan.loaded = true;
 
     setActiveScan(scan);
     renderLibrary();
@@ -318,17 +300,11 @@ async function loadScan(scan) {
     setViewerStatus("Point cloud loaded", "success");
     setStatus(`${scan.name} loaded`, "success");
 
-    setTimeout(() => {
-      fitActiveScan();
-    }, 250);
+    setTimeout(fitActiveScan, 250);
   } catch (error) {
-    scan.loading = false;
-    renderLibrary();
-
     hideLoading();
     setViewerStatus("Loading failed", "error");
-    setStatus(error.message || "Unable to load COPC file.", "error");
-
+    setStatus(error.message, "error");
     console.error(error);
   }
 }
@@ -342,7 +318,7 @@ function loadRemoteCopc(url, name) {
         } else {
           reject(
             new Error(
-              "Potree could not create a point cloud from this COPC file."
+              "Potree could not load this COPC file."
             )
           );
         }
@@ -356,16 +332,21 @@ function loadRemoteCopc(url, name) {
 function configurePointCloud(cloud) {
   if (!cloud.material) return;
 
-  const material = cloud.material;
+  cloud.material.size = Number($("pointSize").value);
 
-  material.size = Number($("pointSize").value);
-
-  if (Potree.PointSizeType && Potree.PointSizeType.ADAPTIVE) {
-    material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+  if (
+    Potree.PointSizeType &&
+    Potree.PointSizeType.ADAPTIVE !== undefined
+  ) {
+    cloud.material.pointSizeType =
+      Potree.PointSizeType.ADAPTIVE;
   }
 
-  if (Potree.PointShape && Potree.PointShape.SQUARE) {
-    material.shape = Potree.PointShape.SQUARE;
+  if (
+    Potree.PointShape &&
+    Potree.PointShape.SQUARE !== undefined
+  ) {
+    cloud.material.shape = Potree.PointShape.SQUARE;
   }
 
   applyColorMode(cloud);
@@ -373,13 +354,15 @@ function configurePointCloud(cloud) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* ACTIVE SCAN AND INSPECTOR                                                  */
+/* ACTIVE SCAN                                                                */
 /* -------------------------------------------------------------------------- */
 
 function setActiveScan(scan) {
   const cloud = state.loadedClouds.get(scan.id);
 
   if (!cloud) return;
+
+  clearSection(false);
 
   state.activeScan = scan;
   state.activeCloud = cloud;
@@ -392,7 +375,6 @@ function setActiveScan(scan) {
 
 function updateInspector() {
   const scan = state.activeScan;
-  const bounds = state.activeBounds;
 
   if (!scan || !state.activeCloud) {
     $("inspectorEmpty").classList.remove("hidden");
@@ -415,20 +397,29 @@ function updateInspector() {
 
   $("activeCrs").textContent = scan.crs || "Unknown";
 
-  if (bounds) {
-    $("boundsX").textContent =
-      `${formatCoordinate(bounds.min.x)} → ${formatCoordinate(bounds.max.x)}`;
-
-    $("boundsY").textContent =
-      `${formatCoordinate(bounds.min.y)} → ${formatCoordinate(bounds.max.y)}`;
-
-    $("boundsZ").textContent =
-      `${formatCoordinate(bounds.min.z)} → ${formatCoordinate(bounds.max.z)}`;
-  } else {
+  if (!state.activeBounds) {
     $("boundsX").textContent = "Unavailable";
     $("boundsY").textContent = "Unavailable";
     $("boundsZ").textContent = "Unavailable";
+    return;
   }
+
+  const bounds = state.activeBounds;
+
+  $("boundsX").textContent =
+    `${formatCoordinate(bounds.min.x)} → ${
+      formatCoordinate(bounds.max.x)
+    }`;
+
+  $("boundsY").textContent =
+    `${formatCoordinate(bounds.min.y)} → ${
+      formatCoordinate(bounds.max.y)
+    }`;
+
+  $("boundsZ").textContent =
+    `${formatCoordinate(bounds.min.z)} → ${
+      formatCoordinate(bounds.max.z)
+    }`;
 }
 
 function getPointCloudBounds(cloud) {
@@ -443,41 +434,33 @@ function getPointCloudBounds(cloud) {
 
   return {
     min: {
-      x: getVectorComponent(box.min, "x", 0),
-      y: getVectorComponent(box.min, "y", 1),
-      z: getVectorComponent(box.min, "z", 2)
+      x: Number(box.min.x),
+      y: Number(box.min.y),
+      z: Number(box.min.z)
     },
     max: {
-      x: getVectorComponent(box.max, "x", 0),
-      y: getVectorComponent(box.max, "y", 1),
-      z: getVectorComponent(box.max, "z", 2)
+      x: Number(box.max.x),
+      y: Number(box.max.y),
+      z: Number(box.max.z)
     }
   };
 }
 
-function getVectorComponent(vector, property, index) {
-  if (typeof vector[property] === "number") {
-    return vector[property];
-  }
-
-  if (typeof vector[index] === "number") {
-    return vector[index];
-  }
-
-  return 0;
-}
-
 /* -------------------------------------------------------------------------- */
-/* APPEARANCE CONTROLS                                                        */
+/* APPEARANCE                                                                 */
 /* -------------------------------------------------------------------------- */
 
 function applyColorMode(cloud = state.activeCloud) {
-  if (!cloud || !cloud.material || !Potree.PointColorType) {
+  if (
+    !cloud ||
+    !cloud.material ||
+    !Potree.PointColorType
+  ) {
     return;
   }
 
-  const selectedMode = $("colorMode").value;
-  const colorType = Potree.PointColorType[selectedMode];
+  const mode = $("colorMode").value;
+  const colorType = Potree.PointColorType[mode];
 
   if (colorType !== undefined) {
     cloud.material.pointColorType = colorType;
@@ -485,108 +468,52 @@ function applyColorMode(cloud = state.activeCloud) {
 }
 
 function applyPointSize() {
-  if (!state.activeCloud || !state.activeCloud.material) {
-    return;
-  }
-
   const value = Number($("pointSize").value);
 
-  state.activeCloud.material.size = value;
-  $("pointSizeValue").value = value.toFixed(1);
   $("pointSizeValue").textContent = value.toFixed(1);
+
+  if (
+    state.activeCloud &&
+    state.activeCloud.material
+  ) {
+    state.activeCloud.material.size = value;
+  }
 }
 
 function applyOpacity() {
-  if (!state.activeCloud || !state.activeCloud.material) {
-    return;
-  }
-
   const value = Number($("pointOpacity").value);
 
-  state.activeCloud.material.opacity = value;
-  state.activeCloud.material.transparent = value < 1;
+  $("pointOpacityValue").textContent =
+    `${Math.round(value * 100)}%`;
 
-  $("pointOpacityValue").value = `${Math.round(value * 100)}%`;
-  $("pointOpacityValue").textContent = `${Math.round(value * 100)}%`;
+  if (
+    state.activeCloud &&
+    state.activeCloud.material
+  ) {
+    state.activeCloud.material.opacity = value;
+    state.activeCloud.material.transparent = value < 1;
+  }
 }
 
 function applyPointBudget() {
-  if (!viewer) return;
-
   const value = Number($("pointBudget").value);
 
   viewer.setPointBudget(value);
-
-  $("pointBudgetValue").value = formatCompactNumber(value);
-  $("pointBudgetValue").textContent = formatCompactNumber(value);
+  $("pointBudgetValue").textContent =
+    formatCompactNumber(value);
 }
 
 /* -------------------------------------------------------------------------- */
 /* SECTION TOOLS                                                              */
 /* -------------------------------------------------------------------------- */
 
-function updateSectionControls() {
-  const mode = $("sectionMode").value;
-  const hasBounds = Boolean(state.activeBounds);
-
-  const isActive = hasBounds && mode !== "none";
-  const isVertical = mode === "vertical";
-
-  $("sectionAxisWrapper").classList.toggle(
-    "hidden",
-    !isVertical
-  );
-
-  $("sectionPosition").disabled = !isActive;
-  $("sectionThickness").disabled = !isActive;
-
-  if (!hasBounds) {
-    $("sectionPositionValue").textContent = "—";
-    $("sectionThicknessValue").textContent = "—";
-    return;
-  }
-
-  const range = getSectionRange();
-
-  const currentPosition = Number($("sectionPosition").value);
-
-  const position =
-    Number.isFinite(currentPosition) &&
-    currentPosition >= range.min &&
-    currentPosition <= range.max
-      ? currentPosition
-      : (range.min + range.max) / 2;
-
-  $("sectionPosition").min = range.min;
-  $("sectionPosition").max = range.max;
-  $("sectionPosition").step = Math.max(
-    (range.max - range.min) / 1000,
-    0.001
-  );
-  $("sectionPosition").value = position;
-
-  const rangeLength = Math.max(range.max - range.min, 0.001);
-  const defaultThickness = Math.max(rangeLength * 0.08, 0.01);
-
-  const currentThickness = Number($("sectionThickness").value);
-
-  if (
-    !Number.isFinite(currentThickness) ||
-    currentThickness <= 0
-  ) {
-    $("sectionThickness").value = defaultThickness.toFixed(3);
-  }
-
-  $("sectionThickness").max = rangeLength;
-  $("sectionPositionValue").textContent = formatCoordinate(position);
-  $("sectionThicknessValue").textContent =
-    `${formatCoordinate(Number($("sectionThickness").value))} units`;
-}
-
 function getSectionRange() {
+  if (!state.activeBounds) return null;
+
+  const mode = $("sectionMode").value;
   const bounds = state.activeBounds;
 
-  if ($("sectionMode").value === "horizontal") {
+  if (mode === "horizontal") {
     return {
       min: bounds.min.z,
       max: bounds.max.z
@@ -601,8 +528,53 @@ function getSectionRange() {
   };
 }
 
+function updateSectionControls() {
+  const mode = $("sectionMode").value;
+  const isActive =
+    mode !== "none" &&
+    Boolean(state.activeBounds);
+
+  $("sectionAxisWrapper").classList.toggle(
+    "hidden",
+    mode !== "vertical"
+  );
+
+  $("sectionPosition").disabled = !isActive;
+  $("sectionThickness").disabled = !isActive;
+
+  if (!isActive) {
+    $("sectionPositionValue").textContent = "—";
+    $("sectionThicknessValue").textContent = "—";
+    return;
+  }
+
+  const range = getSectionRange();
+  const distance = Math.max(range.max - range.min, 0.001);
+
+  $("sectionPosition").min = range.min;
+  $("sectionPosition").max = range.max;
+  $("sectionPosition").step = distance / 1000;
+
+  const position =
+    (Number(range.min) + Number(range.max)) / 2;
+
+  $("sectionPosition").value = position;
+
+  const thickness = Math.max(distance * 0.08, 0.01);
+
+  $("sectionThickness").max = distance;
+  $("sectionThickness").value = thickness.toFixed(3);
+
+  $("sectionPositionValue").textContent =
+    formatCoordinate(position);
+
+  $("sectionThicknessValue").textContent =
+    `${formatCoordinate(thickness)} units`;
+}
+
 function applySection() {
   if (!state.activeBounds || !state.activeCloud) {
+    setStatus("Load a scan first.", "warning");
     return;
   }
 
@@ -612,6 +584,8 @@ function applySection() {
     clearSection();
     return;
   }
+
+  clearSection(false);
 
   const bounds = state.activeBounds;
   const range = getSectionRange();
@@ -634,26 +608,22 @@ function applySection() {
     z: bounds.max.z
   };
 
-  const clampedPosition = clamp(
+  const safePosition = clamp(
     position,
     range.min,
     range.max
   );
 
   if (mode === "horizontal") {
-    min.z = clampedPosition - thickness / 2;
-    max.z = clampedPosition + thickness / 2;
+    min.z = safePosition - thickness / 2;
+    max.z = safePosition + thickness / 2;
   }
 
   if (mode === "vertical") {
     const axis = $("sectionAxis").value;
 
-    min[axis] = clampedPosition - thickness / 2;
-    max[axis] = clampedPosition + thickness / 2;
-  }
-
-  if (state.sectionVolume) {
-    removeSectionVolume();
+    min[axis] = safePosition - thickness / 2;
+    max[axis] = safePosition + thickness / 2;
   }
 
   const volume = new Potree.BoxVolume();
@@ -675,28 +645,31 @@ function applySection() {
     Math.max(max.z - min.z, 0.001)
   );
 
-  /*
-    Potree uses clipping volumes for sectioning.
-    The volume itself stays invisible while clipping remains active.
-  */
   volume.clip = true;
   volume.visible = false;
 
   viewer.scene.addVolume(volume);
 
   state.sectionVolume = volume;
-  state.sectionCreated = true;
 
   if (
     Potree.ClipTask &&
-    Potree.ClipTask.SHOW_INSIDE &&
+    Potree.ClipTask.SHOW_INSIDE !== undefined &&
     typeof viewer.setClipTask === "function"
   ) {
     viewer.setClipTask(Potree.ClipTask.SHOW_INSIDE);
   }
 
+  if (
+    Potree.ClipMethod &&
+    Potree.ClipMethod.INSIDE_ANY !== undefined &&
+    typeof viewer.setClipMethod === "function"
+  ) {
+    viewer.setClipMethod(Potree.ClipMethod.INSIDE_ANY);
+  }
+
   $("sectionPositionValue").textContent =
-    formatCoordinate(clampedPosition);
+    formatCoordinate(safePosition);
 
   $("sectionThicknessValue").textContent =
     `${formatCoordinate(thickness)} units`;
@@ -704,53 +677,45 @@ function applySection() {
   setStatus("Section applied", "success");
 }
 
-function removeSectionVolume() {
-  if (!state.sectionVolume) {
-    return;
+function clearSection(showMessage = true) {
+  if (state.sectionVolume) {
+    if (
+      viewer.scene &&
+      typeof viewer.scene.removeVolume === "function"
+    ) {
+      viewer.scene.removeVolume(state.sectionVolume);
+    }
+
+    state.sectionVolume = null;
   }
 
   if (
-    viewer.scene &&
-    typeof viewer.scene.removeVolume === "function"
-  ) {
-    viewer.scene.removeVolume(state.sectionVolume);
-  }
-
-  state.sectionVolume = null;
-  state.sectionCreated = false;
-}
-
-function clearSection() {
-  removeSectionVolume();
-
-  if (
+    viewer &&
     Potree.ClipTask &&
-    Potree.ClipTask.NONE &&
+    Potree.ClipTask.NONE !== undefined &&
     typeof viewer.setClipTask === "function"
   ) {
     viewer.setClipTask(Potree.ClipTask.NONE);
   }
 
-  $("sectionMode").value = "none";
-  updateSectionControls();
-
-  setStatus("Section cleared", "success");
+  if (showMessage) {
+    $("sectionMode").value = "none";
+    updateSectionControls();
+    setStatus("Section cleared", "success");
+  }
 }
 
 /* -------------------------------------------------------------------------- */
-/* NAVIGATION AND VIEW                                                        */
+/* VIEW CONTROLS                                                              */
 /* -------------------------------------------------------------------------- */
 
 function fitActiveScan() {
-  if (!viewer || !state.activeCloud) {
-    setStatus("Load a scan first.", "warning");
+  if (!state.activeCloud) {
+    setStatus("Select a scan first.", "warning");
     return;
   }
 
-  if (typeof viewer.fitToScreen === "function") {
-    viewer.fitToScreen(0.5);
-  }
-
+  viewer.fitToScreen(0.5);
   setStatus("View fitted to active scan", "success");
 }
 
@@ -758,16 +723,8 @@ function resetView() {
   fitActiveScan();
 }
 
-function selectOrbitMode() {
-  /*
-    Potree's default navigation supports:
-    - Left mouse: orbit
-    - Right mouse: pan
-    - Mouse wheel: zoom
-  */
-
+function activateOrbitMode() {
   if (
-    viewer &&
     viewer.orbitControls &&
     typeof viewer.setControls === "function"
   ) {
@@ -779,54 +736,40 @@ function selectOrbitMode() {
 }
 
 function downloadActiveScan() {
-  const scan = state.activeScan;
-
-  if (!scan) {
+  if (!state.activeScan || !state.activeScan.url) {
     setStatus("Select a scan first.", "warning");
     return;
   }
 
-  let downloadUrl = scan.url;
-  let temporaryUrl = false;
-
-  if (!downloadUrl && scan.localFile) {
-    downloadUrl = URL.createObjectURL(scan.localFile);
-    temporaryUrl = true;
-  }
-
-  if (!downloadUrl) {
-    setStatus("No downloadable COPC source is available.", "warning");
-    return;
-  }
-
   const anchor = document.createElement("a");
-  anchor.href = downloadUrl;
-  anchor.download = scan.filename || `${scan.name}.copc.laz`;
+
+  anchor.href = state.activeScan.url;
+  anchor.download =
+    state.activeScan.filename ||
+    `${state.activeScan.name}.copc.laz`;
   anchor.target = "_blank";
   anchor.rel = "noopener";
+
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
-
-  if (temporaryUrl) {
-    setTimeout(() => URL.revokeObjectURL(downloadUrl), 2000);
-  }
 }
 
 /* -------------------------------------------------------------------------- */
-/* LOCAL UPLOAD / OPTIONAL API UPLOAD                                         */
+/* ADMIN UPLOAD                                                               */
 /* -------------------------------------------------------------------------- */
 
-async function handleSelectedFiles(fileList) {
-  const file = fileList && fileList[0];
-
-  if (!file) {
+async function handleFileSelected(file) {
+  if (!state.admin) {
+    setStatus("Administrator login required.", "error");
     return;
   }
 
+  if (!file) return;
+
   if (!/\.copc\.laz$/i.test(file.name)) {
     setStatus(
-      "Only optimized .copc.laz files are accepted.",
+      "Only .copc.laz files are accepted.",
       "error"
     );
     return;
@@ -834,207 +777,602 @@ async function handleSelectedFiles(fileList) {
 
   if (file.size > CONFIG.maxUploadBytes) {
     setStatus(
-      `File exceeds the ${formatBytes(CONFIG.maxUploadBytes)} limit.`,
+      `The file exceeds ${formatBytes(
+        CONFIG.maxUploadBytes
+      )}.`,
       "error"
     );
     return;
   }
 
-  const localScan = normalizeScan({
-    id: `local-${Date.now()}`,
-    name: file.name.replace(/\.copc\.laz$/i, ""),
-    filename: file.name,
-    sizeBytes: file.size,
-    localFile: file,
-    localOnly: true,
-    crs: "Read from COPC metadata"
-  });
+  try {
+    await validateCopcFile(file);
 
-  /*
-    If an upload endpoint is configured, send the optimized COPC file
-    to that endpoint. The backend should permanently store only the
-    .copc.laz file and return a catalog record containing its URL.
-  */
-  if (CONFIG.uploadEndpoint) {
+    showLoading("Encoding COPC file for GitHub...");
+    setStatus("Preparing upload...", "loading");
+
+    const github = await ensureGithubToken();
+
+    const id = createId();
+    const path = `scans/${id}.copc.laz`;
+
+    const buffer = await file.arrayBuffer();
+    const contentBase64 =
+      arrayBufferToBase64(buffer);
+
+    await putRepositoryFile(
+      path,
+      contentBase64,
+      `Add COPC scan ${id}`
+    );
+
+    const entry = {
+      id,
+      name: file.name.replace(/\.copc\.laz$/i, ""),
+      filename: file.name,
+      path,
+      url: joinUrl(github.rawBaseUrl, path),
+      sizeBytes: file.size,
+      pointCount: 0,
+      crs: "Unknown",
+      uploadedAt: new Date().toISOString()
+    };
+
     try {
-      setStatus("Uploading optimized COPC file...", "loading");
-      showLoading("Saving COPC file...");
+      await mutateCatalog(
+        (root) => {
+          root.scans = root.scans.filter(
+            (scan) => scan.id !== entry.id
+          );
 
-      const storedScan = await uploadCopc(file);
-
-      Object.assign(localScan, normalizeScan(storedScan));
-
-      /*
-        The remote URL becomes the permanent source.
-        The browser File object is no longer needed.
-      */
-      localScan.localFile = null;
-      localScan.localOnly = false;
-    } catch (error) {
-      hideLoading();
-      setStatus(
-        error.message || "COPC upload failed.",
-        "error"
+          root.scans.unshift(entry);
+          return root;
+        },
+        `Add catalog entry ${id}`
       );
-      return;
+    } catch (catalogError) {
+      try {
+        const fileInfo = await getRepositoryFile(path);
+
+        await deleteRepositoryFile(
+          path,
+          fileInfo.sha,
+          `Rollback COPC upload ${id}`
+        );
+      } catch (rollbackError) {
+        console.error("Rollback failed:", rollbackError);
+      }
+
+      throw new Error(
+        `COPC was uploaded, but catalog update failed: ${
+          catalogError.message
+        }`
+      );
     }
+
+    hideLoading();
+
+    await loadCatalog();
+    renderLibrary();
+
+    const createdScan = state.catalog.find(
+      (scan) => scan.id === id
+    );
+
+    if (createdScan) {
+      await loadScan(createdScan);
+    }
+
+    setStatus("COPC permanently saved", "success");
+  } catch (error) {
+    hideLoading();
+    setStatus(error.message, "error");
+    console.error(error);
   }
-
-  state.catalog.unshift(localScan);
-  renderLibrary();
-
-  await loadScan(localScan);
 }
 
-async function uploadCopc(file) {
-  const formData = new FormData();
+async function validateCopcFile(file) {
+  const sampleSize = Math.min(file.size, 65536);
+  const sample = new Uint8Array(
+    await file.slice(0, sampleSize).arrayBuffer()
+  );
 
-  formData.append("file", file, file.name);
-  formData.append("filename", file.name);
-  formData.append("format", "copc.laz");
+  const signature = String.fromCharCode(
+    sample[0],
+    sample[1],
+    sample[2],
+    sample[3]
+  );
 
-  const response = await fetch(CONFIG.uploadEndpoint, {
-    method: "POST",
-    body: formData
+  if (signature !== "LASF") {
+    throw new Error(
+      "This file does not contain a valid LAS/LAZ header."
+    );
+  }
+
+  const text = new TextDecoder().decode(sample);
+
+  if (!/copc/i.test(text)) {
+    throw new Error(
+      "The file does not appear to contain COPC metadata."
+    );
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* GITHUB REPOSITORY OPERATIONS                                               */
+/* -------------------------------------------------------------------------- */
+
+async function ensureGithubToken() {
+  if (state.github && state.github.token) {
+    return state.github;
+  }
+
+  const response = await fetch(CONFIG.tokenEndpoint, {
+    cache: "no-store"
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error(
+        "Administrator authentication has expired."
+      );
+    }
+
     throw new Error(
-      `Upload failed with HTTP ${response.status}.`
+      "Could not obtain GitHub repository access."
     );
   }
 
-  const result = await response.json();
+  state.github = await response.json();
+  return state.github;
+}
 
-  if (!result.url && !result.copcUrl) {
-    throw new Error(
-      "Upload endpoint did not return a COPC URL."
-    );
+async function githubRequest(
+  endpoint,
+  options = {},
+  retry = true
+) {
+  const github = await ensureGithubToken();
+
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    Authorization: `Bearer ${github.token}`,
+    ...options.headers
+  };
+
+  const response = await fetch(
+    `${github.apiBase}${endpoint}`,
+    {
+      ...options,
+      headers
+    }
+  );
+
+  if (response.status === 401 && retry) {
+    state.github = null;
+    return githubRequest(endpoint, options, false);
   }
 
-  return result;
+  if (!response.ok) {
+    const message = await response.text();
+    const error = new Error(
+      `GitHub API error ${response.status}: ${message}`
+    );
+
+    error.status = response.status;
+    throw error;
+  }
+
+  return response;
+}
+
+function repositoryEndpoint(path) {
+  const github = state.github;
+
+  const encodedPath = path
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/");
+
+  return `/repos/${github.owner}/${github.repo}/contents/${encodedPath}?ref=${encodeURIComponent(github.branch)}`;
+}
+
+async function getRepositoryFile(path) {
+  const response = await githubRequest(
+    repositoryEndpoint(path),
+    {
+      headers: {
+        Accept: "application/vnd.github.object+json"
+      }
+    }
+  );
+
+  return response.json();
+}
+
+async function putRepositoryFile(
+  path,
+  base64Content,
+  message,
+  sha = undefined
+) {
+  const github = await ensureGithubToken();
+
+  const encodedPath = path
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/");
+
+  const body = {
+    message,
+    content: base64Content,
+    branch: github.branch
+  };
+
+  if (sha) {
+    body.sha = sha;
+  }
+
+  await githubRequest(
+    `/repos/${github.owner}/${github.repo}/contents/${encodedPath}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    },
+    false
+  );
+}
+
+async function deleteRepositoryFile(
+  path,
+  sha,
+  message
+) {
+  const github = await ensureGithubToken();
+
+  const encodedPath = path
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/");
+
+  await githubRequest(
+    `/repos/${github.owner}/${github.repo}/contents/${encodedPath}`,
+    {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message,
+        sha,
+        branch: github.branch
+      })
+    }
+  );
+}
+
+async function mutateCatalog(mutator, message) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const catalogFile = await getRepositoryFile(
+      state.github.catalogPath
+    );
+
+    const root = decodeCatalog(
+      catalogFile.content
+    );
+
+    const nextRoot = mutator(root) || root;
+
+    const content =
+      JSON.stringify(nextRoot, null, 2) + "\n";
+
+    try {
+      await putRepositoryFile(
+        state.github.catalogPath,
+        utf8ToBase64(content),
+        message,
+        catalogFile.sha
+      );
+
+      return nextRoot;
+    } catch (error) {
+      if (error.status === 409 && attempt < 2) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error("Catalog update conflict.");
+}
+
+function decodeCatalog(content) {
+  if (!content) {
+    return {
+      version: 1,
+      scans: []
+    };
+  }
+
+  const decoded = base64ToUtf8(
+    content.replace(/\n/g, "")
+  );
+
+  const parsed = JSON.parse(decoded);
+
+  if (Array.isArray(parsed)) {
+    return {
+      version: 1,
+      scans: parsed
+    };
+  }
+
+  return {
+    version: parsed.version || 1,
+    scans: Array.isArray(parsed.scans)
+      ? parsed.scans
+      : []
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* ADMIN DELETE                                                               */
+/* -------------------------------------------------------------------------- */
+
+async function deleteActiveScan() {
+  if (!state.admin) {
+    setStatus("Administrator login required.", "error");
+    return;
+  }
+
+  const scan = state.activeScan;
+
+  if (!scan || !scan.path) {
+    setStatus("Select a repository scan first.", "warning");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Delete "${scan.name}" permanently from the active repository?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    showLoading("Removing scan from repository...");
+    setStatus("Preparing deletion...", "loading");
+
+    const fileInfo = await getRepositoryFile(scan.path);
+
+    await mutateCatalog(
+      (root) => {
+        root.scans = root.scans.filter(
+          (item) => item.id !== scan.id
+        );
+
+        return root;
+      },
+      `Remove catalog entry ${scan.id}`
+    );
+
+    try {
+      await deleteRepositoryFile(
+        scan.path,
+        fileInfo.sha,
+        `Delete COPC scan ${scan.id}`
+      );
+    } catch (deleteError) {
+      // Restore catalog entry if file deletion fails.
+      await mutateCatalog(
+        (root) => {
+          if (
+            !root.scans.some(
+              (item) => item.id === scan.id
+            )
+          ) {
+            root.scans.push(scan);
+          }
+
+          return root;
+        },
+        `Restore catalog entry ${scan.id}`
+      );
+
+      throw deleteError;
+    }
+
+    removeLoadedCloud(scan.id);
+
+    state.activeScan = null;
+    state.activeCloud = null;
+    state.activeBounds = null;
+
+    await loadCatalog();
+
+    renderLibrary();
+    updateInspector();
+
+    hideLoading();
+    setViewerStatus("Scan deleted", "success");
+    setStatus("COPC scan deleted", "success");
+  } catch (error) {
+    hideLoading();
+    setStatus(error.message, "error");
+    console.error(error);
+  }
+}
+
+function removeLoadedCloud(scanId) {
+  const cloud = state.loadedClouds.get(scanId);
+
+  if (!cloud) return;
+
+  if (
+    viewer.scene &&
+    typeof viewer.scene.removePointCloud === "function"
+  ) {
+    viewer.scene.removePointCloud(cloud);
+  } else {
+    cloud.visible = false;
+  }
+
+  state.loadedClouds.delete(scanId);
 }
 
 /* -------------------------------------------------------------------------- */
 /* UI EVENTS                                                                  */
 /* -------------------------------------------------------------------------- */
 
-function bindInterfaceEvents() {
+function bindEvents() {
+  $("loginLink").addEventListener("click", () => {
+    setStatus("Opening administrator login...", "loading");
+  });
+
+  $("logoutButton").addEventListener("click", logout);
+
   $("uploadButton").addEventListener("click", () => {
     $("fileInput").click();
   });
 
   $("fileInput").addEventListener("change", (event) => {
-    handleSelectedFiles(event.target.files);
+    const file = event.target.files[0];
+
+    if (file) {
+      handleFileSelected(file);
+    }
+
     event.target.value = "";
   });
 
-  $("scanSearch").addEventListener("input", renderLibrary);
+  $("scanSearch").addEventListener(
+    "input",
+    renderLibrary
+  );
 
-  $("refreshLibrary").addEventListener("click", async () => {
-    await loadCatalog();
-    renderLibrary();
-    setStatus("Library refreshed", "success");
-  });
+  $("refreshLibrary").addEventListener(
+    "click",
+    async () => {
+      await loadCatalog();
+      renderLibrary();
+      setStatus("Library refreshed", "success");
+    }
+  );
 
-  $("fitView").addEventListener("click", fitActiveScan);
-  $("resetView").addEventListener("click", resetView);
-  $("orbitMode").addEventListener("click", selectOrbitMode);
-  $("downloadScan").addEventListener("click", downloadActiveScan);
+  $("fitView").addEventListener(
+    "click",
+    fitActiveScan
+  );
+
+  $("resetView").addEventListener(
+    "click",
+    resetView
+  );
+
+  $("orbitMode").addEventListener(
+    "click",
+    activateOrbitMode
+  );
+
+  $("downloadScan").addEventListener(
+    "click",
+    downloadActiveScan
+  );
+
+  $("deleteScan").addEventListener(
+    "click",
+    deleteActiveScan
+  );
 
   $("colorMode").addEventListener("change", () => {
     applyColorMode();
     setStatus("Color mode updated", "success");
   });
 
-  $("pointSize").addEventListener("input", applyPointSize);
-  $("pointOpacity").addEventListener("input", applyOpacity);
-  $("pointBudget").addEventListener("input", applyPointBudget);
+  $("pointSize").addEventListener(
+    "input",
+    applyPointSize
+  );
 
-  $("sectionMode").addEventListener("change", () => {
-    updateSectionControls();
+  $("pointOpacity").addEventListener(
+    "input",
+    applyOpacity
+  );
 
-    if ($("sectionMode").value === "none") {
-      clearSection();
+  $("pointBudget").addEventListener(
+    "input",
+    applyPointBudget
+  );
+
+  $("sectionMode").addEventListener(
+    "change",
+    () => {
+      updateSectionControls();
+
+      if ($("sectionMode").value === "none") {
+        clearSection();
+      }
     }
-  });
+  );
 
-  $("sectionAxis").addEventListener("change", () => {
-    updateSectionControls();
-
-    if (state.sectionCreated) {
-      applySection();
+  $("sectionAxis").addEventListener(
+    "change",
+    () => {
+      updateSectionControls();
     }
-  });
+  );
 
-  $("sectionPosition").addEventListener("input", () => {
-    const value = Number($("sectionPosition").value);
+  $("sectionPosition").addEventListener(
+    "input",
+    () => {
+      $("sectionPositionValue").textContent =
+        formatCoordinate(
+          Number($("sectionPosition").value)
+        );
 
-    $("sectionPositionValue").textContent =
-      formatCoordinate(value);
-
-    if (state.sectionCreated) {
-      applySection();
+      if (state.sectionVolume) {
+        applySection();
+      }
     }
-  });
+  );
 
-  $("sectionThickness").addEventListener("input", () => {
-    const value = Number($("sectionThickness").value);
+  $("sectionThickness").addEventListener(
+    "input",
+    () => {
+      $("sectionThicknessValue").textContent =
+        `${formatCoordinate(
+          Number($("sectionThickness").value)
+        )} units`;
 
-    $("sectionThicknessValue").textContent =
-      `${formatCoordinate(value)} units`;
-
-    if (state.sectionCreated) {
-      applySection();
+      if (state.sectionVolume) {
+        applySection();
+      }
     }
-  });
+  );
 
-  $("applySection").addEventListener("click", applySection);
-  $("clearSection").addEventListener("click", clearSection);
+  $("applySection").addEventListener(
+    "click",
+    applySection
+  );
 
-  const viewerElement = $("viewer");
-
-  viewerElement.addEventListener("dragover", (event) => {
-    event.preventDefault();
-    viewerElement.classList.add("drop-target");
-  });
-
-  viewerElement.addEventListener("dragleave", () => {
-    viewerElement.classList.remove("drop-target");
-  });
-
-  viewerElement.addEventListener("drop", (event) => {
-    event.preventDefault();
-    viewerElement.classList.remove("drop-target");
-
-    handleSelectedFiles(event.dataTransfer.files);
-  });
+  $("clearSection").addEventListener(
+    "click",
+    clearSection
+  );
 }
 
 /* -------------------------------------------------------------------------- */
-/* STATUS AND LOADING                                                         */
+/* STATUS                                                                     */
 /* -------------------------------------------------------------------------- */
 
 function setStatus(message, type = "") {
   $("statusMessage").textContent = message;
-
-  const dot = $("viewerStatusDot");
-
-  dot.classList.remove(
-    "status-idle",
-    "status-loading",
-    "status-error"
-  );
-
-  if (type === "loading") {
-    dot.classList.add("status-loading");
-  } else if (type === "error") {
-    dot.classList.add("status-error");
-  } else if (type === "success") {
-    dot.classList.add("status-dot");
-  } else {
-    dot.classList.add("status-idle");
-  }
+  setViewerStatus(message, type);
 }
 
 function setViewerStatus(message, type = "idle") {
@@ -1075,17 +1413,22 @@ function hideLoading() {
 function createId() {
   return `scan-${Date.now()}-${Math.random()
     .toString(36)
-    .slice(2, 8)}`;
+    .slice(2, 9)}`;
 }
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function joinUrl(base, path) {
+  return `${String(base).replace(/\/$/, "")}/${path
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/")}`;
+}
+
 function formatBytes(bytes) {
-  if (!bytes || bytes <= 0) {
-    return "Unknown";
-  }
+  if (!bytes || bytes <= 0) return "Unknown";
 
   const units = ["B", "KiB", "MiB", "GiB"];
   const index = Math.min(
@@ -1093,16 +1436,15 @@ function formatBytes(bytes) {
     units.length - 1
   );
 
-  const value = bytes / Math.pow(1024, index);
+  const value =
+    bytes / Math.pow(1024, index);
 
-  return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+  return `${value.toFixed(index === 0 ? 0 : 1)} ${
+    units[index]
+  }`;
 }
 
 function formatNumber(value) {
-  if (!value || value <= 0) {
-    return "Unknown";
-  }
-
   return new Intl.NumberFormat().format(value);
 }
 
@@ -1112,16 +1454,51 @@ function formatCompactNumber(value) {
   }
 
   if (value >= 1000) {
-    return `${(value / 1000).toFixed(0)}K`;
+    return `${Math.round(value / 1000)}K`;
   }
 
   return String(value);
 }
 
 function formatCoordinate(value) {
-  if (!Number.isFinite(value)) {
-    return "—";
+  if (!Number.isFinite(value)) return "—";
+  return Number(value).toFixed(3);
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+
+  for (
+    let offset = 0;
+    offset < bytes.length;
+    offset += chunkSize
+  ) {
+    const chunk = bytes.subarray(
+      offset,
+      Math.min(offset + chunkSize, bytes.length)
+    );
+
+    binary += String.fromCharCode(...chunk);
   }
 
-  return Number(value).toFixed(3);
+  return btoa(binary);
+}
+
+function utf8ToBase64(value) {
+  return arrayBufferToBase64(
+    new TextEncoder().encode(value).buffer
+  );
+}
+
+function base64ToUtf8(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new TextDecoder().decode(bytes);
 }

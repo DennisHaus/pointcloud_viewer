@@ -9,19 +9,26 @@
 
   <title>COPC Point Cloud Library</title>
 
-  <!-- Potree styles -->
   <link
     rel="stylesheet"
-    href="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/build/potree/potree.css"
+    href="https://cdn.jsdelivr.net/gh/potree/potree@develop/build/potree/potree.css"
   />
 
-  <!-- Required Potree styles -->
   <link
     rel="stylesheet"
-    href="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/jquery-ui/jquery-ui.min.css"
+    href="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/jquery-ui/jquery-ui.min.css"
   />
 
-  <!-- Application styles -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/openlayers3/ol.css"
+  />
+
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/spectrum/spectrum.css"
+  />
+
   <link rel="stylesheet" href="./style.css" />
 </head>
 
@@ -34,28 +41,46 @@
 
         <div>
           <div class="brand-title">PointCloud Library</div>
-          <div class="brand-subtitle">Cloud Optimized Point Cloud Viewer</div>
+          <div class="brand-subtitle">
+            Cloud Optimized Point Cloud Viewer
+          </div>
         </div>
       </div>
 
       <div class="topbar-actions">
-        <div class="search-wrapper">
-          <span class="search-icon">⌕</span>
+        <div class="search-box">
+          <span>⌕</span>
           <input
             id="scanSearch"
             type="search"
             placeholder="Search scans..."
-            autocomplete="off"
           />
         </div>
 
+        <span id="adminBadge" class="admin-badge hidden"></span>
+
+        <a
+          id="loginLink"
+          class="button button-secondary"
+          href="/api/auth/login"
+        >
+          Admin login
+        </a>
+
         <button
-          id="uploadButton"
-          class="button button-primary"
+          id="logoutButton"
+          class="button button-ghost hidden"
           type="button"
         >
-          <span>＋</span>
-          Upload COPC
+          Logout
+        </button>
+
+        <button
+          id="uploadButton"
+          class="button button-primary hidden"
+          type="button"
+        >
+          ＋ Upload COPC
         </button>
 
         <input
@@ -69,7 +94,6 @@
 
     <main class="workspace">
 
-      <!-- LEFT LIBRARY PANEL -->
       <aside class="library-panel">
         <div class="panel-header">
           <div>
@@ -90,7 +114,7 @@
         </div>
 
         <div class="library-info">
-          <div class="status-dot"></div>
+          <span class="status-dot"></span>
 
           <div>
             <strong>COPC only</strong>
@@ -100,28 +124,27 @@
 
         <div id="libraryList" class="library-list"></div>
 
-        <div id="libraryEmpty" class="empty-library">
+        <div id="libraryEmpty" class="empty-state">
           <div class="empty-icon">◌</div>
           <strong>No scans found</strong>
-          <span>Upload a .copc.laz file or add one to the catalog.</span>
+          <span>
+            Administrator uploads will appear here permanently.
+          </span>
         </div>
       </aside>
 
-      <!-- VIEWER -->
       <section class="viewer-panel">
+        <div id="potree_render_area" class="viewer"></div>
+        <div id="potree_sidebar_container"></div>
 
-        <div id="viewer" class="viewer"></div>
-
-        <div class="viewer-top-overlay">
+        <div class="viewer-overlay">
           <div class="viewer-status">
             <span id="viewerStatusDot" class="status-dot status-idle"></span>
             <span id="viewerStatus">Ready</span>
           </div>
 
-          <div class="viewer-shortcuts">
-            <span>Orbit: left mouse</span>
-            <span>Pan: right mouse</span>
-            <span>Zoom: wheel</span>
+          <div class="viewer-help">
+            Orbit: left mouse · Pan: right mouse · Zoom: wheel
           </div>
         </div>
 
@@ -135,57 +158,47 @@
             id="fitView"
             class="toolbar-button"
             type="button"
-            title="Fit active scan"
           >
-            <span>⌗</span>
-            Fit
+            ⌗ Fit
           </button>
 
           <button
             id="orbitMode"
             class="toolbar-button active"
             type="button"
-            title="Orbit navigation"
           >
-            <span>◉</span>
-            Orbit
+            ◉ Orbit
           </button>
 
           <button
             id="resetView"
             class="toolbar-button"
             type="button"
-            title="Reset view"
           >
-            <span>⟳</span>
-            Reset
+            ⟳ Reset
           </button>
-
-          <div class="toolbar-divider"></div>
 
           <button
             id="downloadScan"
             class="toolbar-button"
             type="button"
-            title="Download active COPC file"
           >
-            <span>⇩</span>
-            COPC
+            ⇩ COPC
           </button>
         </div>
       </section>
 
-      <!-- RIGHT INSPECTOR PANEL -->
       <aside class="inspector-panel">
-
         <div class="panel-header">
           <div>
             <div class="panel-title">Inspector</div>
-            <div class="panel-subtitle">Active scan properties</div>
+            <div class="panel-subtitle">
+              Active scan properties
+            </div>
           </div>
         </div>
 
-        <div id="inspectorEmpty" class="inspector-empty">
+        <div id="inspectorEmpty" class="empty-state">
           <div class="empty-icon">◇</div>
           <strong>No scan selected</strong>
           <span>Select a scan from the library.</span>
@@ -195,28 +208,28 @@
 
           <section class="inspector-section">
             <div class="section-heading">
-              <span class="section-heading-icon">▣</span>
+              <span>▣</span>
               <span id="activeScanName">Scan</span>
             </div>
 
             <div class="metadata-grid">
-              <div class="metadata-item">
+              <div>
                 <span>Format</span>
                 <strong>COPC LAZ</strong>
               </div>
 
-              <div class="metadata-item">
+              <div>
                 <span>Points</span>
                 <strong id="activePointCount">—</strong>
               </div>
 
-              <div class="metadata-item">
+              <div>
                 <span>File size</span>
                 <strong id="activeFileSize">—</strong>
               </div>
 
-              <div class="metadata-item">
-                <span>Coordinate system</span>
+              <div>
+                <span>CRS</span>
                 <strong id="activeCrs">—</strong>
               </div>
             </div>
@@ -224,11 +237,11 @@
 
           <section class="inspector-section">
             <div class="section-heading">
-              <span class="section-heading-icon">◈</span>
+              <span>◈</span>
               Appearance
             </div>
 
-            <label class="control-label" for="colorMode">
+            <label for="colorMode" class="control-label">
               Color mode
             </label>
 
@@ -240,7 +253,7 @@
               <option value="RETURN_NUMBER">Return number</option>
             </select>
 
-            <label class="control-label" for="pointSize">
+            <label for="pointSize" class="control-label">
               Point size
               <output id="pointSizeValue">1.5</output>
             </label>
@@ -255,7 +268,7 @@
               value="1.5"
             />
 
-            <label class="control-label" for="pointOpacity">
+            <label for="pointOpacity" class="control-label">
               Opacity
               <output id="pointOpacityValue">100%</output>
             </label>
@@ -270,7 +283,7 @@
               value="1"
             />
 
-            <label class="control-label" for="pointBudget">
+            <label for="pointBudget" class="control-label">
               Point budget
               <output id="pointBudgetValue">3.0M</output>
             </label>
@@ -288,11 +301,11 @@
 
           <section class="inspector-section">
             <div class="section-heading">
-              <span class="section-heading-icon">▥</span>
+              <span>▥</span>
               Sections
             </div>
 
-            <label class="control-label" for="sectionMode">
+            <label for="sectionMode" class="control-label">
               Section type
             </label>
 
@@ -302,8 +315,8 @@
               <option value="vertical">Vertical section</option>
             </select>
 
-            <div id="sectionAxisWrapper" class="conditional-control hidden">
-              <label class="control-label" for="sectionAxis">
+            <div id="sectionAxisWrapper" class="hidden">
+              <label for="sectionAxis" class="control-label">
                 Vertical axis
               </label>
 
@@ -313,7 +326,7 @@
               </select>
             </div>
 
-            <label class="control-label" for="sectionPosition">
+            <label for="sectionPosition" class="control-label">
               Position
               <output id="sectionPositionValue">—</output>
             </label>
@@ -329,7 +342,7 @@
               disabled
             />
 
-            <label class="control-label" for="sectionThickness">
+            <label for="sectionThickness" class="control-label">
               Thickness
               <output id="sectionThicknessValue">—</output>
             </label>
@@ -350,7 +363,7 @@
                 class="button button-secondary"
                 type="button"
               >
-                Apply section
+                Apply
               </button>
 
               <button
@@ -361,15 +374,11 @@
                 Clear
               </button>
             </div>
-
-            <p class="helper-text">
-              Sections are created as clipping slabs around the active scan.
-            </p>
           </section>
 
           <section class="inspector-section">
             <div class="section-heading">
-              <span class="section-heading-icon">⌖</span>
+              <span>⌖</span>
               Bounds
             </div>
 
@@ -391,45 +400,51 @@
             </div>
           </section>
 
+          <section
+            id="adminSection"
+            class="inspector-section admin-section hidden"
+          >
+            <button
+              id="deleteScan"
+              class="button button-danger"
+              type="button"
+            >
+              Delete scan from repository
+            </button>
+
+            <p>
+              This removes the active COPC file and its catalog entry.
+            </p>
+          </section>
         </div>
       </aside>
     </main>
 
     <footer class="statusbar">
-      <div>
-        <span id="statusMessage">Ready</span>
-      </div>
+      <span id="statusMessage">Ready</span>
 
-      <div class="statusbar-right">
-        <span>Accepted format: .copc.laz</span>
+      <div>
+        <span>Accepted: .copc.laz</span>
         <span>Maximum: 95 MiB</span>
       </div>
     </footer>
   </div>
 
   <!-- Potree dependencies -->
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/jquery/jquery-3.1.1.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/spectrum/spectrum.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/jquery-ui/jquery-ui.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/other/BinaryHeap.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/tween/tween.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/d3/d3.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/proj4/proj4.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/openlayers3/ol.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/i18next/i18next.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/jstree/jstree.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/jquery/jquery-3.1.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/spectrum/spectrum.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/jquery-ui/jquery-ui.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/other/BinaryHeap.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/tween/tween.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/d3/d3.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/proj4/proj4.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/openlayers3/ol.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/i18next/i18next.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/jstree/jstree.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/copc/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/build/potree/potree.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/potree/potree@develop/libs/plasio/js/laslaz.js"></script>
 
-  <!-- COPC reader used by Potree -->
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/copc/index.js"></script>
-
-  <!-- Potree -->
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/build/potree/potree.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/plasio/js/laslaz.js"></script>
-
-  <!-- Allows local .copc.laz files to be previewed in the browser -->
-  <script src="https://cdn.jsdelivr.net/gh/y-suzuki-git/potree-local-copc-loader@main/src/potree-local-copc-loader.js"></script>
-
-  <!-- Application -->
   <script src="./app.js"></script>
 </body>
 </html>
