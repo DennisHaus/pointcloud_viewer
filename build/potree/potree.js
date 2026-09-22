@@ -70267,12 +70267,12 @@ void main() {
 				renderer.setClearColor(0x000000, 1);
 			}else if(viewer.background === "gradient"){
 				renderer.setClearColor(0x00ff00, 1);
-			}(viewer.background === "skybox"){
+			}else if(viewer.background === "skybox"){
 				renderer.setClearColor(0xff0000, 1);
 			}else if(viewer.background === "white"){
 				renderer.setClearColor(0xFFFFFF, 1);
 			}else {
-				renderer.setClearColor(0x000000, 0);
+				renderer.setClearColor(0xFFFFFF, 1);
 			}
 
 			renderer.clear();
