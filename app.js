@@ -1,5 +1,7 @@
 "use strict";
 
+const app = express();
+
 const ROOT_DIR = __dirname;
 const SCANS_DIR = path.join(ROOT_DIR, "scans");
 const CATALOG_FILE = path.join(ROOT_DIR, "catalog.json");
