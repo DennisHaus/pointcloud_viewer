@@ -4,7 +4,7 @@
     {
       "id": "warehouse-001",
       "name": "Warehouse Exterior",
-      "filename": "warehouse.copc.laz",
+      "filename": "output.copc.laz",
       "path": "scans/warehouse.copc.laz",
       "url": "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/scans/output.copc.laz",
       "sizeBytes": 73400320,
