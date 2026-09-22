@@ -70263,12 +70263,12 @@ void main() {
 
 
 			// render skybox
-			if(viewer.background === "black"){
-				renderer.setClearColor(0x000000, 1);
-			}else if(viewer.background === "gradient"){
-				renderer.setClearColor(0x00ff00, 1);
-			}(viewer.background === "skybox"){
+			if(viewer.background === "skybox"){
 				renderer.setClearColor(0xff0000, 1);
+			}else if(viewer.background === "gradient"){
+				renderer.setClearColor(0x112233, 1);
+			}else if(viewer.background === "black"){
+				renderer.setClearColor(0x000000, 1);
 			}else if(viewer.background === "white"){
 				renderer.setClearColor(0xFFFFFF, 1);
 			}else {
@@ -70867,7 +70867,7 @@ void main() {
 					attributeMaterial.weighted = true;
 					attributeMaterial.screenWidth = width;
 					attributeMaterial.screenHeight = height;
-					attributeMaterial.shape = PointShape.CIRCLE;
+					attributeMaterial.shape = PointShape.PARABOLOID;
 					attributeMaterial.uniforms.visibleNodes.value = material.visibleNodesTexture;
 					attributeMaterial.uniforms.octreeSize.value = octreeSize;
 					attributeMaterial.spacing = pointcloud.pcoGeometry.spacing; // * Math.max(...pointcloud.scale.toArray());
@@ -75754,11 +75754,11 @@ ENDSEC
 			});
 		}
 
-		setPointCloud(pointcloud){
+		setPointCloud(pointcloud){`
 
 			let material = pointcloud.material;
 
-			let panel = $(`
+			let panel = $(
 			<div class="scene_content selectable">
 				<ul class="pv-menu-list">
 
