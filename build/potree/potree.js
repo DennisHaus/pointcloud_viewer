@@ -70867,7 +70867,7 @@ void main() {
 					attributeMaterial.weighted = true;
 					attributeMaterial.screenWidth = width;
 					attributeMaterial.screenHeight = height;
-					attributeMaterial.shape = PointShape.PARABOLOID;
+					attributeMaterial.shape = PointShape.CIRCLE;
 					attributeMaterial.uniforms.visibleNodes.value = material.visibleNodesTexture;
 					attributeMaterial.uniforms.octreeSize.value = octreeSize;
 					attributeMaterial.spacing = pointcloud.pcoGeometry.spacing; // * Math.max(...pointcloud.scale.toArray());
@@ -75754,11 +75754,11 @@ ENDSEC
 			});
 		}
 
-		setPointCloud(pointcloud){`
+		setPointCloud(pointcloud){
 
 			let material = pointcloud.material;
 
-			let panel = $(
+			let panel = $(`
 			<div class="scene_content selectable">
 				<ul class="pv-menu-list">
 
