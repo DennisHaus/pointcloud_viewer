@@ -2321,3 +2321,50 @@ function formatCoordinate(
 
   return Number(value).toFixed(3);
 }
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const workspace = document.querySelector(".workspace");
+
+  const libraryPanel = document.querySelector(".library-panel");
+  const inspectorPanel = document.querySelector(".inspector-panel");
+
+  const toggleLibrary = document.getElementById("toggleLibrary");
+  const toggleInspector = document.getElementById("toggleInspector");
+
+  function updateToggleButton(button, collapsed, label) {
+    const action = collapsed ? "Expand" : "Collapse";
+
+    button.textContent = collapsed ? "▾" : "▴";
+    button.title = `${action} ${label}`;
+    button.setAttribute("aria-label", `${action} ${label}`);
+    button.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  toggleLibrary.addEventListener("click", () => {
+    const collapsed = libraryPanel.classList.toggle("is-collapsed");
+
+    workspace.classList.toggle(
+      "library-collapsed",
+      collapsed
+    );
+
+    updateToggleButton(
+      toggleLibrary,
+      collapsed,
+      "scan library"
+    );
+  });
+
+  toggleInspector.addEventListener("click", () => {
+    const collapsed = inspectorPanel.classList.toggle(
+      "is-collapsed"
+    );
+
+    updateToggleButton(
+      toggleInspector,
+      collapsed,
+      "inspector"
+    );
+  });
+});
