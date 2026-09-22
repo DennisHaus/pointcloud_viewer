@@ -89116,7 +89116,7 @@ ENDSEC
 
 			{ // create VR CONTROLS
 				this.vrControls = null;
-				this.vrControls.enabled = false;
+				this.vrControls.enabled = null;
 				this.vrControls.addEventListener('start', this.disableAnnotations.bind(this));
 				this.vrControls.addEventListener('end', this.enableAnnotations.bind(this));
 			}
