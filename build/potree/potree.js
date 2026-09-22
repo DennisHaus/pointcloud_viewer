@@ -59264,11 +59264,11 @@ void main() {
 				defines.push('#define adaptive_point_size');
 			}
 
-			if (this.shape === PointShape.SQUARE) {
+			if (this.shape === PointShape.PARABOLOID) {
 				defines.push('#define square_point_shape');
 			} else if (this.shape === PointShape.CIRCLE) {
 				defines.push('#define circle_point_shape');
-			} else if (this.shape === PointShape.PARABOLOID) {
+			} else if (this.shape === PointShape.SQUARE) {
 				defines.push('#define paraboloid_point_shape');
 			}
 
@@ -70263,12 +70263,12 @@ void main() {
 
 
 			// render skybox
-			if(viewer.background === "skybox"){
-				renderer.setClearColor(0xff0000, 1);
-			}else if(viewer.background === "gradient"){
-				renderer.setClearColor(0x112233, 1);
-			}else if(viewer.background === "black"){
+			if(viewer.background === "black"){
 				renderer.setClearColor(0x000000, 1);
+			}else if(viewer.background === "gradient"){
+				renderer.setClearColor(0x00ff00, 1);
+			}(viewer.background === "skybox"){
+				renderer.setClearColor(0xff0000, 1);
 			}else if(viewer.background === "white"){
 				renderer.setClearColor(0xFFFFFF, 1);
 			}else {
@@ -89997,7 +89997,7 @@ ENDSEC
 				// automatically switch to paraboloids because they cause far less flickering in VR,
 				// when point sizes are larger than around 2 pixels
 				// if(Features.SHADER_INTERPOLATION.isSupported()){
-				// 	pointcloud.material.shape = Potree.PointShape.PARABOLOID;
+				pointcloud.material.shape = Potree.PointShape.PARABOLOID;
 				// }
 			}
 
