@@ -88225,7 +88225,7 @@ ENDSEC
 
 				this.compass = new Compass(this);
 
-				//this.createControls();
+				this.createControls();
 
 				this.clippingTool.setScene(this.scene);
 
@@ -89115,8 +89115,8 @@ ENDSEC
 			}
 
 			{ // create VR CONTROLS
-				this.vrControls = null;
-				this.vrControls.enabled = null;
+				this.vrControls = false;
+				this.vrControls.enabled = false;
 				this.vrControls.addEventListener('start', this.disableAnnotations.bind(this));
 				this.vrControls.addEventListener('end', this.enableAnnotations.bind(this));
 			}
