@@ -1,5 +1,11 @@
 "use strict";
 
+const express = require("express");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+
 const app = express();
 
 const ROOT_DIR = __dirname;
@@ -135,6 +141,51 @@ app.get("/api/scans", (request, response) => {
   response.json(readCatalog());
 });
 
+/* Upload one COPC file */
+app.post(
+  "/api/scans",
+  upload.single("file"),
+  (request, response) => {
+    if (!request.file) {
+      response.status(400).json({
+        error: "No file was uploaded"
+      });
+
+      return;
+    }
+
+    const originalName = path.basename(
+      request.file.originalname
+    );
+
+    const scanName = originalName.replace(
+      /\.copc\.laz$/i,
+      ""
+    );
+
+    const scan = {
+      id: crypto.randomUUID(),
+      name: scanName,
+      filename: request.file.filename,
+      url:
+        `/scans/${encodeURIComponent(
+          request.file.filename
+        )}`,
+      size: request.file.size,
+      uploadedAt: new Date().toISOString(),
+      crs: null,
+      points: null
+    };
+
+    const catalog = readCatalog();
+
+    catalog.scans.unshift(scan);
+
+    writeCatalog(catalog);
+
+    response.status(201).json(scan);
+  }
+);
 
 /* Serve uploaded scans */
 app.use(
