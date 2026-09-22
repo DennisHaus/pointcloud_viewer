@@ -625,9 +625,6 @@ function renderLibrary() {
           "div"
         );
 
-      icon.className =
-        "scan-icon";
-
       icon.textContent = "";
 
       var name =
