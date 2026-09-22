@@ -70263,12 +70263,12 @@ void main() {
 
 
 			// render skybox
-			if(viewer.background === "skybox"){
-				renderer.setClearColor(0xff0000, 1);
+			if(viewer.background === "black"){
+				renderer.setClearColor(0x000000, 1);
 			}else if(viewer.background === "gradient"){
 				renderer.setClearColor(0x00ff00, 1);
-			}else if(viewer.background === "black"){
-				renderer.setClearColor(0x000000, 1);
+			}(viewer.background === "skybox"){
+				renderer.setClearColor(0xff0000, 1);
 			}else if(viewer.background === "white"){
 				renderer.setClearColor(0xFFFFFF, 1);
 			}else {
