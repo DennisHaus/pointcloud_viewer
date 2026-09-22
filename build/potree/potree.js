@@ -65115,7 +65115,7 @@ void main() {
 			Potree.loadPointCloud(data.url, data.name, (e) => {
 				const {pointcloud} = e;
 
-				material.shape = Potree.PointShape.CIRCLE;
+				pointcloud.shape = Potree.PointShape.CIRCLE;
 
 				pointcloud.position.set(...data.position);
 				pointcloud.rotation.set(...data.rotation);
