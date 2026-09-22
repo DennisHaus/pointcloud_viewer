@@ -1,10 +1,5 @@
 "use strict";
 
-const ROOT_DIR = __dirname;
-const SCANS_DIR = path.join(ROOT_DIR, "scans");
-const CATALOG_FILE = path.join(ROOT_DIR, "catalog.json");
-
-const PORT = process.env.PORT || 3000;
 const MAX_FILE_SIZE = 95 * 1024 * 1024;
 
 fs.mkdirSync(SCANS_DIR, {
