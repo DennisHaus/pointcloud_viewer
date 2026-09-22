@@ -70823,7 +70823,7 @@ void main() {
 					depthMaterial.visibleNodesTexture = material.visibleNodesTexture;
 					depthMaterial.weighted = false;
 					depthMaterial.screenWidth = width;
-					depthMaterial.shape = PointShape.CIRCLE;
+					depthMaterial.shape = PointShape.PARABOLID;
 					depthMaterial.screenHeight = height;
 					depthMaterial.uniforms.visibleNodes.value = material.visibleNodesTexture;
 					depthMaterial.uniforms.octreeSize.value = octreeSize;
