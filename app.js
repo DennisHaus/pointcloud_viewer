@@ -3,37 +3,30 @@
 /*
   Public COPC point-cloud viewer.
 
-  This version:
-  - Loads a public catalog.json
-  - Loads public .copc.laz files
-  - Does not use login
-  - Does not upload files from the browser
-  - Does not use GitHub private keys
-  - Includes orbit, pan, zoom, appearance controls,
-    and horizontal/vertical clipping sections
+  The HTML file must load Potree before this file:
+
+  <script src="./build/potree/potree.js"></script>
+  <script src="./app.js"></script>
 */
 
-const CONFIG = {
-  /*
-    If catalog.json is in the same repository as this application:
-  */
+var CONFIG = {
   catalogUrl: "./catalog.json",
 
   /*
-    Used only when catalog entries contain "path" instead of "url".
+    Used when a catalog entry has "path" instead of "url".
 
-    Replace these values with your actual public repository.
+    Your repository:
+    https://github.com/dennishaus/pointcloud_viewer
 
-    Example:
-    https://raw.githubusercontent.com/johnsmith/my-pointclouds/main
+    Change "main" if your GitHub branch has another name.
   */
   rawBaseUrl:
-    "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main",
+    "https://raw.githubusercontent.com/dennishaus/pointcloud_viewer/main",
 
   defaultPointBudget: 3000000
 };
 
-const state = {
+var state = {
   catalog: [],
   loadedClouds: new Map(),
   activeScan: null,
@@ -42,10 +35,49 @@ const state = {
   sectionVolume: null
 };
 
-let viewer = null;
+var viewer = null;
 
 /* -------------------------------------------------------------------------- */
-/* BASIC HELPERS                                                              */
+/* STARTUP                                                                    */
+/* -------------------------------------------------------------------------- */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
+    initialize();
+  }
+);
+
+function initialize() {
+  bindEvents();
+
+  var viewerReady = initializeViewer();
+
+  if (!viewerReady) {
+    return;
+  }
+
+  loadCatalog()
+    .then(function () {
+      renderLibrary();
+
+      if (state.catalog.length > 0) {
+        return loadScan(state.catalog[0]);
+      }
+
+      setViewerStatus("No scans available", "idle");
+      setStatus("No scans found in catalog.json", "idle");
+
+      return null;
+    })
+    .catch(function (error) {
+      console.error(error);
+      setStatus("Application startup failed.", "error");
+    });
+}
+
+/* -------------------------------------------------------------------------- */
+/* BASIC DOM HELPERS                                                          */
 /* -------------------------------------------------------------------------- */
 
 function getElement(id) {
@@ -53,84 +85,34 @@ function getElement(id) {
 }
 
 function setText(id, value) {
-  const element = getElement(id);
+  var element = getElement(id);
 
   if (element) {
     element.textContent = value;
   }
 }
 
-function on(id, eventName, handler) {
-  const element = getElement(id);
+function addEvent(id, eventName, handler) {
+  var element = getElement(id);
 
   if (element) {
     element.addEventListener(eventName, handler);
   }
 }
 
-function hideElement(id) {
-  const element = getElement(id);
-
-  if (element) {
-    element.classList.add("hidden");
-  }
-}
-
 /* -------------------------------------------------------------------------- */
-/* STARTUP                                                                    */
-/* -------------------------------------------------------------------------- */
-
-document.addEventListener("DOMContentLoaded", initialize);
-
-async function initialize() {
-  hidePubliclyUnavailableControls();
-
-  bindEvents();
-
-  const viewerReady = initializeViewer();
-
-  if (!viewerReady) {
-    return;
-  }
-
-  await loadCatalog();
-
-  renderLibrary();
-
-  if (state.catalog.length > 0) {
-    await loadScan(state.catalog[0]);
-  } else {
-    setViewerStatus("No scans available", "idle");
-    setStatus("No scans found in catalog.json", "idle");
-  }
-}
-
-/*
-  Since this is a public viewer, uploads and deletes are performed
-  manually through the GitHub repository.
-*/
-function hidePubliclyUnavailableControls() {
-  hideElement("loginLink");
-  hideElement("logoutButton");
-  hideElement("adminBadge");
-  hideElement("uploadButton");
-  hideElement("adminSection");
-  hideElement("deleteScan");
-}
-
-/* -------------------------------------------------------------------------- */
-/* POTREE VIEWER                                                              */
+/* POTREE INITIALIZATION                                                      */
 /* -------------------------------------------------------------------------- */
 
 function initializeViewer() {
   if (!window.Potree) {
     setStatus(
-      "Potree is not loaded. Check your index.html script paths.",
+      "Potree is not loaded. Check your script paths.",
       "error"
     );
 
     console.error(
-      "Potree is undefined. Check that build/potree/potree.js exists and is loaded before app.js."
+      "Potree is undefined. Make sure build/potree/potree.js loads before app.js."
     );
 
     return false;
@@ -149,16 +131,12 @@ function initializeViewer() {
     return false;
   }
 
-  const renderArea = getElement("potree_render_area");
+  var renderArea = getElement("potree_render_area");
 
   if (!renderArea) {
     setStatus(
-      "Missing potree_render_area element.",
+      "The potree_render_area element is missing.",
       "error"
-    );
-
-    console.error(
-      'Add <div id="potree_render_area"></div> to index.html.'
     );
 
     return false;
@@ -176,7 +154,9 @@ function initializeViewer() {
     }
 
     if (typeof viewer.setPointBudget === "function") {
-      viewer.setPointBudget(CONFIG.defaultPointBudget);
+      viewer.setPointBudget(
+        CONFIG.defaultPointBudget
+      );
     }
 
     if (typeof viewer.setBackground === "function") {
@@ -190,14 +170,17 @@ function initializeViewer() {
       viewer.setControls(viewer.orbitControls);
     }
 
-    window.addEventListener("resize", function () {
-      if (
-        viewer &&
-        typeof viewer.onWindowResize === "function"
-      ) {
-        viewer.onWindowResize();
+    window.addEventListener(
+      "resize",
+      function () {
+        if (
+          viewer &&
+          typeof viewer.onWindowResize === "function"
+        ) {
+          viewer.onWindowResize();
+        }
       }
-    });
+    );
 
     setViewerStatus("Ready", "idle");
     setStatus("Ready", "idle");
@@ -207,7 +190,7 @@ function initializeViewer() {
     console.error(error);
 
     setStatus(
-      "Could not initialize the Potree viewer.",
+      "Could not initialize Potree.",
       "error"
     );
 
@@ -219,89 +202,108 @@ function initializeViewer() {
 /* CATALOG                                                                    */
 /* -------------------------------------------------------------------------- */
 
-async function loadCatalog() {
-  try {
-    const separator =
-      CONFIG.catalogUrl.indexOf("?") === -1
-        ? "?"
-        : "&";
+function loadCatalog() {
+  var separator =
+    CONFIG.catalogUrl.indexOf("?") === -1
+      ? "?"
+      : "&";
 
-    const catalogUrl =
-      CONFIG.catalogUrl +
-      separator +
-      "cacheBust=" +
-      Date.now();
+  var requestUrl =
+    CONFIG.catalogUrl +
+    separator +
+    "cacheBust=" +
+    Date.now();
 
-    const response = await fetch(catalogUrl, {
-      cache: "no-store"
-    });
+  return fetch(requestUrl, {
+    cache: "no-store"
+  })
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error(
+          "Catalog request failed with HTTP " +
+            response.status
+        );
+      }
 
-    if (!response.ok) {
-      throw new Error(
-        "Catalog request failed with HTTP " +
-          response.status
+      return response.json();
+    })
+    .then(function (data) {
+      var scans;
+
+      if (Array.isArray(data)) {
+        scans = data;
+      } else if (
+        data &&
+        Array.isArray(data.scans)
+      ) {
+        scans = data.scans;
+      } else {
+        scans = [];
+      }
+
+      state.catalog = scans.map(
+        function (scan) {
+          return normalizeScan(scan);
+        }
       );
-    }
 
-    const data = await response.json();
+      setText(
+        "scanCount",
+        state.catalog.length +
+          " " +
+          (
+            state.catalog.length === 1
+              ? "scan"
+              : "scans"
+          )
+      );
 
-    const scans = Array.isArray(data)
-      ? data
-      : Array.isArray(data.scans)
-        ? data.scans
-        : [];
+      return state.catalog;
+    })
+    .catch(function (error) {
+      state.catalog = [];
+      console.error(error);
 
-    state.catalog = scans.map(normalizeScan);
+      setStatus(
+        "Could not load catalog.json.",
+        "error"
+      );
 
-    setText(
-      "scanCount",
-      state.catalog.length +
-        " " +
-        (state.catalog.length === 1
-          ? "scan"
-          : "scans")
-    );
-  } catch (error) {
-    state.catalog = [];
-
-    console.error(error);
-
-    setStatus(
-      "Could not load catalog.json.",
-      "error"
-    );
-  }
+      return [];
+    });
 }
 
 function normalizeScan(scan) {
-  const id = String(
+  var id = String(
     scan.id ||
       scan.filename ||
       "scan-" + Date.now()
   );
 
-  const name = String(
+  var name = String(
     scan.name ||
       scan.filename ||
       id
   );
 
-  const filename = String(
+  var filename = String(
     scan.filename || ""
   );
 
-  const path = String(
+  var path = String(
     scan.path ||
-      (filename
-        ? "scans/" + filename
-        : "")
+      (
+        filename
+          ? "scans/" + filename
+          : ""
+      )
   );
 
-  let url = String(
+  var url = String(
     scan.url || ""
   );
 
-  if (!url && path && CONFIG.rawBaseUrl) {
+  if (!url && path) {
     url = buildRawUrl(path);
   }
 
@@ -324,10 +326,13 @@ function normalizeScan(scan) {
 }
 
 function buildRawUrl(path) {
-  const cleanBase =
-    CONFIG.rawBaseUrl.replace(/\/+$/, "");
+  var cleanBase =
+    CONFIG.rawBaseUrl.replace(
+      /\/+$/,
+      ""
+    );
 
-  const encodedPath = path
+  var encodedPath = path
     .split("/")
     .map(function (part) {
       return encodeURIComponent(part);
@@ -342,36 +347,39 @@ function buildRawUrl(path) {
 /* -------------------------------------------------------------------------- */
 
 function renderLibrary() {
-  const list = getElement("libraryList");
-  const empty = getElement("libraryEmpty");
-  const search = getElement("scanSearch");
+  var list = getElement("libraryList");
+  var empty = getElement("libraryEmpty");
+  var search = getElement("scanSearch");
 
   if (!list) {
     return;
   }
 
-  const searchTerm = search
+  var query = search
     ? search.value.trim().toLowerCase()
     : "";
 
-  list.replaceChildren();
+  while (list.firstChild) {
+    list.removeChild(list.firstChild);
+  }
 
   setText(
     "scanCount",
     state.catalog.length +
       " " +
-      (state.catalog.length === 1
-        ? "scan"
-        : "scans")
+      (
+        state.catalog.length === 1
+          ? "scan"
+          : "scans"
+      )
   );
 
-  const visibleScans = state.catalog.filter(
-    function (scan) {
+  var visibleScans =
+    state.catalog.filter(function (scan) {
       return scan.name
         .toLowerCase()
-        .includes(searchTerm);
-    }
-  );
+        .indexOf(query) !== -1;
+    });
 
   if (visibleScans.length === 0) {
     if (empty) {
@@ -386,7 +394,8 @@ function renderLibrary() {
   }
 
   visibleScans.forEach(function (scan) {
-    const card = document.createElement("button");
+    var card =
+      document.createElement("button");
 
     card.type = "button";
     card.className = "scan-card";
@@ -398,19 +407,28 @@ function renderLibrary() {
       card.classList.add("active");
     }
 
-    const header = document.createElement("div");
-    header.className = "scan-card-header";
+    var header =
+      document.createElement("div");
 
-    const icon = document.createElement("div");
+    header.className =
+      "scan-card-header";
+
+    var icon =
+      document.createElement("div");
+
     icon.className = "scan-icon";
     icon.textContent = "◈";
 
-    const name = document.createElement("div");
+    var name =
+      document.createElement("div");
+
     name.className = "scan-name";
     name.textContent = scan.name;
     name.title = scan.name;
 
-    const stateDot = document.createElement("div");
+    var stateDot =
+      document.createElement("div");
+
     stateDot.className = "scan-state";
 
     if (scan.loading) {
@@ -425,13 +443,19 @@ function renderLibrary() {
     header.appendChild(name);
     header.appendChild(stateDot);
 
-    const metadata = document.createElement("div");
+    var metadata =
+      document.createElement("div");
+
     metadata.className = "scan-meta";
 
-    const format = document.createElement("span");
+    var format =
+      document.createElement("span");
+
     format.textContent = "COPC";
 
-    const size = document.createElement("span");
+    var size =
+      document.createElement("span");
+
     size.textContent = scan.sizeBytes
       ? formatBytes(scan.sizeBytes)
       : "Size unknown";
@@ -442,21 +466,24 @@ function renderLibrary() {
     card.appendChild(header);
     card.appendChild(metadata);
 
-    card.addEventListener("click", function () {
-      loadScan(scan);
-    });
+    card.addEventListener(
+      "click",
+      function () {
+        loadScan(scan);
+      }
+    );
 
     list.appendChild(card);
   });
 }
 
 /* -------------------------------------------------------------------------- */
-/* POINT-CLOUD LOADING                                                        */
+/* POINT CLOUD LOADING                                                        */
 /* -------------------------------------------------------------------------- */
 
-async function loadScan(scan) {
+function loadScan(scan) {
   if (!scan) {
-    return;
+    return Promise.resolve();
   }
 
   if (!scan.url) {
@@ -465,13 +492,14 @@ async function loadScan(scan) {
       "error"
     );
 
-    return;
+    return Promise.resolve();
   }
 
   if (state.loadedClouds.has(scan.id)) {
     setActiveScan(scan);
     fitActiveScan();
-    return;
+
+    return Promise.resolve();
   }
 
   scan.loading = true;
@@ -491,66 +519,69 @@ async function loadScan(scan) {
     "loading"
   );
 
-  try {
-    const pointcloud =
-      await loadCopcPointCloud(scan);
+  return loadCopcPointCloud(scan)
+    .then(function (pointcloud) {
+      if (!pointcloud) {
+        throw new Error(
+          "Potree returned no point cloud."
+        );
+      }
 
-    if (!pointcloud) {
-      throw new Error(
-        "Potree returned no point cloud."
+      pointcloud.name = scan.name;
+
+      viewer.scene.addPointCloud(
+        pointcloud
       );
-    }
 
-    pointcloud.name = scan.name;
+      configurePointCloud(pointcloud);
 
-    viewer.scene.addPointCloud(pointcloud);
+      state.loadedClouds.set(
+        scan.id,
+        pointcloud
+      );
 
-    configurePointCloud(pointcloud);
+      scan.loading = false;
 
-    state.loadedClouds.set(
-      scan.id,
-      pointcloud
-    );
+      setActiveScan(scan);
+      renderLibrary();
 
-    scan.loading = false;
+      hideLoading();
 
-    setActiveScan(scan);
+      setViewerStatus(
+        "Point cloud loaded",
+        "success"
+      );
 
-    hideLoading();
+      setStatus(
+        scan.name + " loaded",
+        "success"
+      );
 
-    setViewerStatus(
-      "Point cloud loaded",
-      "success"
-    );
+      window.setTimeout(
+        function () {
+          fitActiveScan();
+        },
+        250
+      );
+    })
+    .catch(function (error) {
+      scan.loading = false;
 
-    setStatus(
-      scan.name + " loaded",
-      "success"
-    );
+      hideLoading();
+      renderLibrary();
 
-    renderLibrary();
+      console.error(error);
 
-    window.setTimeout(function () {
-      fitActiveScan();
-    }, 250);
-  } catch (error) {
-    scan.loading = false;
+      setViewerStatus(
+        "Point-cloud loading failed",
+        "error"
+      );
 
-    hideLoading();
-    renderLibrary();
-
-    console.error(error);
-
-    setViewerStatus(
-      "Point-cloud loading failed",
-      "error"
-    );
-
-    setStatus(
-      "Could not load " + scan.name,
-      "error"
-    );
-  }
+      setStatus(
+        "Could not load " + scan.name,
+        "error"
+      );
+    });
 }
 
 function loadCopcPointCloud(scan) {
@@ -625,23 +656,27 @@ function configurePointCloud(pointcloud) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* ACTIVE SCAN AND INSPECTOR                                                  */
+/* ACTIVE SCAN / INSPECTOR                                                    */
 /* -------------------------------------------------------------------------- */
 
 function setActiveScan(scan) {
-  const pointcloud =
-    state.loadedClouds.get(scan.id);
+  removeSectionVolume();
 
-  if (!pointcloud) {
-    return;
+  var sectionMode =
+    getElement("sectionMode");
+
+  if (sectionMode) {
+    sectionMode.value = "none";
   }
 
-  clearSection(false);
-
   state.activeScan = scan;
-  state.activeCloud = pointcloud;
+  state.activeCloud =
+    state.loadedClouds.get(scan.id);
+
   state.activeBounds =
-    getPointCloudBounds(pointcloud);
+    getPointCloudBounds(
+      state.activeCloud
+    );
 
   updateInspector();
   updateSectionControls();
@@ -649,12 +684,16 @@ function setActiveScan(scan) {
 }
 
 function updateInspector() {
-  const scan = state.activeScan;
+  var empty =
+    getElement("inspectorEmpty");
 
-  const empty = getElement("inspectorEmpty");
-  const content = getElement("inspectorContent");
+  var content =
+    getElement("inspectorContent");
 
-  if (!scan || !state.activeCloud) {
+  if (
+    !state.activeScan ||
+    !state.activeCloud
+  ) {
     if (empty) {
       empty.classList.remove("hidden");
     }
@@ -674,69 +713,104 @@ function updateInspector() {
     content.classList.remove("hidden");
   }
 
-  setText("activeScanName", scan.name);
+  setText(
+    "activeScanName",
+    state.activeScan.name
+  );
 
   setText(
     "activePointCount",
-    scan.pointCount
-      ? formatNumber(scan.pointCount)
+    state.activeScan.pointCount
+      ? formatNumber(
+          state.activeScan.pointCount
+        )
       : "Loaded"
   );
 
   setText(
     "activeFileSize",
-    scan.sizeBytes
-      ? formatBytes(scan.sizeBytes)
+    state.activeScan.sizeBytes
+      ? formatBytes(
+          state.activeScan.sizeBytes
+        )
       : "Unknown"
   );
 
   setText(
     "activeCrs",
-    scan.crs || "Unknown"
+    state.activeScan.crs ||
+      "Unknown"
   );
 
   if (!state.activeBounds) {
-    setText("boundsX", "Unavailable");
-    setText("boundsY", "Unavailable");
-    setText("boundsZ", "Unavailable");
+    setText(
+      "boundsX",
+      "Unavailable"
+    );
+
+    setText(
+      "boundsY",
+      "Unavailable"
+    );
+
+    setText(
+      "boundsZ",
+      "Unavailable"
+    );
 
     return;
   }
 
-  const bounds = state.activeBounds;
-
   setText(
     "boundsX",
-    formatCoordinate(bounds.min.x) +
+    formatCoordinate(
+      state.activeBounds.min.x
+    ) +
       " → " +
-      formatCoordinate(bounds.max.x)
+      formatCoordinate(
+        state.activeBounds.max.x
+      )
   );
 
   setText(
     "boundsY",
-    formatCoordinate(bounds.min.y) +
+    formatCoordinate(
+      state.activeBounds.min.y
+    ) +
       " → " +
-      formatCoordinate(bounds.max.y)
+      formatCoordinate(
+        state.activeBounds.max.y
+      )
   );
 
   setText(
     "boundsZ",
-    formatCoordinate(bounds.min.z) +
+    formatCoordinate(
+      state.activeBounds.min.z
+    ) +
       " → " +
-      formatCoordinate(bounds.max.z)
+      formatCoordinate(
+        state.activeBounds.max.z
+      )
   );
 }
 
 function getPointCloudBounds(pointcloud) {
-  const box =
-    pointcloud.boundingBox ||
-    (
-      pointcloud.pcoGeometry &&
-      (
-        pointcloud.pcoGeometry.tightBoundingBox ||
-        pointcloud.pcoGeometry.boundingBox
-      )
-    );
+  if (!pointcloud) {
+    return null;
+  }
+
+  var box =
+    pointcloud.boundingBox;
+
+  if (
+    !box &&
+    pointcloud.pcoGeometry
+  ) {
+    box =
+      pointcloud.pcoGeometry.tightBoundingBox ||
+      pointcloud.pcoGeometry.boundingBox;
+  }
 
   if (!box || !box.min || !box.max) {
     return null;
@@ -744,19 +818,47 @@ function getPointCloudBounds(pointcloud) {
 
   return {
     min: {
-      x: getVectorValue(box.min, "x", 0),
-      y: getVectorValue(box.min, "y", 1),
-      z: getVectorValue(box.min, "z", 2)
+      x: getVectorValue(
+        box.min,
+        "x",
+        0
+      ),
+      y: getVectorValue(
+        box.min,
+        "y",
+        1
+      ),
+      z: getVectorValue(
+        box.min,
+        "z",
+        2
+      )
     },
     max: {
-      x: getVectorValue(box.max, "x", 0),
-      y: getVectorValue(box.max, "y", 1),
-      z: getVectorValue(box.max, "z", 2)
+      x: getVectorValue(
+        box.max,
+        "x",
+        0
+      ),
+      y: getVectorValue(
+        box.max,
+        "y",
+        1
+      ),
+      z: getVectorValue(
+        box.max,
+        "z",
+        2
+      )
     }
   };
 }
 
-function getVectorValue(vector, property, index) {
+function getVectorValue(
+  vector,
+  property,
+  index
+) {
   if (
     vector &&
     typeof vector[property] === "number"
@@ -775,11 +877,11 @@ function getVectorValue(vector, property, index) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* APPEARANCE CONTROLS                                                        */
+/* APPEARANCE                                                                 */
 /* -------------------------------------------------------------------------- */
 
 function applyColorMode(pointcloud) {
-  const cloud =
+  var cloud =
     pointcloud || state.activeCloud;
 
   if (
@@ -790,14 +892,15 @@ function applyColorMode(pointcloud) {
     return;
   }
 
-  const select = getElement("colorMode");
+  var select =
+    getElement("colorMode");
 
   if (!select) {
     return;
   }
 
-  const mode = select.value;
-  const colorType =
+  var mode = select.value;
+  var colorType =
     Potree.PointColorType[mode];
 
   if (colorType !== undefined) {
@@ -807,10 +910,11 @@ function applyColorMode(pointcloud) {
 }
 
 function applyPointSize() {
-  const value = getNumberValue(
-    "pointSize",
-    1.5
-  );
+  var value =
+    getNumberValue(
+      "pointSize",
+      1.5
+    );
 
   setText(
     "pointSizeValue",
@@ -827,14 +931,16 @@ function applyPointSize() {
 }
 
 function applyOpacity() {
-  const value = getNumberValue(
-    "pointOpacity",
-    1
-  );
+  var value =
+    getNumberValue(
+      "pointOpacity",
+      1
+    );
 
   setText(
     "pointOpacityValue",
-    Math.round(value * 100) + "%"
+    Math.round(value * 100) +
+      "%"
   );
 
   if (
@@ -850,14 +956,16 @@ function applyOpacity() {
 }
 
 function applyPointBudget() {
-  const value = getNumberValue(
-    "pointBudget",
-    CONFIG.defaultPointBudget
-  );
+  var value =
+    getNumberValue(
+      "pointBudget",
+      CONFIG.defaultPointBudget
+    );
 
   if (
     viewer &&
-    typeof viewer.setPointBudget === "function"
+    typeof viewer.setPointBudget ===
+      "function"
   ) {
     viewer.setPointBudget(value);
   }
@@ -869,20 +977,49 @@ function applyPointBudget() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* SECTIONS                                                                   */
+/* SECTION TOOLS                                                              */
 /* -------------------------------------------------------------------------- */
 
+function getSectionRange() {
+  if (!state.activeBounds) {
+    return null;
+  }
+
+  var mode =
+    getElement("sectionMode").value;
+
+  if (mode === "horizontal") {
+    return {
+      min: state.activeBounds.min.z,
+      max: state.activeBounds.max.z
+    };
+  }
+
+  var axisElement =
+    getElement("sectionAxis");
+
+  var axis =
+    axisElement && axisElement.value
+      ? axisElement.value
+      : "x";
+
+  return {
+    min: state.activeBounds.min[axis],
+    max: state.activeBounds.max[axis]
+  };
+}
+
 function updateSectionControls() {
-  const modeElement =
+  var modeElement =
     getElement("sectionMode");
 
-  const positionElement =
+  var positionElement =
     getElement("sectionPosition");
 
-  const thicknessElement =
+  var thicknessElement =
     getElement("sectionThickness");
 
-  const axisWrapper =
+  var axisWrapper =
     getElement("sectionAxisWrapper");
 
   if (
@@ -893,16 +1030,21 @@ function updateSectionControls() {
     return;
   }
 
-  const mode = modeElement.value;
-  const active =
+  var mode = modeElement.value;
+
+  var active =
     mode !== "none" &&
     Boolean(state.activeBounds);
 
   if (axisWrapper) {
     if (mode === "vertical") {
-      axisWrapper.classList.remove("hidden");
+      axisWrapper.classList.remove(
+        "hidden"
+      );
     } else {
-      axisWrapper.classList.add("hidden");
+      axisWrapper.classList.add(
+        "hidden"
+      );
     }
   }
 
@@ -910,34 +1052,62 @@ function updateSectionControls() {
   thicknessElement.disabled = !active;
 
   if (!active) {
-    setText("sectionPositionValue", "—");
-    setText("sectionThicknessValue", "—");
+    setText(
+      "sectionPositionValue",
+      "—"
+    );
+
+    setText(
+      "sectionThicknessValue",
+      "—"
+    );
+
     return;
   }
 
-  const range = getSectionRange();
+  var range =
+    getSectionRange();
 
   if (!range) {
     return;
   }
 
-  const length =
-    Math.max(range.max - range.min, 0.001);
+  var length =
+    Math.max(
+      range.max - range.min,
+      0.001
+    );
 
-  const center =
+  var center =
     (range.min + range.max) / 2;
 
-  const thickness =
-    Math.max(length * 0.08, 0.01);
+  var thickness =
+    Math.max(
+      length * 0.08,
+      0.01
+    );
 
-  positionElement.min = range.min;
-  positionElement.max = range.max;
+  positionElement.min =
+    range.min;
+
+  positionElement.max =
+    range.max;
+
   positionElement.step =
-    Math.max(length / 1000, 0.0001);
-  positionElement.value = center;
+    Math.max(
+      length / 1000,
+      0.0001
+    );
 
-  thicknessElement.min = 0.001;
-  thicknessElement.max = length;
+  positionElement.value =
+    center;
+
+  thicknessElement.min =
+    0.001;
+
+  thicknessElement.max =
+    length;
+
   thicknessElement.value =
     thickness.toFixed(3);
 
@@ -953,35 +1123,6 @@ function updateSectionControls() {
   );
 }
 
-function getSectionRange() {
-  if (!state.activeBounds) {
-    return null;
-  }
-
-  const mode =
-    getElement("sectionMode").value;
-
-  if (mode === "horizontal") {
-    return {
-      min: state.activeBounds.min.z,
-      max: state.activeBounds.max.z
-    };
-  }
-
-  const axisElement =
-    getElement("sectionAxis");
-
-  const axis =
-    axisElement && axisElement.value
-      ? axisElement.value
-      : "x";
-
-  return {
-    min: state.activeBounds.min[axis],
-    max: state.activeBounds.max[axis]
-  };
-}
-
 function applySection() {
   if (
     !state.activeCloud ||
@@ -995,21 +1136,16 @@ function applySection() {
     return;
   }
 
-  const modeElement =
-    getElement("sectionMode");
-
-  if (!modeElement) {
-    return;
-  }
-
-  const mode = modeElement.value;
+  var mode =
+    getElement("sectionMode").value;
 
   if (mode === "none") {
     clearSection();
     return;
   }
 
-  const range = getSectionRange();
+  var range =
+    getSectionRange();
 
   if (!range) {
     return;
@@ -1017,32 +1153,35 @@ function applySection() {
 
   removeSectionVolume();
 
-  const position = getNumberValue(
-    "sectionPosition",
-    (range.min + range.max) / 2
-  );
+  var position =
+    getNumberValue(
+      "sectionPosition",
+      (range.min + range.max) / 2
+    );
 
-  const thickness = Math.max(
+  var thickness =
     getNumberValue(
       "sectionThickness",
       (range.max - range.min) * 0.08
-    ),
-    0.001
-  );
+    );
 
-  const safePosition = clamp(
-    position,
-    range.min,
-    range.max
-  );
+  thickness =
+    Math.max(thickness, 0.001);
 
-  const min = {
+  var safePosition =
+    clamp(
+      position,
+      range.min,
+      range.max
+    );
+
+  var min = {
     x: state.activeBounds.min.x,
     y: state.activeBounds.min.y,
     z: state.activeBounds.min.z
   };
 
-  const max = {
+  var max = {
     x: state.activeBounds.max.x,
     y: state.activeBounds.max.y,
     z: state.activeBounds.max.z
@@ -1057,10 +1196,10 @@ function applySection() {
   }
 
   if (mode === "vertical") {
-    const axisElement =
+    var axisElement =
       getElement("sectionAxis");
 
-    const axis =
+    var axis =
       axisElement && axisElement.value
         ? axisElement.value
         : "x";
@@ -1085,7 +1224,8 @@ function applySection() {
     return;
   }
 
-  const volume = new Potree.BoxVolume();
+  var volume =
+    new Potree.BoxVolume();
 
   volume.name =
     mode === "horizontal"
@@ -1099,16 +1239,26 @@ function applySection() {
   );
 
   volume.scale.set(
-    Math.max(max.x - min.x, 0.001),
-    Math.max(max.y - min.y, 0.001),
-    Math.max(max.z - min.z, 0.001)
+    Math.max(
+      max.x - min.x,
+      0.001
+    ),
+    Math.max(
+      max.y - min.y,
+      0.001
+    ),
+    Math.max(
+      max.z - min.z,
+      0.001
+    )
   );
 
   volume.clip = true;
   volume.visible = false;
 
   if (
-    typeof viewer.scene.addVolume === "function"
+    typeof viewer.scene.addVolume ===
+      "function"
   ) {
     viewer.scene.addVolume(volume);
   }
@@ -1117,8 +1267,10 @@ function applySection() {
 
   if (
     Potree.ClipTask &&
-    Potree.ClipTask.SHOW_INSIDE !== undefined &&
-    typeof viewer.setClipTask === "function"
+    Potree.ClipTask.SHOW_INSIDE !==
+      undefined &&
+    typeof viewer.setClipTask ===
+      "function"
   ) {
     viewer.setClipTask(
       Potree.ClipTask.SHOW_INSIDE
@@ -1127,8 +1279,10 @@ function applySection() {
 
   if (
     Potree.ClipMethod &&
-    Potree.ClipMethod.INSIDE_ANY !== undefined &&
-    typeof viewer.setClipMethod === "function"
+    Potree.ClipMethod.INSIDE_ANY !==
+      undefined &&
+    typeof viewer.setClipMethod ===
+      "function"
   ) {
     viewer.setClipMethod(
       Potree.ClipMethod.INSIDE_ANY
@@ -1146,7 +1300,10 @@ function applySection() {
       " units"
   );
 
-  setStatus("Section applied", "success");
+  setStatus(
+    "Section applied",
+    "success"
+  );
 }
 
 function removeSectionVolume() {
@@ -1157,7 +1314,8 @@ function removeSectionVolume() {
   if (
     viewer &&
     viewer.scene &&
-    typeof viewer.scene.removeVolume === "function"
+    typeof viewer.scene.removeVolume ===
+      "function"
   ) {
     viewer.scene.removeVolume(
       state.sectionVolume
@@ -1170,7 +1328,8 @@ function removeSectionVolume() {
     viewer &&
     Potree.ClipTask &&
     Potree.ClipTask.NONE !== undefined &&
-    typeof viewer.setClipTask === "function"
+    typeof viewer.setClipTask ===
+      "function"
   ) {
     viewer.setClipTask(
       Potree.ClipTask.NONE
@@ -1178,13 +1337,10 @@ function removeSectionVolume() {
   }
 }
 
-function clearSection(showMessage) {
-  const shouldShowMessage =
-    showMessage !== false;
-
+function clearSection() {
   removeSectionVolume();
 
-  const modeElement =
+  var modeElement =
     getElement("sectionMode");
 
   if (modeElement) {
@@ -1193,9 +1349,10 @@ function clearSection(showMessage) {
 
   updateSectionControls();
 
-  if (shouldShowMessage) {
-    setStatus("Section cleared", "success");
-  }
+  setStatus(
+    "Section cleared",
+    "success"
+  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1213,7 +1370,8 @@ function fitActiveScan() {
   }
 
   if (
-    typeof viewer.fitToScreen === "function"
+    typeof viewer.fitToScreen ===
+      "function"
   ) {
     viewer.fitToScreen(0.5);
   }
@@ -1232,14 +1390,16 @@ function activateOrbitMode() {
   if (
     viewer &&
     viewer.orbitControls &&
-    typeof viewer.setControls === "function"
+    typeof viewer.setControls ===
+      "function"
   ) {
     viewer.setControls(
       viewer.orbitControls
     );
   }
 
-  const button = getElement("orbitMode");
+  var button =
+    getElement("orbitMode");
 
   if (button) {
     button.classList.add("active");
@@ -1264,14 +1424,17 @@ function downloadActiveScan() {
     return;
   }
 
-  const link =
+  var link =
     document.createElement("a");
 
-  link.href = state.activeScan.url;
+  link.href =
+    state.activeScan.url;
+
   link.download =
     state.activeScan.filename ||
     state.activeScan.name +
       ".copc.laz";
+
   link.target = "_blank";
   link.rel = "noopener";
 
@@ -1285,55 +1448,59 @@ function downloadActiveScan() {
 /* -------------------------------------------------------------------------- */
 
 function bindEvents() {
-  on(
+  addEvent(
     "scanSearch",
     "input",
-    renderLibrary
-  );
-
-  on(
-    "refreshLibrary",
-    "click",
-    async function () {
-      await loadCatalog();
+    function () {
       renderLibrary();
-
-      setStatus(
-        "Library refreshed",
-        "success"
-      );
     }
   );
 
-  on(
+  addEvent(
+    "refreshLibrary",
+    "click",
+    function () {
+      loadCatalog().then(function () {
+        renderLibrary();
+
+        setStatus(
+          "Library refreshed",
+          "success"
+        );
+      });
+    }
+  );
+
+  addEvent(
     "fitView",
     "click",
     fitActiveScan
   );
 
-  on(
+  addEvent(
     "resetView",
     "click",
     resetView
   );
 
-  on(
+  addEvent(
     "orbitMode",
     "click",
     activateOrbitMode
   );
 
-  on(
+  addEvent(
     "downloadScan",
     "click",
     downloadActiveScan
   );
 
-  on(
+  addEvent(
     "colorMode",
     "change",
     function () {
       applyColorMode();
+
       setStatus(
         "Color mode updated",
         "success"
@@ -1341,32 +1508,32 @@ function bindEvents() {
     }
   );
 
-  on(
+  addEvent(
     "pointSize",
     "input",
     applyPointSize
   );
 
-  on(
+  addEvent(
     "pointOpacity",
     "input",
     applyOpacity
   );
 
-  on(
+  addEvent(
     "pointBudget",
     "input",
     applyPointBudget
   );
 
-  on(
+  addEvent(
     "sectionMode",
     "change",
     function () {
-      updateSectionControls();
-
-      const mode =
+      var mode =
         getElement("sectionMode");
+
+      updateSectionControls();
 
       if (
         mode &&
@@ -1377,7 +1544,7 @@ function bindEvents() {
     }
   );
 
-  on(
+  addEvent(
     "sectionAxis",
     "change",
     function () {
@@ -1389,11 +1556,11 @@ function bindEvents() {
     }
   );
 
-  on(
+  addEvent(
     "sectionPosition",
     "input",
     function () {
-      const value =
+      var value =
         getNumberValue(
           "sectionPosition",
           0
@@ -1410,11 +1577,11 @@ function bindEvents() {
     }
   );
 
-  on(
+  addEvent(
     "sectionThickness",
     "input",
     function () {
-      const value =
+      var value =
         getNumberValue(
           "sectionThickness",
           0
@@ -1432,13 +1599,13 @@ function bindEvents() {
     }
   );
 
-  on(
+  addEvent(
     "applySection",
     "click",
     applySection
   );
 
-  on(
+  addEvent(
     "clearSection",
     "click",
     clearSection
@@ -1450,52 +1617,68 @@ function bindEvents() {
 /* -------------------------------------------------------------------------- */
 
 function setStatus(message, type) {
-  setText("statusMessage", message);
-  setViewerStatus(message, type);
+  setText(
+    "statusMessage",
+    message
+  );
+
+  setViewerStatus(
+    message,
+    type
+  );
 }
 
 function setViewerStatus(message, type) {
-  setText("viewerStatus", message);
+  setText(
+    "viewerStatus",
+    message
+  );
 
-  const dot =
+  var dot =
     getElement("viewerStatusDot");
 
   if (!dot) {
     return;
   }
 
-  dot.className = "status-dot";
+  dot.className =
+    "status-dot status-idle";
 
   if (type === "loading") {
-    dot.classList.add("status-loading");
+    dot.className =
+      "status-dot status-loading";
   }
 
   if (type === "error") {
-    dot.classList.add("status-error");
+    dot.className =
+      "status-dot status-error";
   }
-
-  /*
-    Normal and success states keep the default green dot.
-  */
 }
 
 function showLoading(message) {
-  setText("loadingMessage", message);
+  setText(
+    "loadingMessage",
+    message
+  );
 
-  const overlay =
+  var overlay =
     getElement("loadingOverlay");
 
   if (overlay) {
-    overlay.classList.remove("hidden");
+    overlay.classList.remove(
+      "hidden"
+    );
   }
 }
 
 function hideLoading() {
-  const overlay =
+  var overlay =
     getElement("loadingOverlay");
 
   if (overlay) {
-    overlay.classList.add("hidden");
+    overlay.classList.add(
+      "hidden"
+    );
   }
 }
 
@@ -1504,15 +1687,17 @@ function hideLoading() {
 /* -------------------------------------------------------------------------- */
 
 function getNumberValue(id, fallback) {
-  const element = getElement(id);
+  var element =
+    getElement(id);
 
   if (!element) {
     return fallback;
   }
 
-  const value = Number(element.value);
+  var value =
+    Number(element.value);
 
-  return Number.isFinite(value)
+  return isFinite(value)
     ? value
     : fallback;
 }
@@ -1529,14 +1714,14 @@ function formatBytes(bytes) {
     return "Unknown";
   }
 
-  const units = [
+  var units = [
     "B",
     "KiB",
     "MiB",
     "GiB"
   ];
 
-  const index = Math.min(
+  var index = Math.min(
     Math.floor(
       Math.log(bytes) /
         Math.log(1024)
@@ -1544,13 +1729,15 @@ function formatBytes(bytes) {
     units.length - 1
   );
 
-  const value =
+  var value =
     bytes /
     Math.pow(1024, index);
 
   return (
     value.toFixed(
-      index === 0 ? 0 : 1
+      index === 0
+        ? 0
+        : 1
     ) +
     " " +
     units[index]
@@ -1582,7 +1769,7 @@ function formatCompactNumber(value) {
 }
 
 function formatCoordinate(value) {
-  if (!Number.isFinite(value)) {
+  if (!isFinite(value)) {
     return "—";
   }
 
