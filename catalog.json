@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "scans": [
+    {
+      "id": "output-001",
+      "name": "Output Test",
+      "filename": "output.copc.laz",
+      "path": "scans/output.copc.laz",
+    }
+  ]
+}
