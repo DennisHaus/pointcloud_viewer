@@ -1,29 +1,48 @@
 "use strict";
 
 /*
-  Public COPC point-cloud viewer.
+  Local Potree COPC viewer.
 
-  The HTML file must load Potree before this file:
+  Required script order in index.html:
 
-  <script src="./build/potree/potree.js"></script>
-  <script src="./app.js"></script>
+  1. Potree dependencies
+  2. libs/copc/index.js
+  3. build/potree/potree.js
+  4. libs/plasio/js/laslaz.js
+  5. app.js
+
+  XR/VR is intentionally not used by this file.
 */
 
 var CONFIG = {
+  /*
+    This file must exist beside index.html.
+
+    Expected structure:
+
+    {
+      "scans": [
+        {
+          "id": "scan-01",
+          "name": "Scan 01",
+          "filename": "scan-01.copc.laz",
+          "path": "scans/scan-01.copc.laz"
+        }
+      ]
+    }
+  */
   catalogUrl: "./catalog.json",
 
+  defaultPointBudget: 3000000,
+
   /*
-    Used when a catalog entry has "path" instead of "url".
-
-    Your repository:
-    https://github.com/dennishaus/pointcloud_viewer
-
-    Change "main" if your GitHub branch has another name.
+    If true, entries with "path" are loaded from GitHub raw content.
+    Leave false when the COPC files are hosted locally.
   */
-  rawBaseUrl:
-    "https://raw.githubusercontent.com/dennishaus/pointcloud_viewer/main",
+  useRawBaseForPaths: false,
 
-  defaultPointBudget: 3000000
+  rawBaseUrl:
+    "https://raw.githubusercontent.com/DennisHaus/pointcloud_viewer/main"
 };
 
 var state = {
@@ -50,10 +69,9 @@ document.addEventListener(
 
 function initialize() {
   bindEvents();
+  initializeControls();
 
-  var viewerReady = initializeViewer();
-
-  if (!viewerReady) {
+  if (!initializeViewer()) {
     return;
   }
 
@@ -65,19 +83,30 @@ function initialize() {
         return loadScan(state.catalog[0]);
       }
 
-      setViewerStatus("No scans available", "idle");
-      setStatus("No scans found in catalog.json", "idle");
+      setViewerStatus(
+        "No scans available",
+        "idle"
+      );
+
+      setStatus(
+        "No scans found in catalog.json",
+        "idle"
+      );
 
       return null;
     })
     .catch(function (error) {
       console.error(error);
-      setStatus("Application startup failed.", "error");
+
+      setStatus(
+        "Application startup failed.",
+        "error"
+      );
     });
 }
 
 /* -------------------------------------------------------------------------- */
-/* BASIC DOM HELPERS                                                          */
+/* DOM HELPERS                                                                */
 /* -------------------------------------------------------------------------- */
 
 function getElement(id) {
@@ -88,7 +117,7 @@ function setText(id, value) {
   var element = getElement(id);
 
   if (element) {
-    element.textContent = value;
+    element.textContent = String(value);
   }
 }
 
@@ -96,8 +125,18 @@ function addEvent(id, eventName, handler) {
   var element = getElement(id);
 
   if (element) {
-    element.addEventListener(eventName, handler);
+    element.addEventListener(
+      eventName,
+      handler
+    );
   }
+}
+
+function initializeControls() {
+  applyPointSize();
+  applyOpacity();
+  applyPointBudget();
+  updateSectionControls();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -105,37 +144,43 @@ function addEvent(id, eventName, handler) {
 /* -------------------------------------------------------------------------- */
 
 function initializeViewer() {
-  if (!window.Potree) {
+  var potree = window.Potree;
+
+  if (!potree) {
     setStatus(
-      "Potree is not loaded. Check your script paths.",
+      "Potree is not loaded.",
       "error"
     );
 
     console.error(
-      "Potree is undefined. Make sure build/potree/potree.js loads before app.js."
+      "window.Potree is undefined. Check build/potree/potree.js."
     );
 
     return false;
   }
 
-  if (typeof window.Potree.Viewer !== "function") {
+  if (
+    typeof potree.Viewer !==
+    "function"
+  ) {
     setStatus(
       "Potree Viewer is unavailable.",
       "error"
     );
 
     console.error(
-      "Potree.Viewer is not available. Potree may be only partially loaded."
+      "Potree.Viewer is not available."
     );
 
     return false;
   }
 
-  var renderArea = getElement("potree_render_area");
+  var renderArea =
+    getElement("potree_render_area");
 
   if (!renderArea) {
     setStatus(
-      "The potree_render_area element is missing.",
+      "The Potree render area is missing.",
       "error"
     );
 
@@ -143,31 +188,63 @@ function initializeViewer() {
   }
 
   try {
-    viewer = new Potree.Viewer(renderArea);
+    /*
+      This constructor requires the local potree.js bundle to have
+      its internal VRControls construction disabled.
 
-    if (typeof viewer.setEDLEnabled === "function") {
+      See the patch instructions below the code.
+    */
+    viewer = new potree.Viewer(
+      renderArea
+    );
+
+    disableXROnViewer();
+
+    if (
+      typeof viewer.setEDLEnabled ===
+      "function"
+    ) {
       viewer.setEDLEnabled(true);
     }
 
-    if (typeof viewer.setFOV === "function") {
+    if (
+      typeof viewer.setFOV ===
+      "function"
+    ) {
       viewer.setFOV(60);
     }
 
-    if (typeof viewer.setPointBudget === "function") {
+    if (
+      typeof viewer.setPointBudget ===
+      "function"
+    ) {
       viewer.setPointBudget(
         CONFIG.defaultPointBudget
       );
     }
 
-    if (typeof viewer.setBackground === "function") {
-      viewer.setBackground("gradient");
+    if (
+      typeof viewer.setBackground ===
+      "function"
+    ) {
+      viewer.setBackground(
+        "gradient"
+      );
     }
 
+    /*
+      Explicitly use orbit controls.
+      No VR, XR, controller, or device-orientation
+      controls are selected.
+    */
     if (
       viewer.orbitControls &&
-      typeof viewer.setControls === "function"
+      typeof viewer.setControls ===
+      "function"
     ) {
-      viewer.setControls(viewer.orbitControls);
+      viewer.setControls(
+        viewer.orbitControls
+      );
     }
 
     window.addEventListener(
@@ -175,19 +252,35 @@ function initializeViewer() {
       function () {
         if (
           viewer &&
-          typeof viewer.onWindowResize === "function"
+          typeof viewer.onWindowResize ===
+          "function"
         ) {
           viewer.onWindowResize();
         }
       }
     );
 
-    setViewerStatus("Ready", "idle");
-    setStatus("Ready", "idle");
+    setViewerStatus(
+      "Ready",
+      "idle"
+    );
+
+    setStatus(
+      "Ready",
+      "idle"
+    );
 
     return true;
   } catch (error) {
-    console.error(error);
+    console.error(
+      "Potree initialization failed:",
+      error
+    );
+
+    setViewerStatus(
+      "Potree initialization failed",
+      "error"
+    );
 
     setStatus(
       "Could not initialize Potree.",
@@ -195,6 +288,43 @@ function initializeViewer() {
     );
 
     return false;
+  }
+}
+
+function disableXROnViewer() {
+  if (!viewer) {
+    return;
+  }
+
+  /*
+    This is only a secondary safeguard.
+    The main XR fix must be made inside potree.js before
+    the Viewer constructor creates VRControls.
+  */
+
+  if (
+    viewer.vrControls
+  ) {
+    viewer.vrControls = null;
+  }
+
+  if (
+    viewer.deviceOrientationControls
+  ) {
+    viewer.deviceOrientationControls =
+      null;
+  }
+
+  var renderer =
+    viewer.renderer ||
+    viewer.pRenderer ||
+    null;
+
+  if (
+    renderer &&
+    renderer.xr
+  ) {
+    renderer.xr.enabled = false;
   }
 }
 
@@ -221,14 +351,14 @@ function loadCatalog() {
       if (!response.ok) {
         throw new Error(
           "Catalog request failed with HTTP " +
-            response.status
+          response.status
         );
       }
 
       return response.json();
     })
     .then(function (data) {
-      var scans;
+      var scans = [];
 
       if (Array.isArray(data)) {
         scans = data;
@@ -237,74 +367,91 @@ function loadCatalog() {
         Array.isArray(data.scans)
       ) {
         scans = data.scans;
-      } else {
-        scans = [];
       }
 
       state.catalog = scans.map(
-        function (scan) {
-          return normalizeScan(scan);
+        function (scan, index) {
+          return normalizeScan(
+            scan,
+            index
+          );
         }
       );
 
-      setText(
-        "scanCount",
-        state.catalog.length +
-          " " +
-          (
-            state.catalog.length === 1
-              ? "scan"
-              : "scans"
-          )
-      );
+      updateScanCount();
 
       return state.catalog;
     })
     .catch(function (error) {
       state.catalog = [];
-      console.error(error);
+
+      console.error(
+        "Could not load catalog.json:",
+        error
+      );
 
       setStatus(
         "Could not load catalog.json.",
         "error"
       );
 
+      updateScanCount();
+
       return [];
     });
 }
 
-function normalizeScan(scan) {
+function normalizeScan(scan, index) {
+  scan = scan || {};
+
+  var fallbackId =
+    "scan-" +
+    (index + 1);
+
   var id = String(
     scan.id ||
-      scan.filename ||
-      "scan-" + Date.now()
+    scan.filename ||
+    fallbackId
+  );
+
+  var filename = String(
+    scan.filename ||
+    ""
   );
 
   var name = String(
     scan.name ||
-      scan.filename ||
-      id
-  );
-
-  var filename = String(
-    scan.filename || ""
+    filename ||
+    id
   );
 
   var path = String(
     scan.path ||
-      (
-        filename
-          ? "scans/" + filename
-          : ""
-      )
+    (
+      filename
+        ? "scans/" + filename
+        : ""
+    )
   );
 
-  var url = String(
-    scan.url || ""
-  );
+  var suppliedUrl = String(
+    scan.url ||
+    ""
+  ).trim();
 
-  if (!url && path) {
+  var url = "";
+
+  if (suppliedUrl) {
+    url = resolveUrl(
+      suppliedUrl
+    );
+  } else if (
+    path &&
+    CONFIG.useRawBaseForPaths
+  ) {
     url = buildRawUrl(path);
+  } else if (path) {
+    url = resolveUrl(path);
   }
 
   return {
@@ -320,13 +467,31 @@ function normalizeScan(scan) {
       scan.pointCount || 0
     ),
     crs: scan.crs || "Unknown",
-    uploadedAt: scan.uploadedAt || "",
+    uploadedAt:
+      scan.uploadedAt || "",
     loading: false
   };
 }
 
+function resolveUrl(value) {
+  try {
+    return new URL(
+      value,
+      document.baseURI
+    ).href;
+  } catch (error) {
+    console.error(
+      "Invalid scan URL:",
+      value,
+      error
+    );
+
+    return "";
+  }
+}
+
 function buildRawUrl(path) {
-  var cleanBase =
+  var base =
     CONFIG.rawBaseUrl.replace(
       /\/+$/,
       ""
@@ -335,150 +500,224 @@ function buildRawUrl(path) {
   var encodedPath = path
     .split("/")
     .map(function (part) {
-      return encodeURIComponent(part);
+      return encodeURIComponent(
+        part
+      );
     })
     .join("/");
 
-  return cleanBase + "/" + encodedPath;
+  return base + "/" + encodedPath;
 }
 
 /* -------------------------------------------------------------------------- */
 /* LIBRARY                                                                    */
 /* -------------------------------------------------------------------------- */
 
+function updateScanCount() {
+  var count =
+    state.catalog.length;
+
+  setText(
+    "scanCount",
+    count +
+    " " +
+    (
+      count === 1
+        ? "scan"
+        : "scans"
+    )
+  );
+}
+
 function renderLibrary() {
-  var list = getElement("libraryList");
-  var empty = getElement("libraryEmpty");
-  var search = getElement("scanSearch");
+  var list =
+    getElement("libraryList");
+
+  var empty =
+    getElement("libraryEmpty");
+
+  var search =
+    getElement("scanSearch");
 
   if (!list) {
     return;
   }
 
-  var query = search
-    ? search.value.trim().toLowerCase()
-    : "";
+  var query =
+    search &&
+    search.value
+      ? search.value
+        .trim()
+        .toLowerCase()
+      : "";
 
   while (list.firstChild) {
-    list.removeChild(list.firstChild);
+    list.removeChild(
+      list.firstChild
+    );
   }
 
-  setText(
-    "scanCount",
-    state.catalog.length +
-      " " +
-      (
-        state.catalog.length === 1
-          ? "scan"
-          : "scans"
-      )
-  );
+  updateScanCount();
 
   var visibleScans =
-    state.catalog.filter(function (scan) {
-      return scan.name
-        .toLowerCase()
-        .indexOf(query) !== -1;
-    });
+    state.catalog.filter(
+      function (scan) {
+        var searchable =
+          (
+            scan.name +
+            " " +
+            scan.filename
+          ).toLowerCase();
 
-  if (visibleScans.length === 0) {
+        return searchable.indexOf(
+          query
+        ) !== -1;
+      }
+    );
+
+  if (
+    visibleScans.length === 0
+  ) {
     if (empty) {
-      empty.classList.remove("hidden");
+      empty.classList.remove(
+        "hidden"
+      );
     }
 
     return;
   }
 
   if (empty) {
-    empty.classList.add("hidden");
+    empty.classList.add(
+      "hidden"
+    );
   }
 
-  visibleScans.forEach(function (scan) {
-    var card =
-      document.createElement("button");
+  visibleScans.forEach(
+    function (scan) {
+      var card =
+        document.createElement(
+          "button"
+        );
 
-    card.type = "button";
-    card.className = "scan-card";
+      card.type = "button";
+      card.className = "scan-card";
 
-    if (
-      state.activeScan &&
-      state.activeScan.id === scan.id
-    ) {
-      card.classList.add("active");
-    }
-
-    var header =
-      document.createElement("div");
-
-    header.className =
-      "scan-card-header";
-
-    var icon =
-      document.createElement("div");
-
-    icon.className = "scan-icon";
-    icon.textContent = "◈";
-
-    var name =
-      document.createElement("div");
-
-    name.className = "scan-name";
-    name.textContent = scan.name;
-    name.title = scan.name;
-
-    var stateDot =
-      document.createElement("div");
-
-    stateDot.className = "scan-state";
-
-    if (scan.loading) {
-      stateDot.classList.add("loading");
-    } else if (
-      state.loadedClouds.has(scan.id)
-    ) {
-      stateDot.classList.add("loaded");
-    }
-
-    header.appendChild(icon);
-    header.appendChild(name);
-    header.appendChild(stateDot);
-
-    var metadata =
-      document.createElement("div");
-
-    metadata.className = "scan-meta";
-
-    var format =
-      document.createElement("span");
-
-    format.textContent = "COPC";
-
-    var size =
-      document.createElement("span");
-
-    size.textContent = scan.sizeBytes
-      ? formatBytes(scan.sizeBytes)
-      : "Size unknown";
-
-    metadata.appendChild(format);
-    metadata.appendChild(size);
-
-    card.appendChild(header);
-    card.appendChild(metadata);
-
-    card.addEventListener(
-      "click",
-      function () {
-        loadScan(scan);
+      if (
+        state.activeScan &&
+        state.activeScan.id === scan.id
+      ) {
+        card.classList.add(
+          "active"
+        );
       }
-    );
 
-    list.appendChild(card);
-  });
+      var header =
+        document.createElement(
+          "div"
+        );
+
+      header.className =
+        "scan-card-header";
+
+      var icon =
+        document.createElement(
+          "div"
+        );
+
+      icon.className =
+        "scan-icon";
+
+      icon.textContent = "◈";
+
+      var name =
+        document.createElement(
+          "div"
+        );
+
+      name.className =
+        "scan-name";
+
+      name.textContent =
+        scan.name;
+
+      name.title =
+        scan.name;
+
+      var scanState =
+        document.createElement(
+          "div"
+        );
+
+      scanState.className =
+        "scan-state";
+
+      if (scan.loading) {
+        scanState.classList.add(
+          "loading"
+        );
+      } else if (
+        state.loadedClouds.has(
+          scan.id
+        )
+      ) {
+        scanState.classList.add(
+          "loaded"
+        );
+      }
+
+      header.appendChild(icon);
+      header.appendChild(name);
+      header.appendChild(scanState);
+
+      var metadata =
+        document.createElement(
+          "div"
+        );
+
+      metadata.className =
+        "scan-meta";
+
+      var format =
+        document.createElement(
+          "span"
+        );
+
+      format.textContent =
+        "COPC";
+
+      var size =
+        document.createElement(
+          "span"
+        );
+
+      size.textContent =
+        scan.sizeBytes
+          ? formatBytes(
+              scan.sizeBytes
+            )
+          : "Size unknown";
+
+      metadata.appendChild(format);
+      metadata.appendChild(size);
+
+      card.appendChild(header);
+      card.appendChild(metadata);
+
+      card.addEventListener(
+        "click",
+        function () {
+          loadScan(scan);
+        }
+      );
+
+      list.appendChild(card);
+    }
+  );
 }
 
 /* -------------------------------------------------------------------------- */
-/* POINT CLOUD LOADING                                                        */
+/* POINT-CLOUD LOADING                                                        */
 /* -------------------------------------------------------------------------- */
 
 function loadScan(scan) {
@@ -495,18 +734,29 @@ function loadScan(scan) {
     return Promise.resolve();
   }
 
-  if (state.loadedClouds.has(scan.id)) {
+  if (
+    state.loadedClouds.has(
+      scan.id
+    )
+  ) {
     setActiveScan(scan);
     fitActiveScan();
 
     return Promise.resolve();
   }
 
+  if (scan.loading) {
+    return Promise.resolve();
+  }
+
   scan.loading = true;
+
   renderLibrary();
 
   showLoading(
-    "Loading " + scan.name + "..."
+    "Loading " +
+    scan.name +
+    "..."
   );
 
   setViewerStatus(
@@ -515,7 +765,9 @@ function loadScan(scan) {
   );
 
   setStatus(
-    "Loading " + scan.name + "...",
+    "Loading " +
+    scan.name +
+    "...",
     "loading"
   );
 
@@ -527,13 +779,27 @@ function loadScan(scan) {
         );
       }
 
-      pointcloud.name = scan.name;
+      pointcloud.name =
+        scan.name;
 
-      viewer.scene.addPointCloud(
+      if (
+        viewer &&
+        viewer.scene &&
+        typeof viewer.scene.addPointCloud ===
+        "function"
+      ) {
+        viewer.scene.addPointCloud(
+          pointcloud
+        );
+      } else {
+        throw new Error(
+          "Potree scene is unavailable."
+        );
+      }
+
+      configurePointCloud(
         pointcloud
       );
-
-      configurePointCloud(pointcloud);
 
       state.loadedClouds.set(
         scan.id,
@@ -544,17 +810,17 @@ function loadScan(scan) {
 
       setActiveScan(scan);
       renderLibrary();
-
       hideLoading();
 
       setViewerStatus(
         "Point cloud loaded",
-        "success"
+        "idle"
       );
 
       setStatus(
-        scan.name + " loaded",
-        "success"
+        scan.name +
+        " loaded",
+        "idle"
       );
 
       window.setTimeout(
@@ -570,7 +836,10 @@ function loadScan(scan) {
       hideLoading();
       renderLibrary();
 
-      console.error(error);
+      console.error(
+        "Point-cloud loading failed:",
+        error
+      );
 
       setViewerStatus(
         "Point-cloud loading failed",
@@ -578,85 +847,209 @@ function loadScan(scan) {
       );
 
       setStatus(
-        "Could not load " + scan.name,
+        "Could not load " +
+        scan.name,
         "error"
       );
     });
 }
 
 function loadCopcPointCloud(scan) {
-  return new Promise(function (resolve, reject) {
-    if (
-      !window.Potree ||
-      typeof Potree.loadPointCloud !== "function"
-    ) {
-      reject(
-        new Error(
-          "Potree.loadPointCloud is unavailable."
-        )
-      );
+  return new Promise(
+    function (resolve, reject) {
+      var potree =
+        window.Potree;
 
-      return;
-    }
+      if (
+        !potree ||
+        typeof potree.loadPointCloud !==
+        "function"
+      ) {
+        reject(
+          new Error(
+            "Potree.loadPointCloud is unavailable."
+          )
+        );
 
-    try {
-      Potree.loadPointCloud(
-        scan.url,
-        scan.name,
-        function (event) {
-          if (
-            event &&
-            event.pointcloud
-          ) {
-            resolve(event.pointcloud);
-          } else {
-            reject(
-              new Error(
-                "Potree did not return a point cloud."
-              )
-            );
-          }
+        return;
+      }
+
+      var finished = false;
+
+      function finishWithCloud(
+        cloud
+      ) {
+        if (
+          finished ||
+          !cloud
+        ) {
+          return;
         }
-      );
-    } catch (error) {
-      reject(error);
+
+        finished = true;
+        resolve(cloud);
+      }
+
+      function finishWithError(
+        error
+      ) {
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+
+        reject(
+          error instanceof Error
+            ? error
+            : new Error(
+                String(error)
+              )
+        );
+      }
+
+      try {
+        var result =
+          potree.loadPointCloud(
+            scan.url,
+            scan.name,
+            function (event) {
+              if (!event) {
+                return;
+              }
+
+              if (
+                event.pointcloud
+              ) {
+                finishWithCloud(
+                  event.pointcloud
+                );
+
+                return;
+              }
+
+              if (
+                event.error
+              ) {
+                finishWithError(
+                  event.error
+                );
+
+                return;
+              }
+
+              /*
+                Some loaders return the cloud directly.
+              */
+              if (
+                event.material ||
+                event.pcoGeometry ||
+                event.boundingBox
+              ) {
+                finishWithCloud(
+                  event
+                );
+              }
+            }
+          );
+
+        /*
+          Support loader versions that return
+          a Promise instead of using only a callback.
+        */
+        if (
+          result &&
+          typeof result.then ===
+          "function"
+        ) {
+          result
+            .then(function (value) {
+              if (
+                value &&
+                value.pointcloud
+              ) {
+                finishWithCloud(
+                  value.pointcloud
+                );
+              } else {
+                finishWithCloud(
+                  value
+                );
+              }
+            })
+            .catch(function (error) {
+              finishWithError(
+                error
+              );
+            });
+        } else if (
+          result &&
+          result.pointcloud
+        ) {
+          finishWithCloud(
+            result.pointcloud
+          );
+        }
+      } catch (error) {
+        finishWithError(
+          error
+        );
+      }
     }
-  });
+  );
 }
 
-function configurePointCloud(pointcloud) {
-  if (!pointcloud.material) {
+function configurePointCloud(
+  pointcloud
+) {
+  if (
+    !pointcloud ||
+    !pointcloud.material
+  ) {
     return;
   }
 
-  pointcloud.material.size =
+  var material =
+    pointcloud.material;
+
+  material.size =
     getNumberValue(
       "pointSize",
       1.5
     );
 
+  var potree =
+    window.Potree;
+
   if (
-    Potree.PointSizeType &&
-    Potree.PointSizeType.ADAPTIVE !== undefined
+    potree &&
+    potree.PointSizeType &&
+    potree.PointSizeType.ADAPTIVE !==
+    undefined
   ) {
-    pointcloud.material.pointSizeType =
-      Potree.PointSizeType.ADAPTIVE;
+    material.pointSizeType =
+      potree.PointSizeType.ADAPTIVE;
   }
 
   if (
-    Potree.PointShape &&
-    Potree.PointShape.SQUARE !== undefined
+    potree &&
+    potree.PointShape &&
+    potree.PointShape.SQUARE !==
+    undefined
   ) {
-    pointcloud.material.shape =
-      Potree.PointShape.SQUARE;
+    material.shape =
+      potree.PointShape.SQUARE;
   }
 
   applyColorMode(pointcloud);
   applyOpacity(pointcloud);
+
+  material.needsUpdate =
+    true;
 }
 
 /* -------------------------------------------------------------------------- */
-/* ACTIVE SCAN / INSPECTOR                                                    */
+/* ACTIVE SCAN AND INSPECTOR                                                  */
 /* -------------------------------------------------------------------------- */
 
 function setActiveScan(scan) {
@@ -669,9 +1062,13 @@ function setActiveScan(scan) {
     sectionMode.value = "none";
   }
 
-  state.activeScan = scan;
+  state.activeScan =
+    scan;
+
   state.activeCloud =
-    state.loadedClouds.get(scan.id);
+    state.loadedClouds.get(
+      scan.id
+    );
 
   state.activeBounds =
     getPointCloudBounds(
@@ -695,22 +1092,30 @@ function updateInspector() {
     !state.activeCloud
   ) {
     if (empty) {
-      empty.classList.remove("hidden");
+      empty.classList.remove(
+        "hidden"
+      );
     }
 
     if (content) {
-      content.classList.add("hidden");
+      content.classList.add(
+        "hidden"
+      );
     }
 
     return;
   }
 
   if (empty) {
-    empty.classList.add("hidden");
+    empty.classList.add(
+      "hidden"
+    );
   }
 
   if (content) {
-    content.classList.remove("hidden");
+    content.classList.remove(
+      "hidden"
+    );
   }
 
   setText(
@@ -739,7 +1144,7 @@ function updateInspector() {
   setText(
     "activeCrs",
     state.activeScan.crs ||
-      "Unknown"
+    "Unknown"
   );
 
   if (!state.activeBounds) {
@@ -766,10 +1171,10 @@ function updateInspector() {
     formatCoordinate(
       state.activeBounds.min.x
     ) +
-      " → " +
-      formatCoordinate(
-        state.activeBounds.max.x
-      )
+    " → " +
+    formatCoordinate(
+      state.activeBounds.max.x
+    )
   );
 
   setText(
@@ -777,10 +1182,10 @@ function updateInspector() {
     formatCoordinate(
       state.activeBounds.min.y
     ) +
-      " → " +
-      formatCoordinate(
-        state.activeBounds.max.y
-      )
+    " → " +
+    formatCoordinate(
+      state.activeBounds.max.y
+    )
   );
 
   setText(
@@ -788,14 +1193,16 @@ function updateInspector() {
     formatCoordinate(
       state.activeBounds.min.z
     ) +
-      " → " +
-      formatCoordinate(
-        state.activeBounds.max.z
-      )
+    " → " +
+    formatCoordinate(
+      state.activeBounds.max.z
+    )
   );
 }
 
-function getPointCloudBounds(pointcloud) {
+function getPointCloudBounds(
+  pointcloud
+) {
   if (!pointcloud) {
     return null;
   }
@@ -812,7 +1219,11 @@ function getPointCloudBounds(pointcloud) {
       pointcloud.pcoGeometry.boundingBox;
   }
 
-  if (!box || !box.min || !box.max) {
+  if (
+    !box ||
+    !box.min ||
+    !box.max
+  ) {
     return null;
   }
 
@@ -861,14 +1272,16 @@ function getVectorValue(
 ) {
   if (
     vector &&
-    typeof vector[property] === "number"
+    typeof vector[property] ===
+    "number"
   ) {
     return vector[property];
   }
 
   if (
     vector &&
-    typeof vector[index] === "number"
+    typeof vector[index] ===
+    "number"
   ) {
     return vector[index];
   }
@@ -880,14 +1293,21 @@ function getVectorValue(
 /* APPEARANCE                                                                 */
 /* -------------------------------------------------------------------------- */
 
-function applyColorMode(pointcloud) {
+function applyColorMode(
+  pointcloud
+) {
   var cloud =
-    pointcloud || state.activeCloud;
+    pointcloud ||
+    state.activeCloud;
+
+  var potree =
+    window.Potree;
 
   if (
     !cloud ||
     !cloud.material ||
-    !Potree.PointColorType
+    !potree ||
+    !potree.PointColorType
   ) {
     return;
   }
@@ -899,13 +1319,19 @@ function applyColorMode(pointcloud) {
     return;
   }
 
-  var mode = select.value;
   var colorType =
-    Potree.PointColorType[mode];
+    potree.PointColorType[
+      select.value
+    ];
 
-  if (colorType !== undefined) {
+  if (
+    colorType !== undefined
+  ) {
     cloud.material.pointColorType =
       colorType;
+
+    cloud.material.needsUpdate =
+      true;
   }
 }
 
@@ -930,7 +1356,9 @@ function applyPointSize() {
   }
 }
 
-function applyOpacity() {
+function applyOpacity(
+  pointcloud
+) {
   var value =
     getNumberValue(
       "pointOpacity",
@@ -940,18 +1368,25 @@ function applyOpacity() {
   setText(
     "pointOpacityValue",
     Math.round(value * 100) +
-      "%"
+    "%"
   );
 
+  var cloud =
+    pointcloud ||
+    state.activeCloud;
+
   if (
-    state.activeCloud &&
-    state.activeCloud.material
+    cloud &&
+    cloud.material
   ) {
-    state.activeCloud.material.opacity =
+    cloud.material.opacity =
       value;
 
-    state.activeCloud.material.transparent =
+    cloud.material.transparent =
       value < 1;
+
+    cloud.material.needsUpdate =
+      true;
   }
 }
 
@@ -965,9 +1400,11 @@ function applyPointBudget() {
   if (
     viewer &&
     typeof viewer.setPointBudget ===
-      "function"
+    "function"
   ) {
-    viewer.setPointBudget(value);
+    viewer.setPointBudget(
+      value
+    );
   }
 
   setText(
@@ -985,8 +1422,13 @@ function getSectionRange() {
     return null;
   }
 
+  var modeElement =
+    getElement("sectionMode");
+
   var mode =
-    getElement("sectionMode").value;
+    modeElement
+      ? modeElement.value
+      : "none";
 
   if (mode === "horizontal") {
     return {
@@ -999,7 +1441,8 @@ function getSectionRange() {
     getElement("sectionAxis");
 
   var axis =
-    axisElement && axisElement.value
+    axisElement &&
+    axisElement.value
       ? axisElement.value
       : "x";
 
@@ -1030,11 +1473,14 @@ function updateSectionControls() {
     return;
   }
 
-  var mode = modeElement.value;
+  var mode =
+    modeElement.value;
 
   var active =
     mode !== "none" &&
-    Boolean(state.activeBounds);
+    Boolean(
+      state.activeBounds
+    );
 
   if (axisWrapper) {
     if (mode === "vertical") {
@@ -1048,8 +1494,11 @@ function updateSectionControls() {
     }
   }
 
-  positionElement.disabled = !active;
-  thicknessElement.disabled = !active;
+  positionElement.disabled =
+    !active;
+
+  thicknessElement.disabled =
+    !active;
 
   if (!active) {
     setText(
@@ -1096,7 +1545,7 @@ function updateSectionControls() {
   positionElement.step =
     Math.max(
       length / 1000,
-      0.0001
+      0.000001
     );
 
   positionElement.value =
@@ -1119,7 +1568,7 @@ function updateSectionControls() {
   setText(
     "sectionThicknessValue",
     formatCoordinate(thickness) +
-      " units"
+    " units"
   );
 }
 
@@ -1136,8 +1585,13 @@ function applySection() {
     return;
   }
 
+  var modeElement =
+    getElement("sectionMode");
+
   var mode =
-    getElement("sectionMode").value;
+    modeElement
+      ? modeElement.value
+      : "none";
 
   if (mode === "none") {
     clearSection();
@@ -1166,7 +1620,10 @@ function applySection() {
     );
 
   thickness =
-    Math.max(thickness, 0.001);
+    Math.max(
+      thickness,
+      0.001
+    );
 
   var safePosition =
     clamp(
@@ -1189,10 +1646,12 @@ function applySection() {
 
   if (mode === "horizontal") {
     min.z =
-      safePosition - thickness / 2;
+      safePosition -
+      thickness / 2;
 
     max.z =
-      safePosition + thickness / 2;
+      safePosition +
+      thickness / 2;
   }
 
   if (mode === "vertical") {
@@ -1200,19 +1659,26 @@ function applySection() {
       getElement("sectionAxis");
 
     var axis =
-      axisElement && axisElement.value
+      axisElement &&
+      axisElement.value
         ? axisElement.value
         : "x";
 
     min[axis] =
-      safePosition - thickness / 2;
+      safePosition -
+      thickness / 2;
 
     max[axis] =
-      safePosition + thickness / 2;
+      safePosition +
+      thickness / 2;
   }
 
+  var potree =
+    window.Potree;
+
   if (
-    !Potree.BoxVolume ||
+    !potree ||
+    !potree.BoxVolume ||
     !viewer ||
     !viewer.scene
   ) {
@@ -1225,7 +1691,7 @@ function applySection() {
   }
 
   var volume =
-    new Potree.BoxVolume();
+    new potree.BoxVolume();
 
   volume.name =
     mode === "horizontal"
@@ -1253,61 +1719,73 @@ function applySection() {
     )
   );
 
-  volume.clip = true;
-  volume.visible = false;
+  volume.clip =
+    true;
+
+  volume.visible =
+    false;
 
   if (
     typeof viewer.scene.addVolume ===
-      "function"
+    "function"
   ) {
-    viewer.scene.addVolume(volume);
+    viewer.scene.addVolume(
+      volume
+    );
   }
 
-  state.sectionVolume = volume;
+  state.sectionVolume =
+    volume;
 
   if (
-    Potree.ClipTask &&
-    Potree.ClipTask.SHOW_INSIDE !==
-      undefined &&
+    potree.ClipTask &&
+    potree.ClipTask.SHOW_INSIDE !==
+    undefined &&
     typeof viewer.setClipTask ===
-      "function"
+    "function"
   ) {
     viewer.setClipTask(
-      Potree.ClipTask.SHOW_INSIDE
+      potree.ClipTask.SHOW_INSIDE
     );
   }
 
   if (
-    Potree.ClipMethod &&
-    Potree.ClipMethod.INSIDE_ANY !==
-      undefined &&
+    potree.ClipMethod &&
+    potree.ClipMethod.INSIDE_ANY !==
+    undefined &&
     typeof viewer.setClipMethod ===
-      "function"
+    "function"
   ) {
     viewer.setClipMethod(
-      Potree.ClipMethod.INSIDE_ANY
+      potree.ClipMethod.INSIDE_ANY
     );
   }
 
   setText(
     "sectionPositionValue",
-    formatCoordinate(safePosition)
+    formatCoordinate(
+      safePosition
+    )
   );
 
   setText(
     "sectionThicknessValue",
-    formatCoordinate(thickness) +
-      " units"
+    formatCoordinate(
+      thickness
+    ) +
+    " units"
   );
 
   setStatus(
     "Section applied",
-    "success"
+    "idle"
   );
 }
 
 function removeSectionVolume() {
-  if (!state.sectionVolume) {
+  if (
+    !state.sectionVolume
+  ) {
     return;
   }
 
@@ -1315,24 +1793,30 @@ function removeSectionVolume() {
     viewer &&
     viewer.scene &&
     typeof viewer.scene.removeVolume ===
-      "function"
+    "function"
   ) {
     viewer.scene.removeVolume(
       state.sectionVolume
     );
   }
 
-  state.sectionVolume = null;
+  state.sectionVolume =
+    null;
+
+  var potree =
+    window.Potree;
 
   if (
     viewer &&
-    Potree.ClipTask &&
-    Potree.ClipTask.NONE !== undefined &&
+    potree &&
+    potree.ClipTask &&
+    potree.ClipTask.NONE !==
+    undefined &&
     typeof viewer.setClipTask ===
-      "function"
+    "function"
   ) {
     viewer.setClipTask(
-      Potree.ClipTask.NONE
+      potree.ClipTask.NONE
     );
   }
 }
@@ -1344,14 +1828,15 @@ function clearSection() {
     getElement("sectionMode");
 
   if (modeElement) {
-    modeElement.value = "none";
+    modeElement.value =
+      "none";
   }
 
   updateSectionControls();
 
   setStatus(
     "Section cleared",
-    "success"
+    "idle"
   );
 }
 
@@ -1360,7 +1845,10 @@ function clearSection() {
 /* -------------------------------------------------------------------------- */
 
 function fitActiveScan() {
-  if (!viewer || !state.activeCloud) {
+  if (
+    !viewer ||
+    !state.activeCloud
+  ) {
     setStatus(
       "Select a scan first.",
       "error"
@@ -1371,14 +1859,16 @@ function fitActiveScan() {
 
   if (
     typeof viewer.fitToScreen ===
-      "function"
+    "function"
   ) {
-    viewer.fitToScreen(0.5);
+    viewer.fitToScreen(
+      0.5
+    );
   }
 
   setStatus(
     "View fitted to active scan",
-    "success"
+    "idle"
   );
 }
 
@@ -1391,7 +1881,7 @@ function activateOrbitMode() {
     viewer &&
     viewer.orbitControls &&
     typeof viewer.setControls ===
-      "function"
+    "function"
   ) {
     viewer.setControls(
       viewer.orbitControls
@@ -1402,12 +1892,14 @@ function activateOrbitMode() {
     getElement("orbitMode");
 
   if (button) {
-    button.classList.add("active");
+    button.classList.add(
+      "active"
+    );
   }
 
   setStatus(
     "Orbit navigation active",
-    "success"
+    "idle"
   );
 }
 
@@ -1425,7 +1917,9 @@ function downloadActiveScan() {
   }
 
   var link =
-    document.createElement("a");
+    document.createElement(
+      "a"
+    );
 
   link.href =
     state.activeScan.url;
@@ -1433,13 +1927,20 @@ function downloadActiveScan() {
   link.download =
     state.activeScan.filename ||
     state.activeScan.name +
-      ".copc.laz";
+    ".copc.laz";
 
-  link.target = "_blank";
-  link.rel = "noopener";
+  link.target =
+    "_blank";
 
-  document.body.appendChild(link);
+  link.rel =
+    "noopener";
+
+  document.body.appendChild(
+    link
+  );
+
   link.click();
+
   link.remove();
 }
 
@@ -1460,14 +1961,16 @@ function bindEvents() {
     "refreshLibrary",
     "click",
     function () {
-      loadCatalog().then(function () {
-        renderLibrary();
+      loadCatalog().then(
+        function () {
+          renderLibrary();
 
-        setStatus(
-          "Library refreshed",
-          "success"
-        );
-      });
+          setStatus(
+            "Library refreshed",
+            "idle"
+          );
+        }
+      );
     }
   );
 
@@ -1503,7 +2006,7 @@ function bindEvents() {
 
       setStatus(
         "Color mode updated",
-        "success"
+        "idle"
       );
     }
   );
@@ -1517,7 +2020,9 @@ function bindEvents() {
   addEvent(
     "pointOpacity",
     "input",
-    applyOpacity
+    function () {
+      applyOpacity();
+    }
   );
 
   addEvent(
@@ -1550,7 +2055,9 @@ function bindEvents() {
     function () {
       updateSectionControls();
 
-      if (state.sectionVolume) {
+      if (
+        state.sectionVolume
+      ) {
         applySection();
       }
     }
@@ -1571,7 +2078,9 @@ function bindEvents() {
         formatCoordinate(value)
       );
 
-      if (state.sectionVolume) {
+      if (
+        state.sectionVolume
+      ) {
         applySection();
       }
     }
@@ -1590,10 +2099,12 @@ function bindEvents() {
       setText(
         "sectionThicknessValue",
         formatCoordinate(value) +
-          " units"
+        " units"
       );
 
-      if (state.sectionVolume) {
+      if (
+        state.sectionVolume
+      ) {
         applySection();
       }
     }
@@ -1616,7 +2127,10 @@ function bindEvents() {
 /* STATUS                                                                     */
 /* -------------------------------------------------------------------------- */
 
-function setStatus(message, type) {
+function setStatus(
+  message,
+  type
+) {
   setText(
     "statusMessage",
     message
@@ -1628,7 +2142,10 @@ function setStatus(message, type) {
   );
 }
 
-function setViewerStatus(message, type) {
+function setViewerStatus(
+  message,
+  type
+) {
   setText(
     "viewerStatus",
     message
@@ -1655,7 +2172,9 @@ function setViewerStatus(message, type) {
   }
 }
 
-function showLoading(message) {
+function showLoading(
+  message
+) {
   setText(
     "loadingMessage",
     message
@@ -1686,7 +2205,10 @@ function hideLoading() {
 /* UTILITIES                                                                  */
 /* -------------------------------------------------------------------------- */
 
-function getNumberValue(id, fallback) {
+function getNumberValue(
+  id,
+  fallback
+) {
   var element =
     getElement(id);
 
@@ -1702,15 +2224,24 @@ function getNumberValue(id, fallback) {
     : fallback;
 }
 
-function clamp(value, min, max) {
+function clamp(
+  value,
+  min,
+  max
+) {
   return Math.min(
     Math.max(value, min),
     max
   );
 }
 
-function formatBytes(bytes) {
-  if (!bytes || bytes <= 0) {
+function formatBytes(
+  bytes
+) {
+  if (
+    !bytes ||
+    bytes <= 0
+  ) {
     return "Unknown";
   }
 
@@ -1724,14 +2255,17 @@ function formatBytes(bytes) {
   var index = Math.min(
     Math.floor(
       Math.log(bytes) /
-        Math.log(1024)
+      Math.log(1024)
     ),
     units.length - 1
   );
 
   var value =
     bytes /
-    Math.pow(1024, index);
+    Math.pow(
+      1024,
+      index
+    );
 
   return (
     value.toFixed(
@@ -1744,23 +2278,33 @@ function formatBytes(bytes) {
   );
 }
 
-function formatNumber(value) {
-  return new Intl.NumberFormat().format(
-    value
-  );
+function formatNumber(
+  value
+) {
+  return new Intl.NumberFormat()
+    .format(value);
 }
 
-function formatCompactNumber(value) {
-  if (value >= 1000000) {
+function formatCompactNumber(
+  value
+) {
+  if (
+    value >= 1000000
+  ) {
     return (
-      (value / 1000000).toFixed(1) +
+      (value / 1000000)
+        .toFixed(1) +
       "M"
     );
   }
 
-  if (value >= 1000) {
+  if (
+    value >= 1000
+  ) {
     return (
-      Math.round(value / 1000) +
+      Math.round(
+        value / 1000
+      ) +
       "K"
     );
   }
@@ -1768,7 +2312,9 @@ function formatCompactNumber(value) {
   return String(value);
 }
 
-function formatCoordinate(value) {
+function formatCoordinate(
+  value
+) {
   if (!isFinite(value)) {
     return "—";
   }

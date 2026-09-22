@@ -2,10 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
   />
+
+  <meta
+    name="description"
+    content="Cloud optimized point cloud viewer for Brienzauis scans."
+  />
+
+  <title>Pointcloud Library Brienzauis</title>
 
   <link
     rel="stylesheet"
@@ -32,7 +40,10 @@
     href="./libs/jstree/themes/mixed/style.css"
   />
 
-  <link rel="stylesheet" href="./style.css" />
+  <link
+    rel="stylesheet"
+    href="./style.css"
+  />
 </head>
 
 <body>
@@ -40,36 +51,39 @@
 
     <header class="topbar">
       <div class="brand">
-  <div class="eyebrow">
-    © ETH ZURICH
-  </div>
+        <div class="eyebrow">
+          © ETH ZURICH
+        </div>
 
-  <div class="brand-title">
-    POINTCLOUD<br>
-    LIBRARY<br>
-    BRIENZAULS<br>
-  </div>
+        <div class="brand-title">
+          POINTCLOUD<br />
+          LIBRARY<br />
+          BRIENZAULS
+        </div>
 
-  <div class="brand-subtitle">
-      <br>
-    CLOUD OPTIMIZED POINT CLOUD VIEWER
-  <br>
-    Developped by Dennis Häusler, Institute for Landscape and Urban Studies, ETH Zürich
-    haeusler@arch.ethz.ch | assisted by AI (gpt 5.6)
-  </div>
-</div>
+        <div class="brand-subtitle">
+          CLOUD OPTIMIZED POINT CLOUD VIEWER<br />
+          Developed by Dennis Häusler, Institute for Landscape and Urban Studies, ETH Zürich<br />
+          haeusler@arch.ethz.ch | assisted by AI
+        </div>
+      </div>
 
       <div class="topbar-actions">
         <div class="search-box">
-          <span>⌕</span>
+          <span aria-hidden="true">⌕</span>
+
           <input
             id="scanSearch"
             type="search"
             placeholder="Search scans..."
+            autocomplete="off"
           />
         </div>
 
-        <span id="adminBadge" class="admin-badge hidden"></span>
+        <span
+          id="adminBadge"
+          class="admin-badge hidden"
+        ></span>
 
         <a
           class="button button-secondary"
@@ -110,8 +124,14 @@
       <aside class="library-panel">
         <div class="panel-header">
           <div>
-            <div class="panel-title">Scan library</div>
-            <div id="scanCount" class="panel-subtitle">
+            <div class="panel-title">
+              Scan library
+            </div>
+
+            <div
+              id="scanCount"
+              class="panel-subtitle"
+            >
               0 scans
             </div>
           </div>
@@ -135,11 +155,19 @@
           </div>
         </div>
 
-        <div id="libraryList" class="library-list"></div>
+        <div
+          id="libraryList"
+          class="library-list"
+        ></div>
 
-        <div id="libraryEmpty" class="empty-state">
+        <div
+          id="libraryEmpty"
+          class="empty-state"
+        >
           <div class="empty-icon">◌</div>
+
           <strong>No scans found</strong>
+
           <span>
             Administrator uploads will appear here permanently.
           </span>
@@ -147,13 +175,25 @@
       </aside>
 
       <section class="viewer-panel">
-        <div id="potree_render_area" class="viewer"></div>
-        <div id="potree_sidebar_container"></div>
+        <div
+          id="potree_render_area"
+          class="viewer"
+        ></div>
+
+        <div
+          id="potree_sidebar_container"
+        ></div>
 
         <div class="viewer-overlay">
           <div class="viewer-status">
-            <span id="viewerStatusDot" class="status-dot status-idle"></span>
-            <span id="viewerStatus">Ready</span>
+            <span
+              id="viewerStatusDot"
+              class="status-dot status-idle"
+            ></span>
+
+            <span id="viewerStatus">
+              Starting viewer...
+            </span>
           </div>
 
           <div class="viewer-help">
@@ -161,9 +201,15 @@
           </div>
         </div>
 
-        <div id="loadingOverlay" class="loading-overlay hidden">
+        <div
+          id="loadingOverlay"
+          class="loading-overlay hidden"
+        >
           <div class="loading-spinner"></div>
-          <div id="loadingMessage">Loading point cloud...</div>
+
+          <div id="loadingMessage">
+            Loading point cloud...
+          </div>
         </div>
 
         <div class="viewer-toolbar">
@@ -204,25 +250,39 @@
       <aside class="inspector-panel">
         <div class="panel-header">
           <div>
-            <div class="panel-title">Inspector</div>
+            <div class="panel-title">
+              Inspector
+            </div>
+
             <div class="panel-subtitle">
               Active scan properties
             </div>
           </div>
         </div>
 
-        <div id="inspectorEmpty" class="empty-state">
+        <div
+          id="inspectorEmpty"
+          class="empty-state"
+        >
           <div class="empty-icon">◇</div>
+
           <strong>No scan selected</strong>
-          <span>Select a scan from the library.</span>
+
+          <span>
+            Select a scan from the library.
+          </span>
         </div>
 
-        <div id="inspectorContent" class="inspector-content hidden">
-
+        <div
+          id="inspectorContent"
+          class="inspector-content hidden"
+        >
           <section class="inspector-section">
             <div class="section-heading">
               <span>▣</span>
-              <span id="activeScanName">Scan</span>
+              <span id="activeScanName">
+                Scan
+              </span>
             </div>
 
             <div class="metadata-grid">
@@ -233,17 +293,23 @@
 
               <div>
                 <span>Points</span>
-                <strong id="activePointCount">—</strong>
+                <strong id="activePointCount">
+                  —
+                </strong>
               </div>
 
               <div>
                 <span>File size</span>
-                <strong id="activeFileSize">—</strong>
+                <strong id="activeFileSize">
+                  —
+                </strong>
               </div>
 
               <div>
                 <span>CRS</span>
-                <strong id="activeCrs">—</strong>
+                <strong id="activeCrs">
+                  —
+                </strong>
               </div>
             </div>
           </section>
@@ -254,21 +320,47 @@
               Appearance
             </div>
 
-            <label for="colorMode" class="control-label">
+            <label
+              for="colorMode"
+              class="control-label"
+            >
               Color mode
             </label>
 
-            <select id="colorMode" class="control-input">
-              <option value="RGB">RGB</option>
-              <option value="ELEVATION">Elevation</option>
-              <option value="INTENSITY">Intensity</option>
-              <option value="CLASSIFICATION">Classification</option>
-              <option value="RETURN_NUMBER">Return number</option>
+            <select
+              id="colorMode"
+              class="control-input"
+            >
+              <option value="RGB">
+                RGB
+              </option>
+
+              <option value="ELEVATION">
+                Elevation
+              </option>
+
+              <option value="INTENSITY">
+                Intensity
+              </option>
+
+              <option value="CLASSIFICATION">
+                Classification
+              </option>
+
+              <option value="RETURN_NUMBER">
+                Return number
+              </option>
             </select>
 
-            <label for="pointSize" class="control-label">
+            <label
+              for="pointSize"
+              class="control-label"
+            >
               Point size
-              <output id="pointSizeValue">1.5</output>
+
+              <output id="pointSizeValue">
+                1.5
+              </output>
             </label>
 
             <input
@@ -281,9 +373,15 @@
               value="1.5"
             />
 
-            <label for="pointOpacity" class="control-label">
+            <label
+              for="pointOpacity"
+              class="control-label"
+            >
               Opacity
-              <output id="pointOpacityValue">100%</output>
+
+              <output id="pointOpacityValue">
+                100%
+              </output>
             </label>
 
             <input
@@ -296,9 +394,15 @@
               value="1"
             />
 
-            <label for="pointBudget" class="control-label">
+            <label
+              for="pointBudget"
+              class="control-label"
+            >
               Point budget
-              <output id="pointBudgetValue">3.0M</output>
+
+              <output id="pointBudgetValue">
+                3.0M
+              </output>
             </label>
 
             <input
@@ -318,30 +422,64 @@
               Sections
             </div>
 
-            <label for="sectionMode" class="control-label">
+            <label
+              for="sectionMode"
+              class="control-label"
+            >
               Section type
             </label>
 
-            <select id="sectionMode" class="control-input">
-              <option value="none">No section</option>
-              <option value="horizontal">Horizontal section</option>
-              <option value="vertical">Vertical section</option>
+            <select
+              id="sectionMode"
+              class="control-input"
+            >
+              <option value="none">
+                No section
+              </option>
+
+              <option value="horizontal">
+                Horizontal section
+              </option>
+
+              <option value="vertical">
+                Vertical section
+              </option>
             </select>
 
-            <div id="sectionAxisWrapper" class="hidden">
-              <label for="sectionAxis" class="control-label">
+            <div
+              id="sectionAxisWrapper"
+              class="hidden"
+            >
+              <label
+                for="sectionAxis"
+                class="control-label"
+              >
                 Vertical axis
               </label>
 
-              <select id="sectionAxis" class="control-input">
-                <option value="x">X axis</option>
-                <option value="y">Y axis</option>
+              <select
+                id="sectionAxis"
+                class="control-input"
+              >
+                <option value="x">
+                  X axis
+                </option>
+
+                <option value="y">
+                  Y axis
+                </option>
               </select>
             </div>
 
-            <label for="sectionPosition" class="control-label">
+            <label
+              for="sectionPosition"
+              class="control-label"
+            >
               Position
-              <output id="sectionPositionValue">—</output>
+
+              <output id="sectionPositionValue">
+                —
+              </output>
             </label>
 
             <input
@@ -355,9 +493,15 @@
               disabled
             />
 
-            <label for="sectionThickness" class="control-label">
+            <label
+              for="sectionThickness"
+              class="control-label"
+            >
               Thickness
-              <output id="sectionThicknessValue">—</output>
+
+              <output id="sectionThicknessValue">
+                —
+              </output>
             </label>
 
             <input
@@ -412,14 +556,14 @@
               </div>
             </div>
           </section>
-
-
         </div>
       </aside>
     </main>
 
     <footer class="statusbar">
-      <span id="statusMessage">Ready</span>
+      <span id="statusMessage">
+        Starting viewer...
+      </span>
 
       <div>
         <span>Accepted: .copc.laz</span>
@@ -443,12 +587,13 @@
   <!-- COPC support -->
   <script src="./libs/copc/index.js"></script>
 
-  <!-- Prebuilt Potree -->
+  <!-- Potree -->
   <script src="./build/potree/potree.js"></script>
 
+  <!-- LAS/LAZ support -->
   <script src="./libs/plasio/js/laslaz.js"></script>
 
-  <!-- Your code must load last -->
+  <!-- Application code must load last -->
   <script src="./app.js"></script>
 </body>
 </html>
