@@ -1,13 +1,35 @@
 "use strict";
 
+/*
+  Public COPC point-cloud viewer.
+
+  This version:
+  - Loads a public catalog.json
+  - Loads public .copc.laz files
+  - Does not use login
+  - Does not upload files from the browser
+  - Does not use GitHub private keys
+  - Includes orbit, pan, zoom, appearance controls,
+    and horizontal/vertical clipping sections
+*/
+
 const CONFIG = {
-  catalogUrl:
-    "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/catalog.json",
+  /*
+    If catalog.json is in the same repository as this application:
+  */
+  catalogUrl: "./catalog.json",
 
-  repositoryUrl:
-    "https://github.com/YOUR_USERNAME/YOUR_REPOSITORY",
+  /*
+    Used only when catalog entries contain "path" instead of "url".
 
-  maxUploadBytes: 95 * 1024 * 1024,
+    Replace these values with your actual public repository.
+
+    Example:
+    https://raw.githubusercontent.com/johnsmith/my-pointclouds/main
+  */
+  rawBaseUrl:
+    "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main",
+
   defaultPointBudget: 3000000
 };
 
@@ -17,20 +39,59 @@ const state = {
   activeScan: null,
   activeCloud: null,
   activeBounds: null,
-  admin: null,
-  github: null,
   sectionVolume: null
 };
 
 let viewer = null;
 
-const $ = (id) => document.getElementById(id);
+/* -------------------------------------------------------------------------- */
+/* BASIC HELPERS                                                              */
+/* -------------------------------------------------------------------------- */
+
+function getElement(id) {
+  return document.getElementById(id);
+}
+
+function setText(id, value) {
+  const element = getElement(id);
+
+  if (element) {
+    element.textContent = value;
+  }
+}
+
+function on(id, eventName, handler) {
+  const element = getElement(id);
+
+  if (element) {
+    element.addEventListener(eventName, handler);
+  }
+}
+
+function hideElement(id) {
+  const element = getElement(id);
+
+  if (element) {
+    element.classList.add("hidden");
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* STARTUP                                                                    */
+/* -------------------------------------------------------------------------- */
 
 document.addEventListener("DOMContentLoaded", initialize);
 
 async function initialize() {
-  initializeViewer();
+  hidePubliclyUnavailableControls();
+
   bindEvents();
+
+  const viewerReady = initializeViewer();
+
+  if (!viewerReady) {
+    return;
+  }
 
   await loadCatalog();
 
@@ -40,84 +101,118 @@ async function initialize() {
     await loadScan(state.catalog[0]);
   } else {
     setViewerStatus("No scans available", "idle");
+    setStatus("No scans found in catalog.json", "idle");
   }
 }
 
+/*
+  Since this is a public viewer, uploads and deletes are performed
+  manually through the GitHub repository.
+*/
+function hidePubliclyUnavailableControls() {
+  hideElement("loginLink");
+  hideElement("logoutButton");
+  hideElement("adminBadge");
+  hideElement("uploadButton");
+  hideElement("adminSection");
+  hideElement("deleteScan");
+}
+
 /* -------------------------------------------------------------------------- */
-/* VIEWER                                                                     */
+/* POTREE VIEWER                                                              */
 /* -------------------------------------------------------------------------- */
 
 function initializeViewer() {
-  if (typeof Potree === "undefined") {
-    setStatus("Potree failed to load.", "error");
-    return;
+  if (!window.Potree) {
+    setStatus(
+      "Potree is not loaded. Check your index.html script paths.",
+      "error"
+    );
+
+    console.error(
+      "Potree is undefined. Check that build/potree/potree.js exists and is loaded before app.js."
+    );
+
+    return false;
   }
 
-  viewer = new Potree.Viewer($("potree_render_area"));
+  if (typeof window.Potree.Viewer !== "function") {
+    setStatus(
+      "Potree Viewer is unavailable.",
+      "error"
+    );
 
-  viewer.setEDLEnabled(true);
-  viewer.setFOV(60);
-  viewer.setPointBudget(CONFIG.defaultPointBudget);
-  viewer.setBackground("gradient");
+    console.error(
+      "Potree.Viewer is not available. Potree may be only partially loaded."
+    );
 
-  window.addEventListener("resize", () => {
-    if (viewer && typeof viewer.onWindowResize === "function") {
-      viewer.onWindowResize();
-    }
-  });
-}
+    return false;
+  }
 
-/* -------------------------------------------------------------------------- */
-/* AUTHENTICATION                                                             */
-/* -------------------------------------------------------------------------- */
+  const renderArea = getElement("potree_render_area");
 
-async function loadSession() {
+  if (!renderArea) {
+    setStatus(
+      "Missing potree_render_area element.",
+      "error"
+    );
+
+    console.error(
+      'Add <div id="potree_render_area"></div> to index.html.'
+    );
+
+    return false;
+  }
+
   try {
-    const response = await fetch("/api/admin/session", {
-      cache: "no-store"
+    viewer = new Potree.Viewer(renderArea);
+
+    if (typeof viewer.setEDLEnabled === "function") {
+      viewer.setEDLEnabled(true);
+    }
+
+    if (typeof viewer.setFOV === "function") {
+      viewer.setFOV(60);
+    }
+
+    if (typeof viewer.setPointBudget === "function") {
+      viewer.setPointBudget(CONFIG.defaultPointBudget);
+    }
+
+    if (typeof viewer.setBackground === "function") {
+      viewer.setBackground("gradient");
+    }
+
+    if (
+      viewer.orbitControls &&
+      typeof viewer.setControls === "function"
+    ) {
+      viewer.setControls(viewer.orbitControls);
+    }
+
+    window.addEventListener("resize", function () {
+      if (
+        viewer &&
+        typeof viewer.onWindowResize === "function"
+      ) {
+        viewer.onWindowResize();
+      }
     });
 
-    const data = await response.json();
+    setViewerStatus("Ready", "idle");
+    setStatus("Ready", "idle");
 
-    state.admin = data.authenticated
-      ? {
-          login: data.login
-        }
-      : null;
-
-    renderAuthentication();
+    return true;
   } catch (error) {
-    state.admin = null;
-    renderAuthentication();
+    console.error(error);
+
+    setStatus(
+      "Could not initialize the Potree viewer.",
+      "error"
+    );
+
+    return false;
   }
-}
-
-function renderAuthentication() {
-  const authenticated = Boolean(state.admin);
-
-  $("loginLink").classList.toggle("hidden", authenticated);
-  $("logoutButton").classList.toggle("hidden", !authenticated);
-  $("uploadButton").classList.toggle("hidden", !authenticated);
-  $("adminSection").classList.toggle("hidden", !authenticated);
-
-  if (authenticated) {
-    $("adminBadge").textContent = `Admin: ${state.admin.login}`;
-    $("adminBadge").classList.remove("hidden");
-  } else {
-    $("adminBadge").classList.add("hidden");
-  }
-}
-
-async function logout() {
-  await fetch("/api/auth/logout", {
-    method: "POST"
-  });
-
-  state.admin = null;
-  state.github = null;
-
-  renderAuthentication();
-  setStatus("Logged out", "success");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -126,16 +221,25 @@ async function logout() {
 
 async function loadCatalog() {
   try {
-    const response = await fetch(
-      `${CONFIG.catalogUrl}?t=${Date.now()}`,
-      {
-        cache: "no-store"
-      }
-    );
+    const separator =
+      CONFIG.catalogUrl.indexOf("?") === -1
+        ? "?"
+        : "&";
+
+    const catalogUrl =
+      CONFIG.catalogUrl +
+      separator +
+      "cacheBust=" +
+      Date.now();
+
+    const response = await fetch(catalogUrl, {
+      cache: "no-store"
+    });
 
     if (!response.ok) {
       throw new Error(
-        `Catalog request failed with HTTP ${response.status}.`
+        "Catalog request failed with HTTP " +
+          response.status
       );
     }
 
@@ -148,48 +252,89 @@ async function loadCatalog() {
         : [];
 
     state.catalog = scans.map(normalizeScan);
+
+    setText(
+      "scanCount",
+      state.catalog.length +
+        " " +
+        (state.catalog.length === 1
+          ? "scan"
+          : "scans")
+    );
   } catch (error) {
     state.catalog = [];
-    setStatus(error.message, "error");
-  }
-}
 
-    if (!response.ok) {
-      throw new Error("Could not load scan catalog.");
-    }
+    console.error(error);
 
-    const data = await response.json();
-
-    const scans = Array.isArray(data)
-      ? data
-      : Array.isArray(data.scans)
-        ? data.scans
-        : [];
-
-    state.catalog = scans.map(normalizeScan);
-  } catch (error) {
-    state.catalog = [];
-    setStatus(error.message, "error");
+    setStatus(
+      "Could not load catalog.json.",
+      "error"
+    );
   }
 }
 
 function normalizeScan(scan) {
-  return {
-    id: String(scan.id || ""),
-    name: String(
-      scan.name ||
+  const id = String(
+    scan.id ||
       scan.filename ||
-      scan.id ||
-      "Unnamed COPC scan"
+      "scan-" + Date.now()
+  );
+
+  const name = String(
+    scan.name ||
+      scan.filename ||
+      id
+  );
+
+  const filename = String(
+    scan.filename || ""
+  );
+
+  const path = String(
+    scan.path ||
+      (filename
+        ? "scans/" + filename
+        : "")
+  );
+
+  let url = String(
+    scan.url || ""
+  );
+
+  if (!url && path && CONFIG.rawBaseUrl) {
+    url = buildRawUrl(path);
+  }
+
+  return {
+    id: id,
+    name: name,
+    filename: filename,
+    path: path,
+    url: url,
+    sizeBytes: Number(
+      scan.sizeBytes || 0
     ),
-    filename: scan.filename || "",
-    path: scan.path || "",
-    url: scan.url || "",
-    sizeBytes: Number(scan.sizeBytes || 0),
-    pointCount: Number(scan.pointCount || 0),
+    pointCount: Number(
+      scan.pointCount || 0
+    ),
     crs: scan.crs || "Unknown",
-    uploadedAt: scan.uploadedAt || ""
+    uploadedAt: scan.uploadedAt || "",
+    loading: false
   };
+}
+
+function buildRawUrl(path) {
+  const cleanBase =
+    CONFIG.rawBaseUrl.replace(/\/+$/, "");
+
+  const encodedPath = path
+    .split("/")
+    .map(function (part) {
+      return encodeURIComponent(part);
+    })
+    .join("/");
+
+  return cleanBase + "/" + encodedPath;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -197,29 +342,50 @@ function normalizeScan(scan) {
 /* -------------------------------------------------------------------------- */
 
 function renderLibrary() {
-  const list = $("libraryList");
-  const empty = $("libraryEmpty");
-  const query = $("scanSearch").value.trim().toLowerCase();
+  const list = getElement("libraryList");
+  const empty = getElement("libraryEmpty");
+  const search = getElement("scanSearch");
 
-  list.replaceChildren();
-
-  $("scanCount").textContent =
-    `${state.catalog.length} ${
-      state.catalog.length === 1 ? "scan" : "scans"
-    }`;
-
-  const visibleScans = state.catalog.filter((scan) =>
-    scan.name.toLowerCase().includes(query)
-  );
-
-  if (visibleScans.length === 0) {
-    empty.classList.remove("hidden");
+  if (!list) {
     return;
   }
 
-  empty.classList.add("hidden");
+  const searchTerm = search
+    ? search.value.trim().toLowerCase()
+    : "";
 
-  visibleScans.forEach((scan) => {
+  list.replaceChildren();
+
+  setText(
+    "scanCount",
+    state.catalog.length +
+      " " +
+      (state.catalog.length === 1
+        ? "scan"
+        : "scans")
+  );
+
+  const visibleScans = state.catalog.filter(
+    function (scan) {
+      return scan.name
+        .toLowerCase()
+        .includes(searchTerm);
+    }
+  );
+
+  if (visibleScans.length === 0) {
+    if (empty) {
+      empty.classList.remove("hidden");
+    }
+
+    return;
+  }
+
+  if (empty) {
+    empty.classList.add("hidden");
+  }
+
+  visibleScans.forEach(function (scan) {
     const card = document.createElement("button");
 
     card.type = "button";
@@ -244,14 +410,20 @@ function renderLibrary() {
     name.textContent = scan.name;
     name.title = scan.name;
 
-    const scanState = document.createElement("div");
-    scanState.className = "scan-state";
+    const stateDot = document.createElement("div");
+    stateDot.className = "scan-state";
 
-    if (state.loadedClouds.has(scan.id)) {
-      scanState.classList.add("loaded");
+    if (scan.loading) {
+      stateDot.classList.add("loading");
+    } else if (
+      state.loadedClouds.has(scan.id)
+    ) {
+      stateDot.classList.add("loaded");
     }
 
-    header.append(icon, name, scanState);
+    header.appendChild(icon);
+    header.appendChild(name);
+    header.appendChild(stateDot);
 
     const metadata = document.createElement("div");
     metadata.className = "scan-meta";
@@ -264,10 +436,13 @@ function renderLibrary() {
       ? formatBytes(scan.sizeBytes)
       : "Size unknown";
 
-    metadata.append(format, size);
-    card.append(header, metadata);
+    metadata.appendChild(format);
+    metadata.appendChild(size);
 
-    card.addEventListener("click", () => {
+    card.appendChild(header);
+    card.appendChild(metadata);
+
+    card.addEventListener("click", function () {
       loadScan(scan);
     });
 
@@ -280,8 +455,16 @@ function renderLibrary() {
 /* -------------------------------------------------------------------------- */
 
 async function loadScan(scan) {
-  if (!scan || !scan.url) {
-    setStatus("This scan has no valid COPC URL.", "error");
+  if (!scan) {
+    return;
+  }
+
+  if (!scan.url) {
+    setStatus(
+      "This scan has no valid COPC URL.",
+      "error"
+    );
+
     return;
   }
 
@@ -291,75 +474,141 @@ async function loadScan(scan) {
     return;
   }
 
-  showLoading(`Loading ${scan.name}...`);
-  setViewerStatus("Loading point cloud", "loading");
-  setStatus(`Loading ${scan.name}...`, "loading");
+  scan.loading = true;
+  renderLibrary();
+
+  showLoading(
+    "Loading " + scan.name + "..."
+  );
+
+  setViewerStatus(
+    "Loading point cloud",
+    "loading"
+  );
+
+  setStatus(
+    "Loading " + scan.name + "...",
+    "loading"
+  );
 
   try {
-    const event = await loadRemoteCopc(
-      scan.url,
-      scan.name
-    );
+    const pointcloud =
+      await loadCopcPointCloud(scan);
 
-    const cloud = event.pointcloud || event;
-
-    if (!cloud) {
-      throw new Error("Potree returned no point cloud.");
+    if (!pointcloud) {
+      throw new Error(
+        "Potree returned no point cloud."
+      );
     }
 
-    cloud.name = scan.name;
+    pointcloud.name = scan.name;
 
-    viewer.scene.addPointCloud(cloud);
-    configurePointCloud(cloud);
+    viewer.scene.addPointCloud(pointcloud);
 
-    state.loadedClouds.set(scan.id, cloud);
+    configurePointCloud(pointcloud);
+
+    state.loadedClouds.set(
+      scan.id,
+      pointcloud
+    );
+
+    scan.loading = false;
 
     setActiveScan(scan);
+
+    hideLoading();
+
+    setViewerStatus(
+      "Point cloud loaded",
+      "success"
+    );
+
+    setStatus(
+      scan.name + " loaded",
+      "success"
+    );
+
     renderLibrary();
 
-    hideLoading();
-    setViewerStatus("Point cloud loaded", "success");
-    setStatus(`${scan.name} loaded`, "success");
-
-    setTimeout(fitActiveScan, 250);
+    window.setTimeout(function () {
+      fitActiveScan();
+    }, 250);
   } catch (error) {
+    scan.loading = false;
+
     hideLoading();
-    setViewerStatus("Loading failed", "error");
-    setStatus(error.message, "error");
+    renderLibrary();
+
     console.error(error);
+
+    setViewerStatus(
+      "Point-cloud loading failed",
+      "error"
+    );
+
+    setStatus(
+      "Could not load " + scan.name,
+      "error"
+    );
   }
 }
 
-function loadRemoteCopc(url, name) {
-  return new Promise((resolve, reject) => {
+function loadCopcPointCloud(scan) {
+  return new Promise(function (resolve, reject) {
+    if (
+      !window.Potree ||
+      typeof Potree.loadPointCloud !== "function"
+    ) {
+      reject(
+        new Error(
+          "Potree.loadPointCloud is unavailable."
+        )
+      );
+
+      return;
+    }
+
     try {
-      Potree.loadPointCloud(url, name, (event) => {
-        if (event && event.pointcloud) {
-          resolve(event);
-        } else {
-          reject(
-            new Error(
-              "Potree could not load this COPC file."
-            )
-          );
+      Potree.loadPointCloud(
+        scan.url,
+        scan.name,
+        function (event) {
+          if (
+            event &&
+            event.pointcloud
+          ) {
+            resolve(event.pointcloud);
+          } else {
+            reject(
+              new Error(
+                "Potree did not return a point cloud."
+              )
+            );
+          }
         }
-      });
+      );
     } catch (error) {
       reject(error);
     }
   });
 }
 
-function configurePointCloud(cloud) {
-  if (!cloud.material) return;
+function configurePointCloud(pointcloud) {
+  if (!pointcloud.material) {
+    return;
+  }
 
-  cloud.material.size = Number($("pointSize").value);
+  pointcloud.material.size =
+    getNumberValue(
+      "pointSize",
+      1.5
+    );
 
   if (
     Potree.PointSizeType &&
     Potree.PointSizeType.ADAPTIVE !== undefined
   ) {
-    cloud.material.pointSizeType =
+    pointcloud.material.pointSizeType =
       Potree.PointSizeType.ADAPTIVE;
   }
 
@@ -367,27 +616,32 @@ function configurePointCloud(cloud) {
     Potree.PointShape &&
     Potree.PointShape.SQUARE !== undefined
   ) {
-    cloud.material.shape = Potree.PointShape.SQUARE;
+    pointcloud.material.shape =
+      Potree.PointShape.SQUARE;
   }
 
-  applyColorMode(cloud);
-  applyOpacity(cloud);
+  applyColorMode(pointcloud);
+  applyOpacity(pointcloud);
 }
 
 /* -------------------------------------------------------------------------- */
-/* ACTIVE SCAN                                                                */
+/* ACTIVE SCAN AND INSPECTOR                                                  */
 /* -------------------------------------------------------------------------- */
 
 function setActiveScan(scan) {
-  const cloud = state.loadedClouds.get(scan.id);
+  const pointcloud =
+    state.loadedClouds.get(scan.id);
 
-  if (!cloud) return;
+  if (!pointcloud) {
+    return;
+  }
 
   clearSection(false);
 
   state.activeScan = scan;
-  state.activeCloud = cloud;
-  state.activeBounds = getPointCloudBounds(cloud);
+  state.activeCloud = pointcloud;
+  state.activeBounds =
+    getPointCloudBounds(pointcloud);
 
   updateInspector();
   updateSectionControls();
@@ -397,57 +651,92 @@ function setActiveScan(scan) {
 function updateInspector() {
   const scan = state.activeScan;
 
+  const empty = getElement("inspectorEmpty");
+  const content = getElement("inspectorContent");
+
   if (!scan || !state.activeCloud) {
-    $("inspectorEmpty").classList.remove("hidden");
-    $("inspectorContent").classList.add("hidden");
+    if (empty) {
+      empty.classList.remove("hidden");
+    }
+
+    if (content) {
+      content.classList.add("hidden");
+    }
+
     return;
   }
 
-  $("inspectorEmpty").classList.add("hidden");
-  $("inspectorContent").classList.remove("hidden");
+  if (empty) {
+    empty.classList.add("hidden");
+  }
 
-  $("activeScanName").textContent = scan.name;
+  if (content) {
+    content.classList.remove("hidden");
+  }
 
-  $("activePointCount").textContent = scan.pointCount
-    ? formatNumber(scan.pointCount)
-    : "Loaded";
+  setText("activeScanName", scan.name);
 
-  $("activeFileSize").textContent = scan.sizeBytes
-    ? formatBytes(scan.sizeBytes)
-    : "Unknown";
+  setText(
+    "activePointCount",
+    scan.pointCount
+      ? formatNumber(scan.pointCount)
+      : "Loaded"
+  );
 
-  $("activeCrs").textContent = scan.crs || "Unknown";
+  setText(
+    "activeFileSize",
+    scan.sizeBytes
+      ? formatBytes(scan.sizeBytes)
+      : "Unknown"
+  );
+
+  setText(
+    "activeCrs",
+    scan.crs || "Unknown"
+  );
 
   if (!state.activeBounds) {
-    $("boundsX").textContent = "Unavailable";
-    $("boundsY").textContent = "Unavailable";
-    $("boundsZ").textContent = "Unavailable";
+    setText("boundsX", "Unavailable");
+    setText("boundsY", "Unavailable");
+    setText("boundsZ", "Unavailable");
+
     return;
   }
 
   const bounds = state.activeBounds;
 
-  $("boundsX").textContent =
-    `${formatCoordinate(bounds.min.x)} → ${
+  setText(
+    "boundsX",
+    formatCoordinate(bounds.min.x) +
+      " → " +
       formatCoordinate(bounds.max.x)
-    }`;
+  );
 
-  $("boundsY").textContent =
-    `${formatCoordinate(bounds.min.y)} → ${
+  setText(
+    "boundsY",
+    formatCoordinate(bounds.min.y) +
+      " → " +
       formatCoordinate(bounds.max.y)
-    }`;
+  );
 
-  $("boundsZ").textContent =
-    `${formatCoordinate(bounds.min.z)} → ${
+  setText(
+    "boundsZ",
+    formatCoordinate(bounds.min.z) +
+      " → " +
       formatCoordinate(bounds.max.z)
-    }`;
+  );
 }
 
-function getPointCloudBounds(cloud) {
+function getPointCloudBounds(pointcloud) {
   const box =
-    cloud.boundingBox ||
-    cloud.pcoGeometry?.tightBoundingBox ||
-    cloud.pcoGeometry?.boundingBox;
+    pointcloud.boundingBox ||
+    (
+      pointcloud.pcoGeometry &&
+      (
+        pointcloud.pcoGeometry.tightBoundingBox ||
+        pointcloud.pcoGeometry.boundingBox
+      )
+    );
 
   if (!box || !box.min || !box.max) {
     return null;
@@ -455,23 +744,44 @@ function getPointCloudBounds(cloud) {
 
   return {
     min: {
-      x: Number(box.min.x),
-      y: Number(box.min.y),
-      z: Number(box.min.z)
+      x: getVectorValue(box.min, "x", 0),
+      y: getVectorValue(box.min, "y", 1),
+      z: getVectorValue(box.min, "z", 2)
     },
     max: {
-      x: Number(box.max.x),
-      y: Number(box.max.y),
-      z: Number(box.max.z)
+      x: getVectorValue(box.max, "x", 0),
+      y: getVectorValue(box.max, "y", 1),
+      z: getVectorValue(box.max, "z", 2)
     }
   };
 }
 
+function getVectorValue(vector, property, index) {
+  if (
+    vector &&
+    typeof vector[property] === "number"
+  ) {
+    return vector[property];
+  }
+
+  if (
+    vector &&
+    typeof vector[index] === "number"
+  ) {
+    return vector[index];
+  }
+
+  return 0;
+}
+
 /* -------------------------------------------------------------------------- */
-/* APPEARANCE                                                                 */
+/* APPEARANCE CONTROLS                                                        */
 /* -------------------------------------------------------------------------- */
 
-function applyColorMode(cloud = state.activeCloud) {
+function applyColorMode(pointcloud) {
+  const cloud =
+    pointcloud || state.activeCloud;
+
   if (
     !cloud ||
     !cloud.material ||
@@ -480,154 +790,245 @@ function applyColorMode(cloud = state.activeCloud) {
     return;
   }
 
-  const mode = $("colorMode").value;
-  const colorType = Potree.PointColorType[mode];
+  const select = getElement("colorMode");
+
+  if (!select) {
+    return;
+  }
+
+  const mode = select.value;
+  const colorType =
+    Potree.PointColorType[mode];
 
   if (colorType !== undefined) {
-    cloud.material.pointColorType = colorType;
+    cloud.material.pointColorType =
+      colorType;
   }
 }
 
 function applyPointSize() {
-  const value = Number($("pointSize").value);
+  const value = getNumberValue(
+    "pointSize",
+    1.5
+  );
 
-  $("pointSizeValue").textContent = value.toFixed(1);
+  setText(
+    "pointSizeValue",
+    value.toFixed(1)
+  );
 
   if (
     state.activeCloud &&
     state.activeCloud.material
   ) {
-    state.activeCloud.material.size = value;
+    state.activeCloud.material.size =
+      value;
   }
 }
 
 function applyOpacity() {
-  const value = Number($("pointOpacity").value);
+  const value = getNumberValue(
+    "pointOpacity",
+    1
+  );
 
-  $("pointOpacityValue").textContent =
-    `${Math.round(value * 100)}%`;
+  setText(
+    "pointOpacityValue",
+    Math.round(value * 100) + "%"
+  );
 
   if (
     state.activeCloud &&
     state.activeCloud.material
   ) {
-    state.activeCloud.material.opacity = value;
-    state.activeCloud.material.transparent = value < 1;
+    state.activeCloud.material.opacity =
+      value;
+
+    state.activeCloud.material.transparent =
+      value < 1;
   }
 }
 
 function applyPointBudget() {
-  const value = Number($("pointBudget").value);
+  const value = getNumberValue(
+    "pointBudget",
+    CONFIG.defaultPointBudget
+  );
 
-  viewer.setPointBudget(value);
-  $("pointBudgetValue").textContent =
-    formatCompactNumber(value);
-}
-
-/* -------------------------------------------------------------------------- */
-/* SECTION TOOLS                                                              */
-/* -------------------------------------------------------------------------- */
-
-function getSectionRange() {
-  if (!state.activeBounds) return null;
-
-  const mode = $("sectionMode").value;
-  const bounds = state.activeBounds;
-
-  if (mode === "horizontal") {
-    return {
-      min: bounds.min.z,
-      max: bounds.max.z
-    };
+  if (
+    viewer &&
+    typeof viewer.setPointBudget === "function"
+  ) {
+    viewer.setPointBudget(value);
   }
 
-  const axis = $("sectionAxis").value;
-
-  return {
-    min: bounds.min[axis],
-    max: bounds.max[axis]
-  };
+  setText(
+    "pointBudgetValue",
+    formatCompactNumber(value)
+  );
 }
 
+/* -------------------------------------------------------------------------- */
+/* SECTIONS                                                                   */
+/* -------------------------------------------------------------------------- */
+
 function updateSectionControls() {
-  const mode = $("sectionMode").value;
-  const isActive =
+  const modeElement =
+    getElement("sectionMode");
+
+  const positionElement =
+    getElement("sectionPosition");
+
+  const thicknessElement =
+    getElement("sectionThickness");
+
+  const axisWrapper =
+    getElement("sectionAxisWrapper");
+
+  if (
+    !modeElement ||
+    !positionElement ||
+    !thicknessElement
+  ) {
+    return;
+  }
+
+  const mode = modeElement.value;
+  const active =
     mode !== "none" &&
     Boolean(state.activeBounds);
 
-  $("sectionAxisWrapper").classList.toggle(
-    "hidden",
-    mode !== "vertical"
-  );
+  if (axisWrapper) {
+    if (mode === "vertical") {
+      axisWrapper.classList.remove("hidden");
+    } else {
+      axisWrapper.classList.add("hidden");
+    }
+  }
 
-  $("sectionPosition").disabled = !isActive;
-  $("sectionThickness").disabled = !isActive;
+  positionElement.disabled = !active;
+  thicknessElement.disabled = !active;
 
-  if (!isActive) {
-    $("sectionPositionValue").textContent = "—";
-    $("sectionThicknessValue").textContent = "—";
+  if (!active) {
+    setText("sectionPositionValue", "—");
+    setText("sectionThicknessValue", "—");
     return;
   }
 
   const range = getSectionRange();
-  const distance = Math.max(range.max - range.min, 0.001);
 
-  $("sectionPosition").min = range.min;
-  $("sectionPosition").max = range.max;
-  $("sectionPosition").step = distance / 1000;
-
-  const position =
-    (Number(range.min) + Number(range.max)) / 2;
-
-  $("sectionPosition").value = position;
-
-  const thickness = Math.max(distance * 0.08, 0.01);
-
-  $("sectionThickness").max = distance;
-  $("sectionThickness").value = thickness.toFixed(3);
-
-  $("sectionPositionValue").textContent =
-    formatCoordinate(position);
-
-  $("sectionThicknessValue").textContent =
-    `${formatCoordinate(thickness)} units`;
-}
-
-function applySection() {
-  if (!state.activeBounds || !state.activeCloud) {
-    setStatus("Load a scan first.", "warning");
+  if (!range) {
     return;
   }
 
-  const mode = $("sectionMode").value;
+  const length =
+    Math.max(range.max - range.min, 0.001);
+
+  const center =
+    (range.min + range.max) / 2;
+
+  const thickness =
+    Math.max(length * 0.08, 0.01);
+
+  positionElement.min = range.min;
+  positionElement.max = range.max;
+  positionElement.step =
+    Math.max(length / 1000, 0.0001);
+  positionElement.value = center;
+
+  thicknessElement.min = 0.001;
+  thicknessElement.max = length;
+  thicknessElement.value =
+    thickness.toFixed(3);
+
+  setText(
+    "sectionPositionValue",
+    formatCoordinate(center)
+  );
+
+  setText(
+    "sectionThicknessValue",
+    formatCoordinate(thickness) +
+      " units"
+  );
+}
+
+function getSectionRange() {
+  if (!state.activeBounds) {
+    return null;
+  }
+
+  const mode =
+    getElement("sectionMode").value;
+
+  if (mode === "horizontal") {
+    return {
+      min: state.activeBounds.min.z,
+      max: state.activeBounds.max.z
+    };
+  }
+
+  const axisElement =
+    getElement("sectionAxis");
+
+  const axis =
+    axisElement && axisElement.value
+      ? axisElement.value
+      : "x";
+
+  return {
+    min: state.activeBounds.min[axis],
+    max: state.activeBounds.max[axis]
+  };
+}
+
+function applySection() {
+  if (
+    !state.activeCloud ||
+    !state.activeBounds
+  ) {
+    setStatus(
+      "Load a scan before creating a section.",
+      "error"
+    );
+
+    return;
+  }
+
+  const modeElement =
+    getElement("sectionMode");
+
+  if (!modeElement) {
+    return;
+  }
+
+  const mode = modeElement.value;
 
   if (mode === "none") {
     clearSection();
     return;
   }
 
-  clearSection(false);
-
-  const bounds = state.activeBounds;
   const range = getSectionRange();
 
-  const position = Number($("sectionPosition").value);
-  const thickness = Math.max(
-    Number($("sectionThickness").value),
-    0.001
+  if (!range) {
+    return;
+  }
+
+  removeSectionVolume();
+
+  const position = getNumberValue(
+    "sectionPosition",
+    (range.min + range.max) / 2
   );
 
-  const min = {
-    x: bounds.min.x,
-    y: bounds.min.y,
-    z: bounds.min.z
-  };
-
-  const max = {
-    x: bounds.max.x,
-    y: bounds.max.y,
-    z: bounds.max.z
-  };
+  const thickness = Math.max(
+    getNumberValue(
+      "sectionThickness",
+      (range.max - range.min) * 0.08
+    ),
+    0.001
+  );
 
   const safePosition = clamp(
     position,
@@ -635,16 +1036,53 @@ function applySection() {
     range.max
   );
 
+  const min = {
+    x: state.activeBounds.min.x,
+    y: state.activeBounds.min.y,
+    z: state.activeBounds.min.z
+  };
+
+  const max = {
+    x: state.activeBounds.max.x,
+    y: state.activeBounds.max.y,
+    z: state.activeBounds.max.z
+  };
+
   if (mode === "horizontal") {
-    min.z = safePosition - thickness / 2;
-    max.z = safePosition + thickness / 2;
+    min.z =
+      safePosition - thickness / 2;
+
+    max.z =
+      safePosition + thickness / 2;
   }
 
   if (mode === "vertical") {
-    const axis = $("sectionAxis").value;
+    const axisElement =
+      getElement("sectionAxis");
 
-    min[axis] = safePosition - thickness / 2;
-    max[axis] = safePosition + thickness / 2;
+    const axis =
+      axisElement && axisElement.value
+        ? axisElement.value
+        : "x";
+
+    min[axis] =
+      safePosition - thickness / 2;
+
+    max[axis] =
+      safePosition + thickness / 2;
+  }
+
+  if (
+    !Potree.BoxVolume ||
+    !viewer ||
+    !viewer.scene
+  ) {
+    setStatus(
+      "Potree clipping volumes are unavailable.",
+      "error"
+    );
+
+    return;
   }
 
   const volume = new Potree.BoxVolume();
@@ -669,7 +1107,11 @@ function applySection() {
   volume.clip = true;
   volume.visible = false;
 
-  viewer.scene.addVolume(volume);
+  if (
+    typeof viewer.scene.addVolume === "function"
+  ) {
+    viewer.scene.addVolume(volume);
+  }
 
   state.sectionVolume = volume;
 
@@ -678,7 +1120,9 @@ function applySection() {
     Potree.ClipTask.SHOW_INSIDE !== undefined &&
     typeof viewer.setClipTask === "function"
   ) {
-    viewer.setClipTask(Potree.ClipTask.SHOW_INSIDE);
+    viewer.setClipTask(
+      Potree.ClipTask.SHOW_INSIDE
+    );
   }
 
   if (
@@ -686,29 +1130,41 @@ function applySection() {
     Potree.ClipMethod.INSIDE_ANY !== undefined &&
     typeof viewer.setClipMethod === "function"
   ) {
-    viewer.setClipMethod(Potree.ClipMethod.INSIDE_ANY);
+    viewer.setClipMethod(
+      Potree.ClipMethod.INSIDE_ANY
+    );
   }
 
-  $("sectionPositionValue").textContent =
-    formatCoordinate(safePosition);
+  setText(
+    "sectionPositionValue",
+    formatCoordinate(safePosition)
+  );
 
-  $("sectionThicknessValue").textContent =
-    `${formatCoordinate(thickness)} units`;
+  setText(
+    "sectionThicknessValue",
+    formatCoordinate(thickness) +
+      " units"
+  );
 
   setStatus("Section applied", "success");
 }
 
-function clearSection(showMessage = true) {
-  if (state.sectionVolume) {
-    if (
-      viewer.scene &&
-      typeof viewer.scene.removeVolume === "function"
-    ) {
-      viewer.scene.removeVolume(state.sectionVolume);
-    }
-
-    state.sectionVolume = null;
+function removeSectionVolume() {
+  if (!state.sectionVolume) {
+    return;
   }
+
+  if (
+    viewer &&
+    viewer.scene &&
+    typeof viewer.scene.removeVolume === "function"
+  ) {
+    viewer.scene.removeVolume(
+      state.sectionVolume
+    );
+  }
+
+  state.sectionVolume = null;
 
   if (
     viewer &&
@@ -716,12 +1172,28 @@ function clearSection(showMessage = true) {
     Potree.ClipTask.NONE !== undefined &&
     typeof viewer.setClipTask === "function"
   ) {
-    viewer.setClipTask(Potree.ClipTask.NONE);
+    viewer.setClipTask(
+      Potree.ClipTask.NONE
+    );
+  }
+}
+
+function clearSection(showMessage) {
+  const shouldShowMessage =
+    showMessage !== false;
+
+  removeSectionVolume();
+
+  const modeElement =
+    getElement("sectionMode");
+
+  if (modeElement) {
+    modeElement.value = "none";
   }
 
-  if (showMessage) {
-    $("sectionMode").value = "none";
-    updateSectionControls();
+  updateSectionControls();
+
+  if (shouldShowMessage) {
     setStatus("Section cleared", "success");
   }
 }
@@ -731,13 +1203,25 @@ function clearSection(showMessage = true) {
 /* -------------------------------------------------------------------------- */
 
 function fitActiveScan() {
-  if (!state.activeCloud) {
-    setStatus("Select a scan first.", "warning");
+  if (!viewer || !state.activeCloud) {
+    setStatus(
+      "Select a scan first.",
+      "error"
+    );
+
     return;
   }
 
-  viewer.fitToScreen(0.5);
-  setStatus("View fitted to active scan", "success");
+  if (
+    typeof viewer.fitToScreen === "function"
+  ) {
+    viewer.fitToScreen(0.5);
+  }
+
+  setStatus(
+    "View fitted to active scan",
+    "success"
+  );
 }
 
 function resetView() {
@@ -746,624 +1230,201 @@ function resetView() {
 
 function activateOrbitMode() {
   if (
+    viewer &&
     viewer.orbitControls &&
     typeof viewer.setControls === "function"
   ) {
-    viewer.setControls(viewer.orbitControls);
+    viewer.setControls(
+      viewer.orbitControls
+    );
   }
 
-  $("orbitMode").classList.add("active");
-  setStatus("Orbit navigation active", "success");
+  const button = getElement("orbitMode");
+
+  if (button) {
+    button.classList.add("active");
+  }
+
+  setStatus(
+    "Orbit navigation active",
+    "success"
+  );
 }
 
 function downloadActiveScan() {
-  if (!state.activeScan || !state.activeScan.url) {
-    setStatus("Select a scan first.", "warning");
-    return;
-  }
-
-  const anchor = document.createElement("a");
-
-  anchor.href = state.activeScan.url;
-  anchor.download =
-    state.activeScan.filename ||
-    `${state.activeScan.name}.copc.laz`;
-  anchor.target = "_blank";
-  anchor.rel = "noopener";
-
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-}
-
-/* -------------------------------------------------------------------------- */
-/* ADMIN UPLOAD                                                               */
-/* -------------------------------------------------------------------------- */
-
-async function handleFileSelected(file) {
-  if (!state.admin) {
-    setStatus("Administrator login required.", "error");
-    return;
-  }
-
-  if (!file) return;
-
-  if (!/\.copc\.laz$/i.test(file.name)) {
-    setStatus(
-      "Only .copc.laz files are accepted.",
-      "error"
-    );
-    return;
-  }
-
-  if (file.size > CONFIG.maxUploadBytes) {
-    setStatus(
-      `The file exceeds ${formatBytes(
-        CONFIG.maxUploadBytes
-      )}.`,
-      "error"
-    );
-    return;
-  }
-
-  try {
-    await validateCopcFile(file);
-
-    showLoading("Encoding COPC file for GitHub...");
-    setStatus("Preparing upload...", "loading");
-
-    const github = await ensureGithubToken();
-
-    const id = createId();
-    const path = `scans/${id}.copc.laz`;
-
-    const buffer = await file.arrayBuffer();
-    const contentBase64 =
-      arrayBufferToBase64(buffer);
-
-    await putRepositoryFile(
-      path,
-      contentBase64,
-      `Add COPC scan ${id}`
-    );
-
-    const entry = {
-      id,
-      name: file.name.replace(/\.copc\.laz$/i, ""),
-      filename: file.name,
-      path,
-      url: joinUrl(github.rawBaseUrl, path),
-      sizeBytes: file.size,
-      pointCount: 0,
-      crs: "Unknown",
-      uploadedAt: new Date().toISOString()
-    };
-
-    try {
-      await mutateCatalog(
-        (root) => {
-          root.scans = root.scans.filter(
-            (scan) => scan.id !== entry.id
-          );
-
-          root.scans.unshift(entry);
-          return root;
-        },
-        `Add catalog entry ${id}`
-      );
-    } catch (catalogError) {
-      try {
-        const fileInfo = await getRepositoryFile(path);
-
-        await deleteRepositoryFile(
-          path,
-          fileInfo.sha,
-          `Rollback COPC upload ${id}`
-        );
-      } catch (rollbackError) {
-        console.error("Rollback failed:", rollbackError);
-      }
-
-      throw new Error(
-        `COPC was uploaded, but catalog update failed: ${
-          catalogError.message
-        }`
-      );
-    }
-
-    hideLoading();
-
-    await loadCatalog();
-    renderLibrary();
-
-    const createdScan = state.catalog.find(
-      (scan) => scan.id === id
-    );
-
-    if (createdScan) {
-      await loadScan(createdScan);
-    }
-
-    setStatus("COPC permanently saved", "success");
-  } catch (error) {
-    hideLoading();
-    setStatus(error.message, "error");
-    console.error(error);
-  }
-}
-
-async function validateCopcFile(file) {
-  const sampleSize = Math.min(file.size, 65536);
-  const sample = new Uint8Array(
-    await file.slice(0, sampleSize).arrayBuffer()
-  );
-
-  const signature = String.fromCharCode(
-    sample[0],
-    sample[1],
-    sample[2],
-    sample[3]
-  );
-
-  if (signature !== "LASF") {
-    throw new Error(
-      "This file does not contain a valid LAS/LAZ header."
-    );
-  }
-
-  const text = new TextDecoder().decode(sample);
-
-  if (!/copc/i.test(text)) {
-    throw new Error(
-      "The file does not appear to contain COPC metadata."
-    );
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/* GITHUB REPOSITORY OPERATIONS                                               */
-/* -------------------------------------------------------------------------- */
-
-async function ensureGithubToken() {
-  if (state.github && state.github.token) {
-    return state.github;
-  }
-
-  const response = await fetch(CONFIG.tokenEndpoint, {
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error(
-        "Administrator authentication has expired."
-      );
-    }
-
-    throw new Error(
-      "Could not obtain GitHub repository access."
-    );
-  }
-
-  state.github = await response.json();
-  return state.github;
-}
-
-async function githubRequest(
-  endpoint,
-  options = {},
-  retry = true
-) {
-  const github = await ensureGithubToken();
-
-  const headers = {
-    Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-    Authorization: `Bearer ${github.token}`,
-    ...options.headers
-  };
-
-  const response = await fetch(
-    `${github.apiBase}${endpoint}`,
-    {
-      ...options,
-      headers
-    }
-  );
-
-  if (response.status === 401 && retry) {
-    state.github = null;
-    return githubRequest(endpoint, options, false);
-  }
-
-  if (!response.ok) {
-    const message = await response.text();
-    const error = new Error(
-      `GitHub API error ${response.status}: ${message}`
-    );
-
-    error.status = response.status;
-    throw error;
-  }
-
-  return response;
-}
-
-function repositoryEndpoint(path) {
-  const github = state.github;
-
-  const encodedPath = path
-    .split("/")
-    .map(encodeURIComponent)
-    .join("/");
-
-  return `/repos/${github.owner}/${github.repo}/contents/${encodedPath}?ref=${encodeURIComponent(github.branch)}`;
-}
-
-async function getRepositoryFile(path) {
-  const response = await githubRequest(
-    repositoryEndpoint(path),
-    {
-      headers: {
-        Accept: "application/vnd.github.object+json"
-      }
-    }
-  );
-
-  return response.json();
-}
-
-async function putRepositoryFile(
-  path,
-  base64Content,
-  message,
-  sha = undefined
-) {
-  const github = await ensureGithubToken();
-
-  const encodedPath = path
-    .split("/")
-    .map(encodeURIComponent)
-    .join("/");
-
-  const body = {
-    message,
-    content: base64Content,
-    branch: github.branch
-  };
-
-  if (sha) {
-    body.sha = sha;
-  }
-
-  await githubRequest(
-    `/repos/${github.owner}/${github.repo}/contents/${encodedPath}`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    },
-    false
-  );
-}
-
-async function deleteRepositoryFile(
-  path,
-  sha,
-  message
-) {
-  const github = await ensureGithubToken();
-
-  const encodedPath = path
-    .split("/")
-    .map(encodeURIComponent)
-    .join("/");
-
-  await githubRequest(
-    `/repos/${github.owner}/${github.repo}/contents/${encodedPath}`,
-    {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message,
-        sha,
-        branch: github.branch
-      })
-    }
-  );
-}
-
-async function mutateCatalog(mutator, message) {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const catalogFile = await getRepositoryFile(
-      state.github.catalogPath
-    );
-
-    const root = decodeCatalog(
-      catalogFile.content
-    );
-
-    const nextRoot = mutator(root) || root;
-
-    const content =
-      JSON.stringify(nextRoot, null, 2) + "\n";
-
-    try {
-      await putRepositoryFile(
-        state.github.catalogPath,
-        utf8ToBase64(content),
-        message,
-        catalogFile.sha
-      );
-
-      return nextRoot;
-    } catch (error) {
-      if (error.status === 409 && attempt < 2) {
-        continue;
-      }
-
-      throw error;
-    }
-  }
-
-  throw new Error("Catalog update conflict.");
-}
-
-function decodeCatalog(content) {
-  if (!content) {
-    return {
-      version: 1,
-      scans: []
-    };
-  }
-
-  const decoded = base64ToUtf8(
-    content.replace(/\n/g, "")
-  );
-
-  const parsed = JSON.parse(decoded);
-
-  if (Array.isArray(parsed)) {
-    return {
-      version: 1,
-      scans: parsed
-    };
-  }
-
-  return {
-    version: parsed.version || 1,
-    scans: Array.isArray(parsed.scans)
-      ? parsed.scans
-      : []
-  };
-}
-
-/* -------------------------------------------------------------------------- */
-/* ADMIN DELETE                                                               */
-/* -------------------------------------------------------------------------- */
-
-async function deleteActiveScan() {
-  if (!state.admin) {
-    setStatus("Administrator login required.", "error");
-    return;
-  }
-
-  const scan = state.activeScan;
-
-  if (!scan || !scan.path) {
-    setStatus("Select a repository scan first.", "warning");
-    return;
-  }
-
-  const confirmed = window.confirm(
-    `Delete "${scan.name}" permanently from the active repository?`
-  );
-
-  if (!confirmed) return;
-
-  try {
-    showLoading("Removing scan from repository...");
-    setStatus("Preparing deletion...", "loading");
-
-    const fileInfo = await getRepositoryFile(scan.path);
-
-    await mutateCatalog(
-      (root) => {
-        root.scans = root.scans.filter(
-          (item) => item.id !== scan.id
-        );
-
-        return root;
-      },
-      `Remove catalog entry ${scan.id}`
-    );
-
-    try {
-      await deleteRepositoryFile(
-        scan.path,
-        fileInfo.sha,
-        `Delete COPC scan ${scan.id}`
-      );
-    } catch (deleteError) {
-      // Restore catalog entry if file deletion fails.
-      await mutateCatalog(
-        (root) => {
-          if (
-            !root.scans.some(
-              (item) => item.id === scan.id
-            )
-          ) {
-            root.scans.push(scan);
-          }
-
-          return root;
-        },
-        `Restore catalog entry ${scan.id}`
-      );
-
-      throw deleteError;
-    }
-
-    removeLoadedCloud(scan.id);
-
-    state.activeScan = null;
-    state.activeCloud = null;
-    state.activeBounds = null;
-
-    await loadCatalog();
-
-    renderLibrary();
-    updateInspector();
-
-    hideLoading();
-    setViewerStatus("Scan deleted", "success");
-    setStatus("COPC scan deleted", "success");
-  } catch (error) {
-    hideLoading();
-    setStatus(error.message, "error");
-    console.error(error);
-  }
-}
-
-function removeLoadedCloud(scanId) {
-  const cloud = state.loadedClouds.get(scanId);
-
-  if (!cloud) return;
-
   if (
-    viewer.scene &&
-    typeof viewer.scene.removePointCloud === "function"
+    !state.activeScan ||
+    !state.activeScan.url
   ) {
-    viewer.scene.removePointCloud(cloud);
-  } else {
-    cloud.visible = false;
+    setStatus(
+      "Select a scan first.",
+      "error"
+    );
+
+    return;
   }
 
-  state.loadedClouds.delete(scanId);
+  const link =
+    document.createElement("a");
+
+  link.href = state.activeScan.url;
+  link.download =
+    state.activeScan.filename ||
+    state.activeScan.name +
+      ".copc.laz";
+  link.target = "_blank";
+  link.rel = "noopener";
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 /* -------------------------------------------------------------------------- */
-/* UI EVENTS                                                                  */
+/* EVENTS                                                                     */
 /* -------------------------------------------------------------------------- */
 
 function bindEvents() {
-  $("loginLink").addEventListener("click", () => {
-    setStatus("Opening administrator login...", "loading");
-  });
-
-  $("logoutButton").addEventListener("click", logout);
-
-  $("uploadButton").addEventListener("click", () => {
-    $("fileInput").click();
-  });
-
-  $("fileInput").addEventListener("change", (event) => {
-    const file = event.target.files[0];
-
-    if (file) {
-      handleFileSelected(file);
-    }
-
-    event.target.value = "";
-  });
-
-  $("scanSearch").addEventListener(
+  on(
+    "scanSearch",
     "input",
     renderLibrary
   );
 
-  $("refreshLibrary").addEventListener(
+  on(
+    "refreshLibrary",
     "click",
-    async () => {
+    async function () {
       await loadCatalog();
       renderLibrary();
-      setStatus("Library refreshed", "success");
+
+      setStatus(
+        "Library refreshed",
+        "success"
+      );
     }
   );
 
-  $("fitView").addEventListener(
+  on(
+    "fitView",
     "click",
     fitActiveScan
   );
 
-  $("resetView").addEventListener(
+  on(
+    "resetView",
     "click",
     resetView
   );
 
-  $("orbitMode").addEventListener(
+  on(
+    "orbitMode",
     "click",
     activateOrbitMode
   );
 
-  $("downloadScan").addEventListener(
+  on(
+    "downloadScan",
     "click",
     downloadActiveScan
   );
 
-  $("colorMode").addEventListener("change", () => {
-    applyColorMode();
-    setStatus("Color mode updated", "success");
-  });
+  on(
+    "colorMode",
+    "change",
+    function () {
+      applyColorMode();
+      setStatus(
+        "Color mode updated",
+        "success"
+      );
+    }
+  );
 
-  $("pointSize").addEventListener(
+  on(
+    "pointSize",
     "input",
     applyPointSize
   );
 
-  $("pointOpacity").addEventListener(
+  on(
+    "pointOpacity",
     "input",
     applyOpacity
   );
 
-  $("pointBudget").addEventListener(
+  on(
+    "pointBudget",
     "input",
     applyPointBudget
   );
 
-  $("sectionMode").addEventListener(
+  on(
+    "sectionMode",
     "change",
-    () => {
+    function () {
       updateSectionControls();
 
-      if ($("sectionMode").value === "none") {
+      const mode =
+        getElement("sectionMode");
+
+      if (
+        mode &&
+        mode.value === "none"
+      ) {
         clearSection();
       }
     }
   );
 
-  $("sectionAxis").addEventListener(
+  on(
+    "sectionAxis",
     "change",
-    () => {
+    function () {
       updateSectionControls();
+
+      if (state.sectionVolume) {
+        applySection();
+      }
     }
   );
 
-  $("sectionPosition").addEventListener(
+  on(
+    "sectionPosition",
     "input",
-    () => {
-      $("sectionPositionValue").textContent =
-        formatCoordinate(
-          Number($("sectionPosition").value)
+    function () {
+      const value =
+        getNumberValue(
+          "sectionPosition",
+          0
         );
 
+      setText(
+        "sectionPositionValue",
+        formatCoordinate(value)
+      );
+
       if (state.sectionVolume) {
         applySection();
       }
     }
   );
 
-  $("sectionThickness").addEventListener(
+  on(
+    "sectionThickness",
     "input",
-    () => {
-      $("sectionThicknessValue").textContent =
-        `${formatCoordinate(
-          Number($("sectionThickness").value)
-        )} units`;
+    function () {
+      const value =
+        getNumberValue(
+          "sectionThickness",
+          0
+        );
+
+      setText(
+        "sectionThicknessValue",
+        formatCoordinate(value) +
+          " units"
+      );
 
       if (state.sectionVolume) {
         applySection();
@@ -1371,12 +1432,14 @@ function bindEvents() {
     }
   );
 
-  $("applySection").addEventListener(
+  on(
+    "applySection",
     "click",
     applySection
   );
 
-  $("clearSection").addEventListener(
+  on(
+    "clearSection",
     "click",
     clearSection
   );
@@ -1386,135 +1449,142 @@ function bindEvents() {
 /* STATUS                                                                     */
 /* -------------------------------------------------------------------------- */
 
-function setStatus(message, type = "") {
-  $("statusMessage").textContent = message;
+function setStatus(message, type) {
+  setText("statusMessage", message);
   setViewerStatus(message, type);
 }
 
-function setViewerStatus(message, type = "idle") {
-  $("viewerStatus").textContent = message;
+function setViewerStatus(message, type) {
+  setText("viewerStatus", message);
 
-  const dot = $("viewerStatusDot");
+  const dot =
+    getElement("viewerStatusDot");
 
-  dot.classList.remove(
-    "status-idle",
-    "status-loading",
-    "status-error"
-  );
+  if (!dot) {
+    return;
+  }
+
+  dot.className = "status-dot";
 
   if (type === "loading") {
     dot.classList.add("status-loading");
-  } else if (type === "error") {
-    dot.classList.add("status-error");
-  } else if (type === "success") {
-    dot.classList.add("status-dot");
-  } else {
-    dot.classList.add("status-idle");
   }
+
+  if (type === "error") {
+    dot.classList.add("status-error");
+  }
+
+  /*
+    Normal and success states keep the default green dot.
+  */
 }
 
 function showLoading(message) {
-  $("loadingMessage").textContent = message;
-  $("loadingOverlay").classList.remove("hidden");
+  setText("loadingMessage", message);
+
+  const overlay =
+    getElement("loadingOverlay");
+
+  if (overlay) {
+    overlay.classList.remove("hidden");
+  }
 }
 
 function hideLoading() {
-  $("loadingOverlay").classList.add("hidden");
+  const overlay =
+    getElement("loadingOverlay");
+
+  if (overlay) {
+    overlay.classList.add("hidden");
+  }
 }
 
 /* -------------------------------------------------------------------------- */
 /* UTILITIES                                                                  */
 /* -------------------------------------------------------------------------- */
 
-function createId() {
-  return `scan-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 9)}`;
+function getNumberValue(id, fallback) {
+  const element = getElement(id);
+
+  if (!element) {
+    return fallback;
+  }
+
+  const value = Number(element.value);
+
+  return Number.isFinite(value)
+    ? value
+    : fallback;
 }
 
 function clamp(value, min, max) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function joinUrl(base, path) {
-  return `${String(base).replace(/\/$/, "")}/${path
-    .split("/")
-    .map(encodeURIComponent)
-    .join("/")}`;
+  return Math.min(
+    Math.max(value, min),
+    max
+  );
 }
 
 function formatBytes(bytes) {
-  if (!bytes || bytes <= 0) return "Unknown";
+  if (!bytes || bytes <= 0) {
+    return "Unknown";
+  }
 
-  const units = ["B", "KiB", "MiB", "GiB"];
+  const units = [
+    "B",
+    "KiB",
+    "MiB",
+    "GiB"
+  ];
+
   const index = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
+    Math.floor(
+      Math.log(bytes) /
+        Math.log(1024)
+    ),
     units.length - 1
   );
 
   const value =
-    bytes / Math.pow(1024, index);
+    bytes /
+    Math.pow(1024, index);
 
-  return `${value.toFixed(index === 0 ? 0 : 1)} ${
+  return (
+    value.toFixed(
+      index === 0 ? 0 : 1
+    ) +
+    " " +
     units[index]
-  }`;
+  );
 }
 
 function formatNumber(value) {
-  return new Intl.NumberFormat().format(value);
+  return new Intl.NumberFormat().format(
+    value
+  );
 }
 
 function formatCompactNumber(value) {
   if (value >= 1000000) {
-    return `${(value / 1000000).toFixed(1)}M`;
+    return (
+      (value / 1000000).toFixed(1) +
+      "M"
+    );
   }
 
   if (value >= 1000) {
-    return `${Math.round(value / 1000)}K`;
+    return (
+      Math.round(value / 1000) +
+      "K"
+    );
   }
 
   return String(value);
 }
 
 function formatCoordinate(value) {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
   return Number(value).toFixed(3);
-}
-
-function arrayBufferToBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  let binary = "";
-
-  for (
-    let offset = 0;
-    offset < bytes.length;
-    offset += chunkSize
-  ) {
-    const chunk = bytes.subarray(
-      offset,
-      Math.min(offset + chunkSize, bytes.length)
-    );
-
-    binary += String.fromCharCode(...chunk);
-  }
-
-  return btoa(binary);
-}
-
-function utf8ToBase64(value) {
-  return arrayBufferToBase64(
-    new TextEncoder().encode(value).buffer
-  );
-}
-
-function base64ToUtf8(value) {
-  const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index++) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return new TextDecoder().decode(bytes);
 }
