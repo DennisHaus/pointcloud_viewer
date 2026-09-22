@@ -3,7 +3,7 @@
   "scans": [
     {
       "id": "output-001",
-      "name": "BIRCH Tree",
+      "name": "Output Test",
       "filename": "output.copc.laz",
       "path": "./scans/output.copc.laz",
       "url": "./scans/output.copc.laz",
