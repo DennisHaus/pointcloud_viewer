@@ -70272,7 +70272,7 @@ void main() {
 			}else if(viewer.background === "white"){
 				renderer.setClearColor(0xFFFFFF, 1);
 			}else {
-				renderer.setClearColor(0xFFFFFF, 1);
+				renderer.setClearColor(0x000000, 1);
 			}
 
 			renderer.clear();
