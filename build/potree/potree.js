@@ -88225,7 +88225,7 @@ ENDSEC
 
 				this.compass = new Compass(this);
 
-				this.createControls();
+				//this.createControls();
 
 				this.clippingTool.setScene(this.scene);
 
