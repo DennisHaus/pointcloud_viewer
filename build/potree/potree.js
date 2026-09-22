@@ -90654,7 +90654,7 @@ ENDSEC
 	exports.TransformationTool = TransformationTool;
 	exports.TreeType = TreeType;
 	exports.Utils = Utils;
-	exports.VRControls = VRControls;
+	//exports.VRControls = VRControls;
 	exports.Version = Version;
 	exports.Viewer = Viewer;
 	exports.Volume = Volume;
