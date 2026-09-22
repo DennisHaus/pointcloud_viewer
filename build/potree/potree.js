@@ -89997,7 +89997,7 @@ ENDSEC
 				// automatically switch to paraboloids because they cause far less flickering in VR,
 				// when point sizes are larger than around 2 pixels
 				// if(Features.SHADER_INTERPOLATION.isSupported()){
-				// 	pointcloud.material.shape = Potree.PointShape.PARABOLOID;
+				pointcloud.material.shape = Potree.PointShape.PARABOLOID;
 				// }
 			}
 
