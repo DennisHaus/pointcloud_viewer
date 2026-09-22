@@ -5,11 +5,12 @@
       "id": "output-001",
       "name": "Output Test",
       "filename": "output.copc.laz",
-      "path": "scans/output.copc.laz",
-      "url": "https://dennishaus.github.io/pointcloud_viewer/scans/output.copc.laz",
+      "path": "./scans/output.copc.laz",
+      "url": "./scans/output.copc.laz",
+      "format": "copc",
       "sizeBytes": 73400320,
       "pointCount": 12800000,
-      "crs": "",
+      "crs": null,
       "uploadedAt": "2026-09-21"
     }
   ]
