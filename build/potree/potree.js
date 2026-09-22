@@ -75754,7 +75754,7 @@ ENDSEC
 			});
 		}
 
-		setPointCloud(pointcloud){``
+		setPointCloud(pointcloud){`
 
 			let material = pointcloud.material;
 
