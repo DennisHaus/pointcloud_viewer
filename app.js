@@ -1,5 +1,19 @@
 "use strict";
 
+const MAX_FILE_SIZE = 95 * 1024 * 1024;
+
+fs.mkdirSync(SCANS_DIR, {
+  recursive: true
+});
+
+if (!fs.existsSync(CATALOG_FILE)) {
+  fs.writeFileSync(
+    CATALOG_FILE,
+    JSON.stringify({ scans: [] }, null, 2),
+    "utf8"
+  );
+}
+
 function readCatalog() {
   try {
     const contents = fs.readFileSync(
