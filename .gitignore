@@ -1,0 +1,7 @@
+.DS_Store
+libs/.DS_Store
+libs/Cesium/.DS_Store
+libs/Cesium/Assets/.DS_Store
+libs/Cesium/Widgets/.DS_Store
+pointclouds/.DS_Store
+scans/lion_takanawa.copc.laz
