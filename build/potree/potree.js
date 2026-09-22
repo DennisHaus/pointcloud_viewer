@@ -89115,10 +89115,10 @@ ENDSEC
 			}
 
 			{ // create VR CONTROLS
-				this.vrControls = false;
-				this.vrControls.enabled = false;
-				this.vrControls.addEventListener('start', this.disableAnnotations.bind(this));
-				this.vrControls.addEventListener('end', this.enableAnnotations.bind(this));
+				this.vrControls = null;
+				//this.vrControls.enabled = false;
+				//this.vrControls.addEventListener('start', this.disableAnnotations.bind(this));
+				//this.vrControls.addEventListener('end', this.enableAnnotations.bind(this));
 			}
 
 
