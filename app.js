@@ -628,7 +628,7 @@ function renderLibrary() {
       icon.className =
         "scan-icon";
 
-      icon.textContent = "◈";
+      icon.textContent = "";
 
       var name =
         document.createElement(
