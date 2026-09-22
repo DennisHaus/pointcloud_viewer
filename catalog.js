@@ -6,7 +6,7 @@
       "name": "Warehouse Exterior",
       "filename": "output.copc.laz",
       "path": "scans/warehouse.copc.laz",
-      "url": "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPOSITORY/main/scans/output.copc.laz",
+      "url": "https://raw.githubusercontent.com/dennishaus/pointcloud_viewer/scans/output.copc.laz",
       "sizeBytes": 73400320,
       "pointCount": 12800000,
       "crs": "EPSG:26910",
