@@ -13,15 +13,16 @@
   --muted: #8d8d8d;
   --muted-dark: #666666;
 
+  --accent: #d8d8d8;
   --accent-strong: #ffffff;
+
   --danger: #d37b7b;
   --warning: #d7b66d;
 
   --interface-width: 370px;
-  --header-height: 300px;
+  --header-height: 205px;
   --library-height: 215px;
   --status-height: 30px;
-  --panel-header-height: 48px;
 
   font-family:
     Inter,
@@ -35,8 +36,6 @@
 
 * {
   box-sizing: border-box;
-  scrollbar-width: thin;
-  scrollbar-color: #444444 transparent;
 }
 
 html,
@@ -44,10 +43,9 @@ body {
   width: 100%;
   height: 100%;
   margin: 0;
-  overflow: hidden;
-
-  color: var(--text);
+  overflow: auto;
   background: var(--black);
+  color: var(--text);
 }
 
 body {
@@ -65,11 +63,6 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
@@ -77,13 +70,12 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
-.hidden,
-[hidden] {
+.hidden {
   display: none !important;
 }
 
 /* -------------------------------------------------------------------------- */
-/* APPLICATION LAYOUT                                                         */
+/* MAIN APPLICATION LAYOUT                                                    */
 /* -------------------------------------------------------------------------- */
 
 .app-shell {
@@ -94,14 +86,24 @@ select:focus-visible {
   background: var(--black);
 }
 
+/*
+  The existing DOM contains:
+  - .topbar
+  - .workspace
+  - .statusbar
+
+  This stylesheet places the topbar, library, and inspector on the right.
+*/
+
 .workspace {
   position: absolute;
   inset: 0;
+  display: block;
   overflow: hidden;
 }
 
 /* -------------------------------------------------------------------------- */
-/* HEADER                                                                     */
+/* RIGHT-SIDE HEADER                                                          */
 /* -------------------------------------------------------------------------- */
 
 .topbar {
@@ -109,6 +111,8 @@ select:focus-visible {
   z-index: 30;
   top: 0;
   right: 0;
+
+  display: block;
 
   width: var(--interface-width);
   height: var(--header-height);
@@ -121,6 +125,15 @@ select:focus-visible {
   border-bottom: 1px solid var(--border);
 
   background: var(--black);
+}
+
+.brand {
+  display: block;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: none;
 }
 
 .eyebrow {
@@ -160,24 +173,28 @@ select:focus-visible {
 }
 
 .topbar-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
 
   margin-top: 17px;
 }
 
 .search-box {
+  grid-column: 1 / -1;
+
   display: flex;
   align-items: center;
   gap: 8px;
 
   width: 100%;
-  height: 32px;
+  height: 30px;
 
   padding: 0 8px;
 
   border: 1px solid var(--border-light);
+  border-radius: 0;
+
   background: var(--surface-3);
 }
 
@@ -208,73 +225,93 @@ select:focus-visible {
   color: var(--muted-dark);
 }
 
-.upload-dropzone {
-  display: flex;
+.admin-badge {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
 
-  width: 100%;
-  min-height: 52px;
-
-  padding: 8px 10px;
-
-  border: 1px dashed var(--border-light);
-
-  color: var(--text);
-  background: var(--surface-2);
-
-  cursor: pointer;
-
-  transition:
-    border-color 120ms ease,
-    background 120ms ease,
-    color 120ms ease;
-}
-
-.upload-dropzone:hover,
-.upload-dropzone:focus-visible,
-.upload-dropzone.is-dragging {
-  border-color: #aaaaaa;
-  color: #ffffff;
-  background: #161616;
-}
-
-.upload-mark {
-  display: grid;
-  place-items: center;
-
-  width: 29px;
-  height: 29px;
-  flex: 0 0 29px;
+  min-height: 31px;
+  padding: 0 8px;
 
   border: 1px solid var(--border-light);
+  border-radius: 0;
 
-  font-size: 20px;
-  line-height: 1;
-}
+  color: var(--muted);
+  background: var(--surface);
 
-.upload-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.upload-copy strong {
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.upload-copy small {
-  overflow: hidden;
+/* -------------------------------------------------------------------------- */
+/* BUTTONS                                                                    */
+/* -------------------------------------------------------------------------- */
 
-  color: var(--muted);
+.button,
+button {
+  min-height: 31px;
+
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+
+  color: #dddddd;
+  background: #0c0c0c;
 
   font-size: 9px;
-  letter-spacing: 0.03em;
-  text-overflow: ellipsis;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 10px;
+  text-decoration: none;
   white-space: nowrap;
+}
+
+.button:hover,
+button:hover {
+  border-color: #aaaaaa;
+  color: #ffffff;
+  background: #1b1b1b;
+}
+
+.button:active,
+button:active {
+  background: #2a2a2a;
+}
+
+.button-primary {
+  border-color: #eeeeee;
+  color: #000000;
+  background: #eeeeee;
+}
+
+.button-primary:hover {
+  border-color: #ffffff;
+  color: #000000;
+  background: #ffffff;
+}
+
+.button-secondary {
+  color: #dddddd;
+  background: #0c0c0c;
+}
+
+.button-ghost {
+  color: var(--muted);
+  background: transparent;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -299,15 +336,12 @@ select:focus-visible {
     );
 }
 
-.viewer,
-#potree_render_area {
-  position: absolute !important;
-  inset: 0 !important;
+.viewer {
+  position: absolute;
+  inset: 0;
 
-  width: 100% !important;
-  height: 100% !important;
-
-  overflow: hidden;
+  width: 100%;
+  height: 100%;
 
   background:
     radial-gradient(
@@ -316,6 +350,16 @@ select:focus-visible {
       #050505 55%,
       #000000 100%
     );
+}
+
+#potree_render_area {
+  position: absolute !important;
+  inset: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  overflow: hidden;
 }
 
 #potree_render_area .potree_container,
@@ -348,8 +392,8 @@ select:focus-visible {
   position: absolute;
   z-index: 10;
   top: 15px;
-  right: 16px;
   left: 16px;
+  right: 16px;
 
   display: flex;
   align-items: flex-start;
@@ -363,6 +407,7 @@ select:focus-visible {
   padding: 8px 10px;
 
   border: 1px solid var(--border);
+  border-radius: 0;
 
   color: var(--muted);
   background: rgba(0, 0, 0, 0.72);
@@ -383,17 +428,22 @@ select:focus-visible {
 }
 
 /* -------------------------------------------------------------------------- */
-/* STATUS DOTS                                                                */
+/* STATUS LIGHTS                                                              */
 /* -------------------------------------------------------------------------- */
 
 .status-dot {
-  display: inline-block;
-
   width: 8px;
   height: 8px;
   flex: 0 0 8px;
 
+  display: inline-block;
+
   border-radius: 50%;
+  background: #eeeeee;
+  box-shadow: 0 0 9px rgba(238, 238, 238, 0.65);
+}
+
+.status-dot.status-idle {
   background: #eeeeee;
   box-shadow: 0 0 9px rgba(238, 238, 238, 0.65);
 }
@@ -406,10 +456,6 @@ select:focus-visible {
 .status-dot.status-error {
   background: var(--danger);
   box-shadow: 0 0 9px rgba(211, 123, 123, 0.7);
-}
-
-.status-dot.status-idle {
-  background: #eeeeee;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -470,28 +516,20 @@ select:focus-visible {
   transform: translateX(-50%);
 
   border: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.82);
-}
-
-.toolbar-button,
-.button,
-.icon-button,
-.panel-toggle {
-  border: 1px solid var(--border-light);
   border-radius: 0;
 
-  color: #dddddd;
-  background: #0c0c0c;
-
-  transition:
-    background 120ms ease,
-    color 120ms ease,
-    border-color 120ms ease;
+  background: rgba(0, 0, 0, 0.82);
 }
 
 .toolbar-button {
   min-height: 30px;
   padding: 0 10px;
+
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+
+  color: #cccccc;
+  background: #0b0b0b;
 
   font-size: 9px;
   font-weight: 750;
@@ -507,44 +545,27 @@ select:focus-visible {
 }
 
 /* -------------------------------------------------------------------------- */
-/* PANELS                                                                     */
+/* LIBRARY PANEL                                                              */
 /* -------------------------------------------------------------------------- */
 
-.library-panel,
-.inspector-panel {
+.library-panel {
   position: absolute;
   z-index: 20;
-  right: 0;
-
-  width: var(--interface-width);
-  min-height: 0;
-
-  border-left: 1px solid var(--border);
-
-  background: var(--black);
-}
-
-.library-panel {
   top: var(--header-height);
+  right: 0;
 
   display: flex;
   flex-direction: column;
 
+  width: var(--interface-width);
   height: var(--library-height);
 
   overflow: hidden;
 
+  border-left: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-}
 
-.inspector-panel {
-  top: calc(var(--header-height) + var(--library-height));
-  bottom: var(--status-height);
-
-  display: flex;
-  flex-direction: column;
-
-  overflow: hidden;
+  background: var(--black);
 }
 
 .panel-header {
@@ -552,10 +573,7 @@ select:focus-visible {
   align-items: center;
   justify-content: space-between;
 
-  min-height: var(--panel-header-height);
-  height: var(--panel-header-height);
-  flex: 0 0 var(--panel-header-height);
-
+  min-height: 48px;
   padding: 10px 13px;
 
   border-bottom: 1px solid var(--border);
@@ -580,81 +598,23 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
-.panel-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.panel-toggle,
 .icon-button {
-  display: grid;
-  place-items: center;
-
   width: 28px;
-  height: 28px;
   min-height: 28px;
+  height: 28px;
 
   padding: 0;
 
   color: var(--muted);
   background: transparent;
 
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 400;
 }
 
-.panel-toggle:hover,
 .icon-button:hover {
-  border-color: #aaaaaa;
   color: #ffffff;
-  background: var(--surface-3);
 }
-
-.panel-body {
-  min-height: 0;
-}
-
-.library-panel .panel-body {
-  display: flex;
-  flex-direction: column;
-
-  min-height: 0;
-  flex: 1 1 auto;
-
-  overflow: hidden;
-}
-
-.inspector-panel .panel-body {
-  min-height: 0;
-  flex: 1 1 auto;
-
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-.library-panel.is-collapsed {
-  height: var(--panel-header-height);
-}
-
-.inspector-panel.is-collapsed {
-  bottom: auto;
-  height: var(--panel-header-height);
-}
-
-.workspace.library-collapsed .inspector-panel {
-  top: calc(
-    var(--header-height) + var(--panel-header-height)
-  );
-}
-
-.library-panel.is-collapsed .panel-body,
-.inspector-panel.is-collapsed .panel-body {
-  display: none;
-}
-
-/* -------------------------------------------------------------------------- */
-/* LIBRARY                                                                    */
-/* -------------------------------------------------------------------------- */
 
 .library-info {
   display: flex;
@@ -693,22 +653,22 @@ select:focus-visible {
 
 .library-list {
   min-height: 0;
-  flex: 1 1 auto;
-
-  overflow-x: hidden;
+  height: 100%;
   overflow-y: auto;
 
   padding: 0 10px 12px;
 }
 
 .scan-card {
+  width: 100%;
+
   display: block;
 
-  width: 100%;
   margin-bottom: 5px;
   padding: 9px;
 
   border: 1px solid transparent;
+  border-radius: 0;
 
   color: var(--text);
   background: transparent;
@@ -733,12 +693,12 @@ select:focus-visible {
 }
 
 .scan-icon {
-  display: grid;
-  place-items: center;
-
   width: 23px;
   height: 23px;
   flex: 0 0 23px;
+
+  display: grid;
+  place-items: center;
 
   border: 1px solid var(--border-light);
 
@@ -778,6 +738,11 @@ select:focus-visible {
   box-shadow: 0 0 7px rgba(238, 238, 238, 0.7);
 }
 
+.scan-state.loading {
+  background: var(--warning);
+  box-shadow: 0 0 7px rgba(215, 182, 109, 0.7);
+}
+
 .scan-meta {
   display: flex;
   gap: 9px;
@@ -793,8 +758,25 @@ select:focus-visible {
 }
 
 /* -------------------------------------------------------------------------- */
-/* INSPECTOR                                                                  */
+/* INSPECTOR PANEL                                                            */
 /* -------------------------------------------------------------------------- */
+
+.inspector-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(var(--header-height) + var(--library-height));
+  right: 0;
+  bottom: var(--status-height);
+
+  width: var(--interface-width);
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  border-left: 1px solid var(--border);
+
+  background: var(--black);
+}
 
 .inspector-content {
   padding-bottom: 20px;
@@ -857,6 +839,10 @@ select:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* -------------------------------------------------------------------------- */
+/* CONTROLS                                                                   */
+/* -------------------------------------------------------------------------- */
 
 .control-label {
   display: flex;
@@ -961,44 +947,22 @@ select:focus-visible {
   margin-top: 17px;
 }
 
-.section-buttons button {
+.section-buttons .button {
   width: 100%;
-  min-height: 31px;
+  padding: 0 6px;
 }
 
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.helper-text {
+  margin: 11px 0 0;
 
-  min-height: 31px;
-  padding: 0 10px;
+  color: var(--muted-dark);
 
   font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  text-decoration: none;
-  text-transform: uppercase;
-}
-
-.button:hover {
-  border-color: #aaaaaa;
-  color: #ffffff;
-  background: #1b1b1b;
-}
-
-.button-secondary {
-  color: #dddddd;
-  background: #0c0c0c;
-}
-
-.button-ghost {
-  color: var(--muted);
-  background: transparent;
+  line-height: 1.45;
 }
 
 /* -------------------------------------------------------------------------- */
-/* EMPTY STATE                                                                */
+/* EMPTY STATES                                                               */
 /* -------------------------------------------------------------------------- */
 
 .empty-state {
@@ -1014,10 +978,6 @@ select:focus-visible {
   color: var(--muted);
 
   text-align: center;
-}
-
-.library-panel .empty-state {
-  flex: 1 1 auto;
 }
 
 .empty-state strong {
@@ -1081,7 +1041,7 @@ select:focus-visible {
 }
 
 /* -------------------------------------------------------------------------- */
-/* FOOTER                                                                     */
+/* FOOTER STATUS BAR                                                          */
 /* -------------------------------------------------------------------------- */
 
 .statusbar {
@@ -1104,6 +1064,7 @@ select:focus-visible {
   border-left: 1px solid var(--border);
 
   color: var(--muted);
+
   background: var(--black);
 
   font-size: 8px;
@@ -1120,13 +1081,34 @@ select:focus-visible {
 }
 
 #statusMessage {
-  min-width: 0;
   overflow: hidden;
 
   color: #eeeeee;
 
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------- */
+/* SCROLLBARS                                                                 */
+/* -------------------------------------------------------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #444444 transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3b3b3b;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1166,7 +1148,6 @@ select:focus-visible {
 
     height: auto;
     min-height: 0;
-
     overflow: visible;
   }
 
@@ -1189,7 +1170,7 @@ select:focus-visible {
     order: 2;
 
     width: 100%;
-    height: 260px;
+    height: 240px;
 
     border-top: 1px solid var(--border);
     border-left: 0;
@@ -1204,14 +1185,10 @@ select:focus-visible {
     order: 3;
 
     width: 100%;
-    height: auto;
+    max-height: none;
 
     border-top: 1px solid var(--border);
     border-left: 0;
-  }
-
-  .inspector-panel .panel-body {
-    overflow: visible;
   }
 
   .statusbar {
@@ -1224,17 +1201,8 @@ select:focus-visible {
     border-left: 0;
   }
 
-  .workspace.library-collapsed .inspector-panel {
-    top: auto;
-  }
-
   .viewer-help {
     display: none;
-  }
-
-  .library-panel.is-collapsed,
-  .inspector-panel.is-collapsed {
-    height: var(--panel-header-height);
   }
 }
 
@@ -1275,21 +1243,46 @@ select:focus-visible {
   .statusbar > div {
     display: none;
   }
-}
 
+  /* -------------------------------------------------------------------------- */
+/* SCROLLABLE SIDE PANELS                                                     */
 /* -------------------------------------------------------------------------- */
-/* WEBKIT SCROLLBARS                                                          */
-/* -------------------------------------------------------------------------- */
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.library-panel,
+.inspector-panel {
+  min-height: 0;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+/* Keep panel headers visible */
+.library-panel > .panel-header,
+.inspector-panel > .panel-header {
+  flex: 0 0 auto;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #3b3b3b;
+/* Library panel */
+.library-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  padding: 0 10px 12px;
+}
+
+/* Inspector panel */
+.inspector-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.inspector-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
 }
