@@ -1,21 +1,17 @@
 "use strict";
 
-var express = require("express");
-var multer = require("multer");
-var fs = require("fs");
-var path = require("path");
+const express = require("express");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
 
-var app = express();
+const app = express();
 
-var PORT = process.env.PORT || 3000;
-var ROOT_DIR = __dirname;
-var SCANS_DIR = path.join(ROOT_DIR, "scans");
-var CATALOG_FILE = path.join(ROOT_DIR, "catalog.json");
-var MAX_FILE_SIZE = 95 * 1024 * 1024;
-
-/* -------------------------------------------------------------------------- */
-/* DIRECTORIES AND CATALOG                                                    */
-/* -------------------------------------------------------------------------- */
+const PORT = 3000;
+const ROOT_DIR = __dirname;
+const SCANS_DIR = path.join(ROOT_DIR, "scans");
+const CATALOG_FILE = path.join(ROOT_DIR, "catalog.json");
+const MAX_FILE_SIZE = 95 * 1024 * 1024;
 
 fs.mkdirSync(SCANS_DIR, {
   recursive: true
@@ -24,35 +20,23 @@ fs.mkdirSync(SCANS_DIR, {
 if (!fs.existsSync(CATALOG_FILE)) {
   fs.writeFileSync(
     CATALOG_FILE,
-    JSON.stringify(
-      {
-        scans: []
-      },
-      null,
-      2
-    ),
+    JSON.stringify({ scans: [] }, null, 2),
     "utf8"
   );
 }
 
 function readCatalog() {
   try {
-    var content = fs.readFileSync(
+    const content = fs.readFileSync(
       CATALOG_FILE,
       "utf8"
     );
 
-    var catalog = JSON.parse(content);
+    const catalog = JSON.parse(content);
 
     if (Array.isArray(catalog)) {
       return {
         scans: catalog
-      };
-    }
-
-    if (!catalog || typeof catalog !== "object") {
-      return {
-        scans: []
       };
     }
 
@@ -62,10 +46,7 @@ function readCatalog() {
 
     return catalog;
   } catch (error) {
-    console.error(
-      "Could not read catalog.json:",
-      error
-    );
+    console.error("Could not read catalog.json:", error);
 
     return {
       scans: []
@@ -81,23 +62,20 @@ function writeCatalog(catalog) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/* FILENAMES                                                                  */
-/* -------------------------------------------------------------------------- */
-
 function sanitizeFilename(filename) {
   return path
-    .basename(String(filename || ""))
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .replace(/_+/g, "_");
+    .basename(filename)
+    .replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 function createUniqueFilename(originalFilename) {
-  var cleaned = sanitizeFilename(
+  const cleanName = sanitizeFilename(
     originalFilename
   );
 
-  var baseName = cleaned.replace(
+  const extension = ".copc.laz";
+
+  let baseName = cleanName.replace(
     /\.copc\.laz$/i,
     ""
   );
@@ -106,8 +84,8 @@ function createUniqueFilename(originalFilename) {
     baseName = "scan";
   }
 
-  var filename = baseName + ".copc.laz";
-  var counter = 1;
+  let filename = `${baseName}${extension}`;
+  let counter = 1;
 
   while (
     fs.existsSync(
@@ -115,10 +93,7 @@ function createUniqueFilename(originalFilename) {
     )
   ) {
     filename =
-      baseName +
-      "-" +
-      counter +
-      ".copc.laz";
+      `${baseName}-${counter}${extension}`;
 
     counter += 1;
   }
@@ -126,36 +101,32 @@ function createUniqueFilename(originalFilename) {
   return filename;
 }
 
-/* -------------------------------------------------------------------------- */
-/* FILE UPLOAD                                                                */
-/* -------------------------------------------------------------------------- */
-
-var storage = multer.diskStorage({
-  destination: function (request, file, callback) {
+const storage = multer.diskStorage({
+  destination: (request, file, callback) => {
     callback(null, SCANS_DIR);
   },
 
-  filename: function (request, file, callback) {
-    callback(
-      null,
-      createUniqueFilename(file.originalname)
+  filename: (request, file, callback) => {
+    const filename = createUniqueFilename(
+      file.originalname
     );
+
+    callback(null, filename);
   }
 });
 
-var upload = multer({
-  storage: storage,
+const upload = multer({
+  storage,
 
   limits: {
     fileSize: MAX_FILE_SIZE
   },
 
-  fileFilter: function (request, file, callback) {
-    var filename = String(
-      file.originalname || ""
-    ).toLowerCase();
+  fileFilter: (request, file, callback) => {
+    const filename =
+      file.originalname.toLowerCase();
 
-    if (!/\.copc\.laz$/i.test(filename)) {
+    if (!filename.endsWith(".copc.laz")) {
       callback(
         new Error(
           "Only .copc.laz files are accepted."
@@ -169,18 +140,21 @@ var upload = multer({
   }
 });
 
-/* -------------------------------------------------------------------------- */
-/* API                                                                        */
-/* -------------------------------------------------------------------------- */
-
-app.get("/api/scans", function (request, response) {
+/*
+  Return catalog.json
+*/
+app.get("/api/scans", (request, response) => {
   response.json(readCatalog());
 });
 
+/*
+  Upload a COPC file, save it in /scans,
+  and add it to catalog.json.
+*/
 app.post(
   "/api/scans",
   upload.single("file"),
-  function (request, response) {
+  (request, response) => {
     if (!request.file) {
       response.status(400).json({
         error: "No file was uploaded."
@@ -189,90 +163,54 @@ app.post(
       return;
     }
 
-    var filename = request.file.filename;
+    const filename = request.file.filename;
 
-    var scanName = filename.replace(
+    const name = filename.replace(
       /\.copc\.laz$/i,
       ""
     );
 
-    var scan = {
-      id:
-        String(Date.now()) +
-        "-" +
-        filename,
-
-      name: scanName,
-
-      filename: filename,
-
-      url:
-        "/scans/" +
-        encodeURIComponent(filename),
-
+    const scan = {
+      id: `${Date.now()}-${filename}`,
+      name,
+      filename,
+      url: `/scans/${encodeURIComponent(filename)}`,
       size: request.file.size,
-
       uploadedAt: new Date().toISOString(),
-
       points: null,
-
       crs: null
     };
 
-    var catalog = readCatalog();
+    const catalog = readCatalog();
 
     catalog.scans.unshift(scan);
 
-    try {
-      writeCatalog(catalog);
-    } catch (error) {
-      console.error(
-        "Could not update catalog.json:",
-        error
-      );
-
-      try {
-        fs.unlinkSync(
-          path.join(SCANS_DIR, filename)
-        );
-      } catch (unlinkError) {
-        console.error(unlinkError);
-      }
-
-      response.status(500).json({
-        error: "The file was uploaded but catalog.json could not be updated."
-      });
-
-      return;
-    }
+    writeCatalog(catalog);
 
     response.status(201).json(scan);
   }
 );
 
-/* -------------------------------------------------------------------------- */
-/* STATIC FILES                                                               */
-/* -------------------------------------------------------------------------- */
-
+/*
+  Make uploaded files available at /scans/...
+*/
 app.use(
   "/scans",
   express.static(SCANS_DIR)
 );
 
+/*
+  Serve index.html, app.js, style.css,
+  Potree, and the libraries.
+*/
 app.use(
   express.static(ROOT_DIR)
 );
 
-/* -------------------------------------------------------------------------- */
-/* ERROR HANDLING                                                             */
-/* -------------------------------------------------------------------------- */
-
-app.use(function (
-  error,
-  request,
-  response,
-  next
-) {
+/*
+  Handle upload errors.
+*/
+app.use((error, request, response, next) => {
   console.error(error);
 
   if (
@@ -287,19 +225,12 @@ app.use(function (
   }
 
   response.status(400).json({
-    error:
-      error.message ||
-      "The request failed."
+    error: error.message || "Upload failed."
   });
 });
 
-/* -------------------------------------------------------------------------- */
-/* START SERVER                                                               */
-/* -------------------------------------------------------------------------- */
-
-app.listen(PORT, function () {
+app.listen(PORT, () => {
   console.log(
-    "Pointcloud viewer running at http://localhost:" +
-      PORT
+    `Viewer running at http://localhost:${PORT}`
   );
 });
