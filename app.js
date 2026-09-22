@@ -1034,7 +1034,7 @@ function configurePointCloud(
   if (
     potree &&
     potree.PointShape &&
-    potree.PointShape.SQUARE !==
+    potree.PointShape.CIRCLE !==
     undefined
   ) {
     material.shape =
