@@ -10,7 +10,7 @@
       "sizeBytes": 73400320,
       "pointCount": 12800000,
       "crs": "EPSG:26910",
-      "uploadedAt": "2026-09-21T00:00:00Z"
+      "uploadedAt": "2026-09-21"
     }
   ]
 }
