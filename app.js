@@ -204,7 +204,7 @@ function initializeViewer() {
       typeof viewer.setEDLEnabled ===
       "function"
     ) {
-      viewer.setEDLEnabled(true);
+      viewer.setEDLEnabled(false);
     }
 
     if (
