@@ -3237,10 +3237,7 @@ function exportScreenshot() {
   }
 
   var originalWidth =
-    (Math.round(
-      CONFIG.screenshotWidth *
-      CONFIG.screenshotScale
-    );
+    (canvas.clientWidth * 1.5);
 
   var originalHeight =
     canvas.clientHeight ||
@@ -3369,8 +3366,8 @@ function exportScreenshot() {
     }
 
     renderer.setSize(
-      originalWidth,
-      originalHeight,
+      (canvas.clientWidth * 1.5),
+      (canvas.clientHeight * 1.5),
       false
     );
 
