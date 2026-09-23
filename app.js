@@ -2349,6 +2349,231 @@ function clearSection() {
 /* VIEW CONTROLS                                                              */
 /* -------------------------------------------------------------------------- */
 
+/*
+  Keyboard navigation
+  -------------------
+
+  W / Arrow Up    = Forward
+  S / Arrow Down  = Backward
+  A / Arrow Left  = Left
+  D / Arrow Right = Right
+
+  The keys are tracked continuously so holding a key down
+  produces continuous movement rather than one movement
+  per keypress.
+*/
+
+var navigationKeys = {
+  forward: false,
+  backward: false,
+  left: false,
+  right: false
+};
+
+var navigationKeyboardBound = false;
+
+
+/* -------------------------------------------------------------------------- */
+/* KEYBOARD HELPERS                                                           */
+/* -------------------------------------------------------------------------- */
+
+function isTypingInField(target) {
+  if (!target) {
+    return false;
+  }
+
+  var tagName =
+    target.tagName
+      ? target.tagName.toLowerCase()
+      : "";
+
+  return (
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select" ||
+    target.isContentEditable === true
+  );
+}
+
+
+function setNavigationKey(
+  key,
+  pressed
+) {
+  switch (key) {
+    case "w":
+    case "arrowup":
+      navigationKeys.forward =
+        pressed;
+      break;
+
+    case "s":
+    case "arrowdown":
+      navigationKeys.backward =
+        pressed;
+      break;
+
+    case "a":
+    case "arrowleft":
+      navigationKeys.left =
+        pressed;
+      break;
+
+    case "d":
+    case "arrowright":
+      navigationKeys.right =
+        pressed;
+      break;
+  }
+}
+
+
+function isNavigationKey(key) {
+  return (
+    key === "w" ||
+    key === "a" ||
+    key === "s" ||
+    key === "d" ||
+    key === "arrowup" ||
+    key === "arrowdown" ||
+    key === "arrowleft" ||
+    key === "arrowright"
+  );
+}
+
+
+/*
+  Bind keyboard navigation once.
+*/
+function bindNavigationKeyboard() {
+  if (navigationKeyboardBound) {
+    return;
+  }
+
+  navigationKeyboardBound =
+    true;
+
+
+  document.addEventListener(
+    "keydown",
+    function (event) {
+      if (
+        isTypingInField(
+          event.target
+        )
+      ) {
+        return;
+      }
+
+      var key =
+        String(
+          event.key || ""
+        ).toLowerCase();
+
+      if (
+        !isNavigationKey(key)
+      ) {
+        return;
+      }
+
+      /*
+        Prevent the browser from scrolling
+        the page when arrow keys are used.
+      */
+      event.preventDefault();
+
+      setNavigationKey(
+        key,
+        true
+      );
+    },
+    {
+      passive: false
+    }
+  );
+
+
+  document.addEventListener(
+    "keyup",
+    function (event) {
+      var key =
+        String(
+          event.key || ""
+        ).toLowerCase();
+
+      if (
+        !isNavigationKey(key)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+      setNavigationKey(
+        key,
+        false
+      );
+    },
+    {
+      passive: false
+    }
+  );
+
+
+  /*
+    If the browser window loses focus while
+    a key is being held, clear the movement
+    state. This prevents "stuck" movement.
+  */
+  window.addEventListener(
+    "blur",
+    function () {
+      navigationKeys.forward =
+        false;
+
+      navigationKeys.backward =
+        false;
+
+      navigationKeys.left =
+        false;
+
+      navigationKeys.right =
+        false;
+    }
+  );
+
+
+  /*
+    Clear movement when the document becomes
+    hidden, for example when changing tabs.
+  */
+  document.addEventListener(
+    "visibilitychange",
+    function () {
+      if (
+        document.hidden
+      ) {
+        navigationKeys.forward =
+          false;
+
+        navigationKeys.backward =
+          false;
+
+        navigationKeys.left =
+          false;
+
+        navigationKeys.right =
+          false;
+      }
+    }
+  );
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* VIEW CONTROLS                                                              */
+/* -------------------------------------------------------------------------- */
+
 function fitActiveScan() {
   if (
     !viewer ||
@@ -2419,9 +2644,11 @@ function fitActiveScan() {
   );
 }
 
+
 function resetView() {
   fitActiveScan();
 }
+
 
 function activateOrbitMode() {
   if (
@@ -2451,6 +2678,7 @@ function activateOrbitMode() {
     "idle"
   );
 }
+
 
 function downloadActiveScan() {
   if (
@@ -2492,6 +2720,20 @@ function downloadActiveScan() {
 
   link.remove();
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* INITIALISE KEYBOARD NAVIGATION                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+  Call this once after your viewer/application
+  has been initialised.
+
+  If this file is loaded after the viewer is
+  created, this can simply run immediately.
+*/
+bindNavigationKeyboard();
 
 
 /* -------------------------------------------------------------------------- */
