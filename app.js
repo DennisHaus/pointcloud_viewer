@@ -606,22 +606,6 @@ function buildRawUrl(path) {
 /* LIBRARY                                                                    */
 /* -------------------------------------------------------------------------- */
 
-function updateScanCount() {
-  var count =
-    state.catalog.length;
-
-  setText(
-    "scanCount",
-    count +
-    " " +
-    (
-      count === 1
-        ? "scan"
-        : "scans"
-    )
-  );
-}
-
 function renderLibrary() {
   var list =
     getElement("libraryList");
@@ -644,29 +628,20 @@ function renderLibrary() {
         .toLowerCase()
       : "";
 
+  /*
+    Clear the existing scan cards.
+  */
   while (list.firstChild) {
     list.removeChild(
       list.firstChild
     );
-
-    if (scan.loading) {
-    scanState.classList.add(
-      "loading"
-    );
-  } else if (
-    state.loadedClouds.has(
-      scan.id
-    )
-  ) {
-    scanState.classList.add(
-      "loaded"
-    );
-  }
-  
   }
 
   updateScanCount();
 
+  /*
+    Filter scans according to the search field.
+  */
   var visibleScans =
     state.catalog.filter(
       function (scan) {
@@ -683,6 +658,9 @@ function renderLibrary() {
       }
     );
 
+  /*
+    Show the empty message if no scans are available.
+  */
   if (
     visibleScans.length === 0
   ) {
@@ -701,6 +679,9 @@ function renderLibrary() {
     );
   }
 
+  /*
+    Create one card for every scan.
+  */
   visibleScans.forEach(
     function (scan) {
       var card =
@@ -708,8 +689,11 @@ function renderLibrary() {
           "button"
         );
 
-      card.type = "button";
-      card.className = "scan-card";
+      card.type =
+        "button";
+
+      card.className =
+        "scan-card";
 
       if (
         state.activeScan &&
@@ -733,7 +717,11 @@ function renderLibrary() {
           "div"
         );
 
-      icon.textContent = "";
+      icon.className =
+        "scan-card-icon";
+
+      icon.textContent =
+        "";
 
       var name =
         document.createElement(
@@ -749,6 +737,9 @@ function renderLibrary() {
       name.title =
         scan.name;
 
+      /*
+        Loading/loaded status indicator.
+      */
       var scanState =
         document.createElement(
           "div"
@@ -757,7 +748,9 @@ function renderLibrary() {
       scanState.className =
         "scan-state";
 
-      if (scan.loading) {
+      if (
+        scan.loading
+      ) {
         scanState.classList.add(
           "loading"
         );
@@ -771,10 +764,117 @@ function renderLibrary() {
         );
       }
 
-      header.appendChild(icon);
-      header.appendChild(name);
-      header.appendChild(scanState);
+      /*
+        Visibility toggle.
+      */
+      var pointcloud =
+        state.loadedClouds.get(
+          scan.id
+        );
 
+      var isLoaded =
+        Boolean(
+          pointcloud
+        );
+
+      var isVisible =
+        isLoaded &&
+        pointcloud.visible !== false;
+
+      var visibilityToggle =
+        document.createElement(
+          "span"
+        );
+
+      visibilityToggle.className =
+        "scan-visibility-toggle";
+
+      visibilityToggle.textContent =
+        isLoaded
+          ? (
+              isVisible
+                ? "●"
+                : "○"
+            )
+          : "·";
+
+      visibilityToggle.title =
+        isLoaded
+          ? (
+              isVisible
+                ? "Hide scan"
+                : "Show scan"
+            )
+          : "Load scan";
+
+      visibilityToggle.setAttribute(
+        "role",
+        "button"
+      );
+
+      visibilityToggle.setAttribute(
+        "aria-label",
+        visibilityToggle.title
+      );
+
+      visibilityToggle.setAttribute(
+        "aria-pressed",
+        String(
+          isVisible
+        )
+      );
+
+      visibilityToggle.tabIndex =
+        0;
+
+      visibilityToggle.addEventListener(
+        "click",
+        function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+
+          toggleScanVisibility(
+            scan
+          );
+        }
+      );
+
+      visibilityToggle.addEventListener(
+        "keydown",
+        function (event) {
+          if (
+            event.key === "Enter" ||
+            event.key === " "
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            toggleScanVisibility(
+              scan
+            );
+          }
+        }
+      );
+
+      header.appendChild(
+        icon
+      );
+
+      header.appendChild(
+        name
+      );
+
+      header.appendChild(
+        scanState
+      );
+
+      header.appendChild(
+        visibilityToggle
+      );
+
+      /*
+        Metadata row.
+      */
       var metadata =
         document.createElement(
           "div"
@@ -803,389 +903,43 @@ function renderLibrary() {
             )
           : "Size unknown";
 
-      metadata.appendChild(format);
-      metadata.appendChild(size);
+      metadata.appendChild(
+        format
+      );
 
-      card.appendChild(header);
-      card.appendChild(metadata);
+      metadata.appendChild(
+        size
+      );
 
+      /*
+        Assemble the card.
+      */
+      card.appendChild(
+        header
+      );
+
+      card.appendChild(
+        metadata
+      );
+
+      /*
+        Clicking the card activates/fits the scan.
+        Clicking the visibility indicator is handled
+        separately above.
+      */
       card.addEventListener(
         "click",
         function () {
-          loadScan(scan);
-        }
-      );
-
-      list.appendChild(card);
-    }
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* POINT-CLOUD LOADING                                                        */
-/* -------------------------------------------------------------------------- */
-
-function loadScan(scan) {
-  if (!scan) {
-    return Promise.resolve();
-  }
-
-  if (!scan.url) {
-    setStatus(
-      "This scan has no valid COPC URL.",
-      "error"
-    );
-
-    return Promise.resolve();
-  }
-
-  if (
-    state.loadedClouds.has(
-      scan.id
-    )
-  ) {
-    setActiveScan(scan);
-    fitActiveScan();
-
-    return Promise.resolve();
-  }
-
-  if (scan.loading) {
-    return Promise.resolve();
-  }
-
-  scan.loading = true;
-
-  renderLibrary();
-
-  showLoading(
-    "Loading " +
-    scan.name +
-    "..."
-  );
-
-  setViewerStatus(
-    "Loading point cloud",
-    "loading"
-  );
-
-  setStatus(
-    "Loading " +
-    scan.name +
-    "...",
-    "loading"
-  );
-
-  return loadCopcPointCloud(scan)
-    .then(function (pointcloud) {
-      if (!pointcloud) {
-        throw new Error(
-          "Potree returned no point cloud."
-        );
-      }
-
-      pointcloud.name =
-        scan.name;
-
-      pointcloud.visible =
-        true;
-
-      if (
-        viewer &&
-        viewer.scene &&
-        typeof viewer.scene.addPointCloud ===
-        "function"
-      ) {
-        viewer.scene.addPointCloud(
-          pointcloud
-        );
-      } else {
-        throw new Error(
-          "Potree scene is unavailable."
-        );
-      }
-
-      configurePointCloud(
-        pointcloud
-      );
-
-      state.loadedClouds.set(
-        scan.id,
-        pointcloud
-      );
-
-      scan.loading = false;
-
-      setActiveScan(scan);
-      renderLibrary();
-      hideLoading();
-
-      setViewerStatus(
-        "Point cloud loaded",
-        "idle"
-      );
-
-      setStatus(
-        scan.name +
-        " loaded",
-        "idle"
-      );
-
-      window.setTimeout(
-        function () {
-          fitActiveScan();
-        },
-        250
-      );
-    })
-    .catch(function (error) {
-      scan.loading = false;
-
-      hideLoading();
-      renderLibrary();
-
-      console.error(
-        "Point-cloud loading failed:",
-        error
-      );
-
-      setViewerStatus(
-        "Point-cloud loading failed",
-        "error"
-      );
-
-      setStatus(
-        "Could not load " +
-        scan.name,
-        "error"
-      );
-    });
-}
-
-function loadCopcPointCloud(scan) {
-  return new Promise(
-    function (resolve, reject) {
-      var potree =
-        window.Potree;
-
-      if (
-        !potree ||
-        typeof potree.loadPointCloud !==
-        "function"
-      ) {
-        reject(
-          new Error(
-            "Potree.loadPointCloud is unavailable."
-          )
-        );
-
-        return;
-      }
-
-      var finished = false;
-
-      function finishWithCloud(
-        cloud
-      ) {
-        if (
-          finished ||
-          !cloud
-        ) {
-          return;
-        }
-
-        finished = true;
-        resolve(cloud);
-      }
-
-      function finishWithError(
-        error
-      ) {
-        if (finished) {
-          return;
-        }
-
-        finished = true;
-
-        reject(
-          error instanceof Error
-            ? error
-            : new Error(
-                String(error)
-              )
-        );
-      }
-
-      try {
-        var result =
-          potree.loadPointCloud(
-            scan.url,
-            scan.name,
-            function (event) {
-              if (!event) {
-                return;
-              }
-
-              if (
-                event.pointcloud
-              ) {
-                finishWithCloud(
-                  event.pointcloud
-                );
-
-                return;
-              }
-
-              if (
-                event.error
-              ) {
-                finishWithError(
-                  event.error
-                );
-
-                return;
-              }
-
-              /*
-                Some loaders return the cloud directly.
-              */
-              if (
-                event.material ||
-                event.pcoGeometry ||
-                event.boundingBox
-              ) {
-                finishWithCloud(
-                  event
-                );
-              }
-            }
-          );
-
-        /*
-          Support loader versions that return
-          a Promise instead of using only a callback.
-        */
-        if (
-          result &&
-          typeof result.then ===
-          "function"
-        ) {
-          result
-            .then(function (value) {
-              if (
-                value &&
-                value.pointcloud
-              ) {
-                finishWithCloud(
-                  value.pointcloud
-                );
-              } else {
-                finishWithCloud(
-                  value
-                );
-              }
-            })
-            .catch(function (error) {
-              finishWithError(
-                error
-              );
-            });
-        } else if (
-          result &&
-          result.pointcloud
-        ) {
-          finishWithCloud(
-            result.pointcloud
+          loadScan(
+            scan
           );
         }
-      } catch (error) {
-        finishWithError(
-          error
-        );
-      }
+      );
+
+      list.appendChild(
+        card
+      );
     }
-  );
-}
-
-function configurePointCloud(
-  pointcloud
-) {
-  if (
-    !pointcloud ||
-    !pointcloud.material
-  ) {
-    return;
-  }
-
-  var material =
-    pointcloud.material;
-
-  material.size =
-    getNumberValue(
-      "pointSize",
-      1.5
-    );
-
-  var potree =
-    window.Potree;
-
-  if (
-    potree &&
-    potree.PointSizeType &&
-    potree.PointSizeType.ADAPTIVE !==
-    undefined
-  ) {
-    material.pointSizeType =
-      potree.PointSizeType.ADAPTIVE;
-  }
-
-  if (
-    potree &&
-    potree.PointShape &&
-    potree.PointShape.CIRCLE !==
-    undefined
-  ) {
-    material.shape =
-      potree.PointShape.CIRCLE;
-  }
-
-  applyColorMode(pointcloud);
-  applyOpacity(pointcloud);
-
-  material.needsUpdate =
-    true;
-}
-
-function toggleScanVisibility(scan) {
-  if (!scan) {
-    return;
-  }
-
-  var pointcloud =
-    state.loadedClouds.get(scan.id);
-
-  /*
-    If the scan has not been loaded yet,
-    load it first.
-  */
-  if (!pointcloud) {
-    loadScan(scan);
-    return;
-  }
-
-  pointcloud.visible =
-    pointcloud.visible === false;
-
-  renderLibrary();
-
-  setStatus(
-    scan.name +
-    (
-      pointcloud.visible
-        ? " shown"
-        : " hidden"
-    ),
-    "idle"
   );
 }
 
