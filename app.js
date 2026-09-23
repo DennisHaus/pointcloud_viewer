@@ -274,6 +274,36 @@ function initializeViewer() {
       );
     }
 
+    /*
+      Initialize the renderer with a transparent clear color.
+
+      Potree normally creates an alpha-enabled renderer. These settings
+      also ensure that the normal viewer and the screenshot export start
+      with a transparent WebGL background.
+    */
+    if (
+      viewer.renderer
+    ) {
+      if (
+        typeof viewer.renderer.setClearColor ===
+        "function"
+      ) {
+        viewer.renderer.setClearColor(
+          0x000000,
+          0
+        );
+      }
+
+      if (
+        typeof viewer.renderer.setClearAlpha ===
+        "function"
+      ) {
+        viewer.renderer.setClearAlpha(
+          0
+        );
+      }
+    }
+
     if (
       viewer.orbitControls &&
       typeof viewer.setControls ===
@@ -1022,7 +1052,7 @@ function renderLibrary() {
             event.key ===
               "Enter" ||
             event.key ===
-              " "
+            " "
           ) {
             event.preventDefault();
             event.stopPropagation();
@@ -3176,16 +3206,56 @@ function getScreenshotFilename(
 }
 
 function exportScreenshot() {
-  var targetWidth =
-    Math.round(
-      CONFIG.screenshotWidth *
-      CONFIG.screenshotScale
+  /*
+    screenshotWidth and screenshotHeight are the logical dimensions.
+
+    screenshotScale is applied to the renderer pixel ratio.
+
+    Example:
+      3000 x 4000 with scale 2
+      becomes a 6000 x 8000 PNG.
+  */
+  var logicalWidth =
+    Math.max(
+      1,
+      Math.round(
+        Number(
+          CONFIG.screenshotWidth
+        ) ||
+        1
+      )
     );
 
-  var targetHeight =
+  var logicalHeight =
+    Math.max(
+      1,
+      Math.round(
+        Number(
+          CONFIG.screenshotHeight
+        ) ||
+        1
+      )
+    );
+
+  var screenshotScale =
+    Math.max(
+      1,
+      Number(
+        CONFIG.screenshotScale
+      ) ||
+      1
+    );
+
+  var outputWidth =
     Math.round(
-      CONFIG.screenshotHeight *
-      CONFIG.screenshotScale
+      logicalWidth *
+      screenshotScale
+    );
+
+  var outputHeight =
+    Math.round(
+      logicalHeight *
+      screenshotScale
     );
 
   if (
@@ -3236,17 +3306,51 @@ function exportScreenshot() {
       1;
   }
 
-  var originalWidth =
-    canvas.clientWidth ||
+  var originalCanvasWidth =
+    canvas.width ||
     1;
 
-  var originalHeight =
+  var originalCanvasHeight =
+    canvas.height ||
+    1;
+
+  var originalClientWidth =
+    canvas.clientWidth ||
+    (
+      renderArea &&
+      renderArea.clientWidth
+    ) ||
+    1;
+
+  var originalClientHeight =
     canvas.clientHeight ||
     (
       renderArea &&
       renderArea.clientHeight
     ) ||
     1;
+
+  var originalRendererSize =
+    null;
+
+  if (
+    typeof renderer.getSize ===
+    "function" &&
+    window.THREE &&
+    window.THREE.Vector2
+  ) {
+    try {
+      originalRendererSize =
+        renderer.getSize(
+          new window.THREE.Vector2()
+        );
+    } catch (
+      error
+    ) {
+      originalRendererSize =
+        null;
+    }
+  }
 
   var originalAspect =
     camera &&
@@ -3255,40 +3359,295 @@ function exportScreenshot() {
       ? camera.aspect
       : null;
 
-  var originalBackground =
+  var originalViewerBackground =
     viewer.background;
 
-  var originalBackgroundColor =
+  var viewerHasBackgroundProperty =
+    "background" in viewer;
+
+  var originalSceneBackground =
+    viewer.scene &&
+    viewer.scene.background;
+
+  var sceneHasBackgroundProperty =
+    Boolean(
+      viewer.scene &&
+      "background" in viewer.scene
+    );
+
+  var originalRenderAreaBackgroundColor =
     renderArea
       ? renderArea.style.backgroundColor
       : "";
 
-  var originalBackgroundImage =
+  var originalRenderAreaBackgroundImage =
     renderArea
       ? renderArea.style.backgroundImage
-      : "none";
+      : "";
+
+  var originalCanvasBackgroundColor =
+    canvas.style.backgroundColor;
+
+  var originalCanvasBackgroundImage =
+    canvas.style.backgroundImage;
 
   var originalClearAlpha =
-    typeof renderer.getClearAlpha === "function"
+    typeof renderer.getClearAlpha ===
+    "function"
       ? renderer.getClearAlpha()
       : 1;
 
   var originalClearColor =
-    typeof renderer.getClearColor === "function" &&
-      window.THREE &&
-      window.THREE.Color
-        ? renderer.getClearColor(
-            new window.THREE.Color()
-          ).clone()
-        : null;
+    null;
+
+  if (
+    typeof renderer.getClearColor ===
+    "function" &&
+    window.THREE &&
+    window.THREE.Color
+  ) {
+    try {
+      originalClearColor =
+        renderer.getClearColor(
+          new window.THREE.Color()
+        ).clone();
+    } catch (
+      error
+    ) {
+      originalClearColor =
+        null;
+    }
+  }
+
+  var originalAutoClear =
+    typeof renderer.autoClear ===
+    "boolean"
+      ? renderer.autoClear
+      : null;
+
+  var originalAutoClearColor =
+    typeof renderer.autoClearColor ===
+    "boolean"
+      ? renderer.autoClearColor
+      : null;
+
+  var originalAutoClearDepth =
+    typeof renderer.autoClearDepth ===
+    "boolean"
+      ? renderer.autoClearDepth
+      : null;
+
+  var originalAutoClearStencil =
+    typeof renderer.autoClearStencil ===
+    "boolean"
+      ? renderer.autoClearStencil
+      : null;
 
   var originalButtonText =
     button
       ? button.textContent
       : "";
 
+  var backgroundWarningShown =
+    false;
+
   var restored =
     false;
+
+  function forceTransparentBackground() {
+    if (
+      renderArea
+    ) {
+      renderArea.style.backgroundImage =
+        "none";
+
+      renderArea.style.backgroundColor =
+        "transparent";
+    }
+
+    canvas.style.backgroundImage =
+      "none";
+
+    canvas.style.backgroundColor =
+      "transparent";
+
+    if (
+      viewer &&
+      typeof viewer.setBackground ===
+      "function"
+    ) {
+      try {
+        viewer.setBackground(
+          "none"
+        );
+      } catch (
+        error
+      ) {
+        if (
+          !backgroundWarningShown
+        ) {
+          console.warn(
+            "Potree does not support the 'none' background setting.",
+            error
+          );
+
+          backgroundWarningShown =
+            true;
+        }
+      }
+    }
+
+    /*
+      Potree uses viewer.background during rendering.
+      Assigning it directly as well makes the export robust
+      across different Potree versions.
+    */
+    if (
+      viewer
+    ) {
+      viewer.background =
+        "none";
+    }
+
+    if (
+      viewer.scene &&
+      sceneHasBackgroundProperty
+    ) {
+      viewer.scene.background =
+        null;
+    }
+
+    if (
+      typeof renderer.setClearColor ===
+      "function"
+    ) {
+      renderer.setClearColor(
+        0x000000,
+        0
+      );
+    }
+
+    if (
+      typeof renderer.setClearAlpha ===
+      "function"
+    ) {
+      renderer.setClearAlpha(
+        0
+      );
+    }
+
+    /*
+      Make sure the renderer clears the color buffer with alpha 0.
+    */
+    if (
+      originalAutoClear !==
+      null
+    ) {
+      renderer.autoClear =
+        true;
+    }
+
+    if (
+      originalAutoClearColor !==
+      null
+    ) {
+      renderer.autoClearColor =
+        true;
+    }
+
+    if (
+      originalAutoClearDepth !==
+      null
+    ) {
+      renderer.autoClearDepth =
+        true;
+    }
+
+    if (
+      originalAutoClearStencil !==
+      null
+    ) {
+      renderer.autoClearStencil =
+        true;
+    }
+  }
+
+  function configureHighResolutionRenderer() {
+    /*
+      The important part for the 2x export is:
+
+        setPixelRatio(screenshotScale)
+        setSize(logicalWidth, logicalHeight, false)
+
+      The internal canvas drawing buffer then becomes:
+
+        logicalWidth  * screenshotScale
+        logicalHeight * screenshotScale
+    */
+    if (
+      typeof renderer.setPixelRatio ===
+      "function"
+    ) {
+      renderer.setPixelRatio(
+        screenshotScale
+      );
+    }
+
+    renderer.setSize(
+      logicalWidth,
+      logicalHeight,
+      false
+    );
+
+    /*
+      Some older Three.js/Potree combinations can leave the canvas
+      drawing buffer at its previous size. Force the backing buffer
+      dimensions if necessary.
+    */
+    if (
+      canvas.width !==
+        outputWidth ||
+      canvas.height !==
+        outputHeight
+    ) {
+      canvas.width =
+        outputWidth;
+
+      canvas.height =
+        outputHeight;
+    }
+
+    if (
+      typeof renderer.setViewport ===
+      "function"
+    ) {
+      renderer.setViewport(
+        0,
+        0,
+        logicalWidth,
+        logicalHeight
+      );
+    }
+
+    if (
+      camera &&
+      typeof camera.aspect ===
+      "number"
+    ) {
+      camera.aspect =
+        logicalWidth /
+        logicalHeight;
+
+      if (
+        typeof camera.updateProjectionMatrix ===
+        "function"
+      ) {
+        camera.updateProjectionMatrix();
+      }
+    }
+
+    forceTransparentBackground();
+  }
 
   function restoreViewer() {
     if (
@@ -3304,22 +3663,28 @@ function exportScreenshot() {
       renderArea
     ) {
       renderArea.style.backgroundImage =
-        originalBackgroundImage;
+        originalRenderAreaBackgroundImage;
 
       renderArea.style.backgroundColor =
-        originalBackgroundColor;
+        originalRenderAreaBackgroundColor;
     }
+
+    canvas.style.backgroundImage =
+      originalCanvasBackgroundImage;
+
+    canvas.style.backgroundColor =
+      originalCanvasBackgroundColor;
 
     if (
       viewer &&
       typeof viewer.setBackground ===
       "function" &&
-      originalBackground !==
+      originalViewerBackground !==
       undefined
     ) {
       try {
         viewer.setBackground(
-          originalBackground
+          originalViewerBackground
         );
       } catch (
         error
@@ -3332,19 +3697,37 @@ function exportScreenshot() {
     }
 
     if (
+      viewer &&
+      viewerHasBackgroundProperty
+    ) {
+      viewer.background =
+        originalViewerBackground;
+    }
+
+    if (
+      viewer.scene &&
+      sceneHasBackgroundProperty
+    ) {
+      viewer.scene.background =
+        originalSceneBackground;
+    }
+
+    if (
       originalClearColor &&
       typeof renderer.setClearColor ===
       "function"
     ) {
       renderer.setClearColor(
-        0x000000, 0
+        originalClearColor,
+        originalClearAlpha
       );
     } else if (
       typeof renderer.setClearColor ===
       "function"
     ) {
       renderer.setClearColor(
-        0x000000, 0
+        0x000000,
+        originalClearAlpha
       );
     }
 
@@ -3358,6 +3741,38 @@ function exportScreenshot() {
     }
 
     if (
+      originalAutoClear !==
+      null
+    ) {
+      renderer.autoClear =
+        originalAutoClear;
+    }
+
+    if (
+      originalAutoClearColor !==
+      null
+    ) {
+      renderer.autoClearColor =
+        originalAutoClearColor;
+    }
+
+    if (
+      originalAutoClearDepth !==
+      null
+    ) {
+      renderer.autoClearDepth =
+        originalAutoClearDepth;
+    }
+
+    if (
+      originalAutoClearStencil !==
+      null
+    ) {
+      renderer.autoClearStencil =
+        originalAutoClearStencil;
+    }
+
+    if (
       typeof renderer.setPixelRatio ===
       "function"
     ) {
@@ -3366,11 +3781,49 @@ function exportScreenshot() {
       );
     }
 
+    var restoreWidth =
+      originalRendererSize &&
+      isFinite(
+        originalRendererSize.x
+      ) &&
+      originalRendererSize.x > 0
+        ? Math.round(
+            originalRendererSize.x
+          )
+        : originalClientWidth;
+
+    var restoreHeight =
+      originalRendererSize &&
+      isFinite(
+        originalRendererSize.y
+      ) &&
+      originalRendererSize.y > 0
+        ? Math.round(
+            originalRendererSize.y
+          )
+        : originalClientHeight;
+
     renderer.setSize(
-      (canvas.clientWidth * 1.5),
-      (canvas.clientHeight * 1.5),
+      restoreWidth,
+      restoreHeight,
       false
     );
+
+    /*
+      Restore the exact original drawing-buffer size if required.
+    */
+    if (
+      canvas.width !==
+        originalCanvasWidth ||
+      canvas.height !==
+        originalCanvasHeight
+    ) {
+      canvas.width =
+        originalCanvasWidth;
+
+      canvas.height =
+        originalCanvasHeight;
+    }
 
     if (
       viewer &&
@@ -3412,8 +3865,8 @@ function exportScreenshot() {
   ) {
     var filename =
       getScreenshotFilename(
-        targetWidth,
-        targetHeight
+        outputWidth,
+        outputHeight
       );
 
     var link =
@@ -3442,21 +3895,43 @@ function exportScreenshot() {
     );
   }
 
+  function renderHighResolutionFrame() {
+    configureHighResolutionRenderer();
+
+    if (
+      viewer &&
+      typeof viewer.render ===
+      "function"
+    ) {
+      viewer.render();
+    }
+  }
+
+  var warmupMs =
+    Math.max(
+      0,
+      Number(
+        CONFIG.screenshotWarmupMs
+      ) ||
+      0
+    );
+
+  var warmupStartedAt =
+    Date.now();
+
   function captureAfterFrames(
     frame
   ) {
-    if (
-      frame <
-      3
-    ) {
-      if (
-        viewer &&
-        typeof viewer.render ===
-        "function"
-      ) {
-        viewer.render();
-      }
+    renderHighResolutionFrame();
 
+    var elapsed =
+      Date.now() -
+      warmupStartedAt;
+
+    if (
+      frame < 3 ||
+      elapsed < warmupMs
+    ) {
       window.requestAnimationFrame(
         function () {
           captureAfterFrames(
@@ -3470,12 +3945,44 @@ function exportScreenshot() {
     }
 
     try {
+      /*
+        Verify that the final drawing buffer has the requested
+        high-resolution dimensions.
+      */
       if (
-        viewer &&
-        typeof viewer.render ===
-        "function"
+        canvas.width !==
+          outputWidth ||
+        canvas.height !==
+          outputHeight
       ) {
-        viewer.render();
+        configureHighResolutionRenderer();
+
+        if (
+          viewer &&
+          typeof viewer.render ===
+          "function"
+        ) {
+          viewer.render();
+        }
+      }
+
+      if (
+        canvas.width !==
+          outputWidth ||
+        canvas.height !==
+          outputHeight
+      ) {
+        throw new Error(
+          "The renderer produced " +
+          canvas.width +
+          " x " +
+          canvas.height +
+          " instead of " +
+          outputWidth +
+          " x " +
+          outputHeight +
+          "."
+        );
       }
 
       var dataUrl =
@@ -3484,6 +3991,7 @@ function exportScreenshot() {
         );
 
       restoreViewer();
+
       downloadImage(
         dataUrl
       );
@@ -3512,27 +4020,42 @@ function exportScreenshot() {
       var gl =
         renderer.getContext();
 
-      var maxSize =
+      var maxRenderbufferSize =
         gl.getParameter(
           gl.MAX_RENDERBUFFER_SIZE
         );
 
       if (
-        maxSize &&
+        maxRenderbufferSize &&
         (
-          targetWidth >
-          maxSize ||
-          targetHeight >
-          maxSize
+          outputWidth >
+          maxRenderbufferSize ||
+          outputHeight >
+          maxRenderbufferSize
         )
       ) {
         throw new Error(
           "The GPU does not support " +
-          targetWidth +
+          outputWidth +
           " x " +
-          targetHeight +
+          outputHeight +
           ". Maximum renderbuffer size: " +
-          maxSize
+          maxRenderbufferSize
+        );
+      }
+
+      var contextAttributes =
+        gl.getContextAttributes &&
+        gl.getContextAttributes();
+
+      if (
+        contextAttributes &&
+        contextAttributes.alpha ===
+        false
+      ) {
+        console.warn(
+          "The Potree WebGL context was created without alpha support. " +
+          "Transparent PNG output requires an alpha-enabled renderer."
         );
       }
     }
@@ -3552,89 +4075,7 @@ function exportScreenshot() {
       "loading"
     );
 
-    /*
-      Make the output transparent.
-      This requires the WebGL renderer to have
-      been created with alpha: true.
-    */
-    if (
-      renderArea
-    ) {
-      renderArea.style.backgroundImage =
-        "none";
-
-      renderArea.style.backgroundColor =
-        "";
-    }
-
-    if (
-      viewer &&
-      typeof viewer.setBackground ===
-      "function"
-    ) {
-      try {
-        viewer.setBackground(
-          "none"
-        );
-      } catch (
-        error
-      ) {
-        console.warn(
-          "Potree does not support the 'none' background setting."
-        );
-      }
-    }
-
-    if (
-      typeof renderer.setClearColor ===
-      "function"
-    ) {
-      renderer.setClearColor(
-        0x000000,
-        0
-      );
-    }
-
-    if (
-      typeof renderer.setClearAlpha ===
-      "function"
-    ) {
-      renderer.setClearAlpha(
-        0
-      );
-    }
-
-    if (
-      typeof renderer.setPixelRatio ===
-      "function"
-    ) {
-      renderer.setPixelRatio(
-        1
-      );
-    }
-
-    renderer.setSize(
-      targetWidth,
-      targetHeight,
-      false
-    );
-
-    if (
-      camera &&
-      typeof camera.aspect ===
-      "number"
-    ) {
-      camera.aspect =
-        targetWidth /
-        targetHeight;
-
-      if (
-        typeof camera.updateProjectionMatrix ===
-        "function"
-      ) {
-        camera.updateProjectionMatrix();
-      }
-    }
+    configureHighResolutionRenderer();
 
     captureAfterFrames(
       0
