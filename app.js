@@ -10,35 +10,13 @@
   3. build/potree/potree.js
   4. libs/plasio/js/laslaz.js
   5. app.js
-
-  XR/VR is intentionally not used by this file.
 */
 
 var CONFIG = {
-  /*
-    This file must exist beside index.html.
-
-    Expected structure:
-
-    {
-      "scans": [
-        {
-          "id": "scan-01",
-          "name": "Scan 01",
-          "filename": "scan-01.copc.laz",
-          "path": "scans/scan-01.copc.laz"
-        }
-      ]
-    }
-  */
   catalogUrl: "./catalog.json",
 
   defaultPointBudget: 3000000,
 
-  /*
-    If true, entries with "path" are loaded from GitHub raw content.
-    Leave false when the COPC files are hosted locally.
-  */
   useRawBaseForPaths: false,
 
   rawBaseUrl:
@@ -55,6 +33,7 @@ var state = {
 };
 
 var viewer = null;
+
 
 /* -------------------------------------------------------------------------- */
 /* STARTUP                                                                    */
@@ -80,7 +59,9 @@ function initialize() {
       renderLibrary();
 
       if (state.catalog.length > 0) {
-        return loadScan(state.catalog[0]);
+        return loadScan(
+          state.catalog[0]
+        );
       }
 
       setViewerStatus(
@@ -96,7 +77,10 @@ function initialize() {
       return null;
     })
     .catch(function (error) {
-      console.error(error);
+      console.error(
+        "Application startup failed:",
+        error
+      );
 
       setStatus(
         "Application startup failed.",
@@ -104,6 +88,7 @@ function initialize() {
       );
     });
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* DOM HELPERS                                                                */
@@ -114,15 +99,22 @@ function getElement(id) {
 }
 
 function setText(id, value) {
-  var element = getElement(id);
+  var element =
+    getElement(id);
 
   if (element) {
-    element.textContent = String(value);
+    element.textContent =
+      String(value);
   }
 }
 
-function addEvent(id, eventName, handler) {
-  var element = getElement(id);
+function addEvent(
+  id,
+  eventName,
+  handler
+) {
+  var element =
+    getElement(id);
 
   if (element) {
     element.addEventListener(
@@ -139,12 +131,14 @@ function initializeControls() {
   updateSectionControls();
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* POTREE INITIALIZATION                                                      */
 /* -------------------------------------------------------------------------- */
 
 function initializeViewer() {
-  var potree = window.Potree;
+  var potree =
+    window.Potree;
 
   if (!potree) {
     setStatus(
@@ -176,7 +170,9 @@ function initializeViewer() {
   }
 
   var renderArea =
-    getElement("potree_render_area");
+    getElement(
+      "potree_render_area"
+    );
 
   if (!renderArea) {
     setStatus(
@@ -188,15 +184,10 @@ function initializeViewer() {
   }
 
   try {
-    /*
-      This constructor requires the local potree.js bundle to have
-      its internal VRControls construction disabled.
-
-      See the patch instructions below the code.
-    */
-    viewer = new potree.Viewer(
-      renderArea
-    );
+    viewer =
+      new potree.Viewer(
+        renderArea
+      );
 
     disableXROnViewer();
 
@@ -204,14 +195,18 @@ function initializeViewer() {
       typeof viewer.setEDLEnabled ===
       "function"
     ) {
-      viewer.setEDLEnabled(false);
+      viewer.setEDLEnabled(
+        false
+      );
     }
 
     if (
       typeof viewer.setFOV ===
       "function"
     ) {
-      viewer.setFOV(60);
+      viewer.setFOV(
+        60
+      );
     }
 
     if (
@@ -223,19 +218,20 @@ function initializeViewer() {
       );
     }
 
+    /*
+      Completely black background.
+    */
     if (
       typeof viewer.setBackground ===
       "function"
     ) {
       viewer.setBackground(
-        "solid"
+        "black"
       );
     }
 
     /*
-      Explicitly use orbit controls.
-      No VR, XR, controller, or device-orientation
-      controls are selected.
+      Use orbit controls.
     */
     if (
       viewer.orbitControls &&
@@ -296,16 +292,11 @@ function disableXROnViewer() {
     return;
   }
 
-  /*
-    This is only a secondary safeguard.
-    The main XR fix must be made inside potree.js before
-    the Viewer constructor creates VRControls.
-  */
-
   if (
     viewer.vrControls
   ) {
-    viewer.vrControls = null;
+    viewer.vrControls =
+      null;
   }
 
   if (
@@ -324,9 +315,11 @@ function disableXROnViewer() {
     renderer &&
     renderer.xr
   ) {
-    renderer.xr.enabled = false;
+    renderer.xr.enabled =
+      false;
   }
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* CATALOG                                                                    */
@@ -344,9 +337,12 @@ function loadCatalog() {
     "cacheBust=" +
     Date.now();
 
-  return fetch(requestUrl, {
-    cache: "no-store"
-  })
+  return fetch(
+    requestUrl,
+    {
+      cache: "no-store"
+    }
+  )
     .then(function (response) {
       if (!response.ok) {
         throw new Error(
@@ -360,43 +356,72 @@ function loadCatalog() {
     .then(function (data) {
       var scans = [];
 
-      if (Array.isArray(data)) {
-        scans = data;
+      if (
+        Array.isArray(data)
+      ) {
+        scans =
+          data;
       } else if (
         data &&
         Array.isArray(data.scans)
       ) {
-        scans = data.scans;
+        scans =
+          data.scans;
       }
 
-      state.catalog = scans.map(
-        function (scan, index) {
-          return normalizeScan(
-            scan,
-            index
+      var previousScans =
+        new Map();
+
+      state.catalog.forEach(
+        function (oldScan) {
+          previousScans.set(
+            oldScan.id,
+            oldScan
           );
         }
       );
 
+      state.catalog =
+        scans.map(
+          function (scan, index) {
+            var normalized =
+              normalizeScan(
+                scan,
+                index
+              );
+
+            var previous =
+              previousScans.get(
+                normalized.id
+              );
+
+            if (
+              previous &&
+              previous.loading
+            ) {
+              normalized.loading =
+                true;
+            }
+
+            return normalized;
+          }
+        );
+
       console.log(
         "Catalog scans:",
-        state.catalog.map(function (scan) {
-          return scan.id;
-        })
+        state.catalog.map(
+          function (scan) {
+            return scan.id;
+          }
+        )
       );
 
-      // Remove loaded clouds that no longer exist
-      // in the updated catalog.
       reconcileLoadedClouds();
-
       updateScanCount();
 
       return state.catalog;
-
     })
     .catch(function (error) {
-      state.catalog = [];
-
       console.error(
         "Could not load catalog.json:",
         error
@@ -407,30 +432,42 @@ function loadCatalog() {
         "error"
       );
 
+      /*
+        Keep the current catalog if a refresh
+        fails temporarily.
+      */
       updateScanCount();
 
-      return [];
+      return state.catalog;
     });
 }
 
 function reconcileLoadedClouds() {
-  var catalogIds = new Set(
-    state.catalog.map(function (scan) {
-      return scan.id;
-    })
-  );
+  var catalogIds =
+    new Set(
+      state.catalog.map(
+        function (scan) {
+          return scan.id;
+        }
+      )
+    );
 
-  var removedActiveCloud = false;
+  var removedActiveCloud =
+    false;
 
   state.loadedClouds.forEach(
     function (pointcloud, scanId) {
-      if (catalogIds.has(scanId)) {
+      if (
+        catalogIds.has(scanId)
+      ) {
         return;
       }
 
-      /*
-        Remove the deleted scan from the Potree scene.
-      */
+      console.log(
+        "Removing deleted point cloud:",
+        scanId
+      );
+
       if (
         viewer &&
         viewer.scene &&
@@ -450,21 +487,25 @@ function reconcileLoadedClouds() {
         state.activeScan &&
         state.activeScan.id === scanId
       ) {
-        removedActiveCloud = true;
+        removedActiveCloud =
+          true;
       }
     }
   );
 
-  /*
-    Clear the inspector if the active scan
-    was deleted from the catalog.
-  */
-  if (removedActiveCloud) {
+  if (
+    removedActiveCloud
+  ) {
     removeSectionVolume();
 
-    state.activeScan = null;
-    state.activeCloud = null;
-    state.activeBounds = null;
+    state.activeScan =
+      null;
+
+    state.activeCloud =
+      null;
+
+    state.activeBounds =
+      null;
 
     setViewerStatus(
       "No scan selected",
@@ -472,21 +513,34 @@ function reconcileLoadedClouds() {
     );
   }
 
-  /*
-    Refresh the active scan metadata if it still exists.
-  */
-  if (state.activeScan) {
+  if (
+    state.activeScan
+  ) {
     var refreshedScan =
       state.catalog.find(
         function (scan) {
-          return scan.id ===
-            state.activeScan.id;
+          return (
+            scan.id ===
+            state.activeScan.id
+          );
         }
       );
 
-    if (refreshedScan) {
+    if (
+      refreshedScan
+    ) {
       state.activeScan =
         refreshedScan;
+
+      state.activeCloud =
+        state.loadedClouds.get(
+          refreshedScan.id
+        );
+
+      state.activeBounds =
+        getPointCloudBounds(
+          state.activeCloud
+        );
     }
   }
 
@@ -494,57 +548,79 @@ function reconcileLoadedClouds() {
   updateSectionControls();
 }
 
-function normalizeScan(scan, index) {
-  scan = scan || {};
+function normalizeScan(
+  scan,
+  index
+) {
+  scan =
+    scan || {};
 
   var fallbackId =
     "scan-" +
     (index + 1);
 
-  var id = String(
-    scan.id ||
-    scan.filename ||
-    fallbackId
-  );
-
-  var filename = String(
-    scan.filename ||
-    ""
-  );
-
-  var name = String(
-    scan.name ||
-    filename ||
-    id
-  );
-
-  var path = String(
-    scan.path ||
-    (
-      filename
-        ? "scans/" + filename
-        : ""
-    )
-  );
-
-  var suppliedUrl = String(
-    scan.url ||
-    ""
-  ).trim();
-
-  var url = "";
-
-  if (suppliedUrl) {
-    url = resolveUrl(
-      suppliedUrl
+  var id =
+    String(
+      scan.id ||
+      scan.filename ||
+      fallbackId
     );
+
+  var filename =
+    String(
+      scan.filename ||
+      ""
+    );
+
+  var name =
+    String(
+      scan.name ||
+      filename ||
+      id
+    );
+
+  var path =
+    String(
+      scan.path ||
+      (
+        filename
+          ? "scans/" +
+            filename
+          : ""
+      )
+    );
+
+  var suppliedUrl =
+    String(
+      scan.url ||
+      ""
+    ).trim();
+
+  var url =
+    "";
+
+  if (
+    suppliedUrl
+  ) {
+    url =
+      resolveUrl(
+        suppliedUrl
+      );
   } else if (
     path &&
     CONFIG.useRawBaseForPaths
   ) {
-    url = buildRawUrl(path);
-  } else if (path) {
-    url = resolveUrl(path);
+    url =
+      buildRawUrl(
+        path
+      );
+  } else if (
+    path
+  ) {
+    url =
+      resolveUrl(
+        path
+      );
   }
 
   return {
@@ -553,15 +629,25 @@ function normalizeScan(scan, index) {
     filename: filename,
     path: path,
     url: url,
-    sizeBytes: Number(
-      scan.sizeBytes || 0
-    ),
-    pointCount: Number(
-      scan.pointCount || 0
-    ),
-    crs: scan.crs || "Unknown",
+    format:
+      scan.format ||
+      "copc",
+    sizeBytes:
+      Number(
+        scan.sizeBytes ||
+        0
+      ),
+    pointCount:
+      Number(
+        scan.pointCount ||
+        0
+      ),
+    crs:
+      scan.crs ||
+      "Unknown",
     uploadedAt:
-      scan.uploadedAt || "",
+      scan.uploadedAt ||
+      "",
     loading: false
   };
 }
@@ -590,17 +676,25 @@ function buildRawUrl(path) {
       ""
     );
 
-  var encodedPath = path
-    .split("/")
-    .map(function (part) {
-      return encodeURIComponent(
-        part
-      );
-    })
-    .join("/");
+  var encodedPath =
+    path
+      .split("/")
+      .map(
+        function (part) {
+          return encodeURIComponent(
+            part
+          );
+        }
+      )
+      .join("/");
 
-  return base + "/" + encodedPath;
+  return (
+    base +
+    "/" +
+    encodedPath
+  );
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* LIBRARY                                                                    */
@@ -626,13 +720,19 @@ function updateScanCount() {
 
 function renderLibrary() {
   var list =
-    getElement("libraryList");
+    getElement(
+      "libraryList"
+    );
 
   var empty =
-    getElement("libraryEmpty");
+    getElement(
+      "libraryEmpty"
+    );
 
   var search =
-    getElement("scanSearch");
+    getElement(
+      "scanSearch"
+    );
 
   if (!list) {
     return;
@@ -641,13 +741,14 @@ function renderLibrary() {
   var query =
     search &&
     search.value
-      ? search.value.trim().toLowerCase()
+      ? search.value
+        .trim()
+        .toLowerCase()
       : "";
 
-  /*
-    Remove the old cards.
-  */
-  while (list.firstChild) {
+  while (
+    list.firstChild
+  ) {
     list.removeChild(
       list.firstChild
     );
@@ -655,9 +756,6 @@ function renderLibrary() {
 
   updateScanCount();
 
-  /*
-    Filter the catalog according to the search text.
-  */
   var visibleScans =
     state.catalog.filter(
       function (scan) {
@@ -668,17 +766,17 @@ function renderLibrary() {
             scan.filename
           ).toLowerCase();
 
-        return searchable.indexOf(
-          query
-        ) !== -1;
+        return (
+          searchable.indexOf(
+            query
+          ) !== -1
+        );
       }
     );
 
-  /*
-    Show the empty message when there are no scans.
-  */
   if (
-    visibleScans.length === 0
+    visibleScans.length ===
+    0
   ) {
     if (empty) {
       empty.classList.remove(
@@ -695,9 +793,6 @@ function renderLibrary() {
     );
   }
 
-  /*
-    Create one card for each scan.
-  */
   visibleScans.forEach(
     function (scan) {
       var card =
@@ -713,7 +808,8 @@ function renderLibrary() {
 
       if (
         state.activeScan &&
-        state.activeScan.id === scan.id
+        state.activeScan.id ===
+        scan.id
       ) {
         card.classList.add(
           "active"
@@ -753,9 +849,6 @@ function renderLibrary() {
       name.title =
         scan.name;
 
-      /*
-        Loaded/loading status.
-      */
       var scanState =
         document.createElement(
           "div"
@@ -780,9 +873,6 @@ function renderLibrary() {
         );
       }
 
-      /*
-        Visibility toggle.
-      */
       var pointcloud =
         state.loadedClouds.get(
           scan.id
@@ -795,7 +885,8 @@ function renderLibrary() {
 
       var isVisible =
         isLoaded &&
-        pointcloud.visible !== false;
+        pointcloud.visible !==
+        false;
 
       var visibilityToggle =
         document.createElement(
@@ -859,8 +950,10 @@ function renderLibrary() {
         "keydown",
         function (event) {
           if (
-            event.key === "Enter" ||
-            event.key === " "
+            event.key ===
+              "Enter" ||
+            event.key ===
+              " "
           ) {
             event.preventDefault();
             event.stopPropagation();
@@ -888,9 +981,6 @@ function renderLibrary() {
         visibilityToggle
       );
 
-      /*
-        Metadata.
-      */
       var metadata =
         document.createElement(
           "div"
@@ -927,9 +1017,6 @@ function renderLibrary() {
         size
       );
 
-      /*
-        Assemble the card.
-      */
       card.appendChild(
         header
       );
@@ -938,10 +1025,6 @@ function renderLibrary() {
         metadata
       );
 
-      /*
-        Clicking the card loads or activates
-        the point cloud.
-      */
       card.addEventListener(
         "click",
         function () {
@@ -958,18 +1041,436 @@ function renderLibrary() {
   );
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* POINT-CLOUD LOADING                                                        */
+/* -------------------------------------------------------------------------- */
+
+function loadScan(scan) {
+  if (!scan) {
+    return Promise.resolve(
+      null
+    );
+  }
+
+  if (!scan.url) {
+    setStatus(
+      "This scan has no valid COPC URL.",
+      "error"
+    );
+
+    return Promise.resolve(
+      null
+    );
+  }
+
+  if (
+    state.loadedClouds.has(
+      scan.id
+    )
+  ) {
+    setActiveScan(
+      scan
+    );
+
+    fitActiveScan();
+
+    return Promise.resolve(
+      state.loadedClouds.get(
+        scan.id
+      )
+    );
+  }
+
+  if (
+    scan.loading
+  ) {
+    return Promise.resolve(
+      null
+    );
+  }
+
+  scan.loading =
+    true;
+
+  renderLibrary();
+
+  showLoading(
+    "Loading " +
+    scan.name +
+    "..."
+  );
+
+  setViewerStatus(
+    "Loading point cloud",
+    "loading"
+  );
+
+  setStatus(
+    "Loading " +
+    scan.name +
+    "...",
+    "loading"
+  );
+
+  return loadCopcPointCloud(
+    scan
+  )
+    .then(
+      function (pointcloud) {
+        if (!pointcloud) {
+          throw new Error(
+            "Potree returned no point cloud."
+          );
+        }
+
+        pointcloud.name =
+          scan.name;
+
+        pointcloud.visible =
+          true;
+
+        if (
+          viewer &&
+          viewer.scene &&
+          typeof viewer.scene.addPointCloud ===
+          "function"
+        ) {
+          viewer.scene.addPointCloud(
+            pointcloud
+          );
+        } else {
+          throw new Error(
+            "Potree scene is unavailable."
+          );
+        }
+
+        configurePointCloud(
+          pointcloud
+        );
+
+        state.loadedClouds.set(
+          scan.id,
+          pointcloud
+        );
+
+        scan.loading =
+          false;
+
+        setActiveScan(
+          scan
+        );
+
+        renderLibrary();
+        hideLoading();
+
+        setViewerStatus(
+          "Point cloud loaded",
+          "idle"
+        );
+
+        setStatus(
+          scan.name +
+          " loaded",
+          "idle"
+        );
+
+        window.setTimeout(
+          function () {
+            fitActiveScan();
+          },
+          250
+        );
+
+        return pointcloud;
+      }
+    )
+    .catch(
+      function (error) {
+        scan.loading =
+          false;
+
+        hideLoading();
+        renderLibrary();
+
+        console.error(
+          "Point-cloud loading failed:",
+          error
+        );
+
+        setViewerStatus(
+          "Point-cloud loading failed",
+          "error"
+        );
+
+        setStatus(
+          "Could not load " +
+          scan.name,
+          "error"
+        );
+
+        return null;
+      }
+    );
+}
+
+function loadCopcPointCloud(scan) {
+  return new Promise(
+    function (resolve, reject) {
+      var potree =
+        window.Potree;
+
+      if (
+        !potree ||
+        typeof potree.loadPointCloud !==
+        "function"
+      ) {
+        reject(
+          new Error(
+            "Potree.loadPointCloud is unavailable."
+          )
+        );
+
+        return;
+      }
+
+      var finished =
+        false;
+
+      function finishWithCloud(
+        cloud
+      ) {
+        if (
+          finished ||
+          !cloud
+        ) {
+          return;
+        }
+
+        finished =
+          true;
+
+        resolve(
+          cloud
+        );
+      }
+
+      function finishWithError(
+        error
+      ) {
+        if (finished) {
+          return;
+        }
+
+        finished =
+          true;
+
+        reject(
+          error instanceof Error
+            ? error
+            : new Error(
+                String(error)
+              )
+        );
+      }
+
+      try {
+        var result =
+          potree.loadPointCloud(
+            scan.url,
+            scan.name,
+            function (event) {
+              if (!event) {
+                return;
+              }
+
+              if (
+                event.pointcloud
+              ) {
+                finishWithCloud(
+                  event.pointcloud
+                );
+
+                return;
+              }
+
+              if (
+                event.error
+              ) {
+                finishWithError(
+                  event.error
+                );
+
+                return;
+              }
+
+              if (
+                event.material ||
+                event.pcoGeometry ||
+                event.boundingBox
+              ) {
+                finishWithCloud(
+                  event
+                );
+              }
+            }
+          );
+
+        if (
+          result &&
+          typeof result.then ===
+          "function"
+        ) {
+          result
+            .then(
+              function (value) {
+                if (
+                  value &&
+                  value.pointcloud
+                ) {
+                  finishWithCloud(
+                    value.pointcloud
+                  );
+                } else {
+                  finishWithCloud(
+                    value
+                  );
+                }
+              }
+            )
+            .catch(
+              function (error) {
+                finishWithError(
+                  error
+                );
+              }
+            );
+        } else if (
+          result &&
+          result.pointcloud
+        ) {
+          finishWithCloud(
+            result.pointcloud
+          );
+        }
+      } catch (error) {
+        finishWithError(
+          error
+        );
+      }
+    }
+  );
+}
+
+function configurePointCloud(
+  pointcloud
+) {
+  if (
+    !pointcloud ||
+    !pointcloud.material
+  ) {
+    return;
+  }
+
+  var material =
+    pointcloud.material;
+
+  material.size =
+    getNumberValue(
+      "pointSize",
+      1.5
+    );
+
+  var potree =
+    window.Potree;
+
+  if (
+    potree &&
+    potree.PointSizeType &&
+    potree.PointSizeType.ADAPTIVE !==
+    undefined
+  ) {
+    material.pointSizeType =
+      potree.PointSizeType.ADAPTIVE;
+  }
+
+  if (
+    potree &&
+    potree.PointShape &&
+    potree.PointShape.CIRCLE !==
+    undefined
+  ) {
+    material.shape =
+      potree.PointShape.CIRCLE;
+  }
+
+  applyColorMode(
+    pointcloud
+  );
+
+  applyOpacity(
+    pointcloud
+  );
+
+  material.needsUpdate =
+    true;
+}
+
+function toggleScanVisibility(
+  scan
+) {
+  if (!scan) {
+    return;
+  }
+
+  var pointcloud =
+    state.loadedClouds.get(
+      scan.id
+    );
+
+  if (!pointcloud) {
+    loadScan(
+      scan
+    );
+
+    return;
+  }
+
+  pointcloud.visible =
+    pointcloud.visible ===
+    false;
+
+  renderLibrary();
+
+  setStatus(
+    scan.name +
+    (
+      pointcloud.visible
+        ? " shown"
+        : " hidden"
+    ),
+    "idle"
+  );
+}
+
+
 /* -------------------------------------------------------------------------- */
 /* ACTIVE SCAN AND INSPECTOR                                                  */
 /* -------------------------------------------------------------------------- */
 
-function setActiveScan(scan) {
+function setActiveScan(
+  scan
+) {
   removeSectionVolume();
 
   var sectionMode =
-    getElement("sectionMode");
+    getElement(
+      "sectionMode"
+    );
 
   if (sectionMode) {
-    sectionMode.value = "none";
+    sectionMode.value =
+      "none";
   }
 
   state.activeScan =
@@ -992,10 +1493,14 @@ function setActiveScan(scan) {
 
 function updateInspector() {
   var empty =
-    getElement("inspectorEmpty");
+    getElement(
+      "inspectorEmpty"
+    );
 
   var content =
-    getElement("inspectorContent");
+    getElement(
+      "inspectorContent"
+    );
 
   if (
     !state.activeScan ||
@@ -1057,7 +1562,9 @@ function updateInspector() {
     "Unknown"
   );
 
-  if (!state.activeBounds) {
+  if (
+    !state.activeBounds
+  ) {
     setText(
       "boundsX",
       "Unavailable"
@@ -1199,6 +1706,7 @@ function getVectorValue(
   return 0;
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* APPEARANCE                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -1223,7 +1731,9 @@ function applyColorMode(
   }
 
   var select =
-    getElement("colorMode");
+    getElement(
+      "colorMode"
+    );
 
   if (!select) {
     return;
@@ -1254,7 +1764,9 @@ function applyPointSize() {
 
   setText(
     "pointSizeValue",
-    value.toFixed(1)
+    value.toFixed(
+      1
+    )
   );
 
   if (
@@ -1263,6 +1775,9 @@ function applyPointSize() {
   ) {
     state.activeCloud.material.size =
       value;
+
+    state.activeCloud.material.needsUpdate =
+      true;
   }
 }
 
@@ -1277,7 +1792,9 @@ function applyOpacity(
 
   setText(
     "pointOpacityValue",
-    Math.round(value * 100) +
+    Math.round(
+      value * 100
+    ) +
     "%"
   );
 
@@ -1319,36 +1836,50 @@ function applyPointBudget() {
 
   setText(
     "pointBudgetValue",
-    formatCompactNumber(value)
+    formatCompactNumber(
+      value
+    )
   );
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* SECTION TOOLS                                                              */
 /* -------------------------------------------------------------------------- */
 
 function getSectionRange() {
-  if (!state.activeBounds) {
+  if (
+    !state.activeBounds
+  ) {
     return null;
   }
 
   var modeElement =
-    getElement("sectionMode");
+    getElement(
+      "sectionMode"
+    );
 
   var mode =
     modeElement
       ? modeElement.value
       : "none";
 
-  if (mode === "horizontal") {
+  if (
+    mode ===
+    "horizontal"
+  ) {
     return {
-      min: state.activeBounds.min.z,
-      max: state.activeBounds.max.z
+      min:
+        state.activeBounds.min.z,
+      max:
+        state.activeBounds.max.z
     };
   }
 
   var axisElement =
-    getElement("sectionAxis");
+    getElement(
+      "sectionAxis"
+    );
 
   var axis =
     axisElement &&
@@ -1357,23 +1888,33 @@ function getSectionRange() {
       : "x";
 
   return {
-    min: state.activeBounds.min[axis],
-    max: state.activeBounds.max[axis]
+    min:
+      state.activeBounds.min[axis],
+    max:
+      state.activeBounds.max[axis]
   };
 }
 
 function updateSectionControls() {
   var modeElement =
-    getElement("sectionMode");
+    getElement(
+      "sectionMode"
+    );
 
   var positionElement =
-    getElement("sectionPosition");
+    getElement(
+      "sectionPosition"
+    );
 
   var thicknessElement =
-    getElement("sectionThickness");
+    getElement(
+      "sectionThickness"
+    );
 
   var axisWrapper =
-    getElement("sectionAxisWrapper");
+    getElement(
+      "sectionAxisWrapper"
+    );
 
   if (
     !modeElement ||
@@ -1393,7 +1934,10 @@ function updateSectionControls() {
     );
 
   if (axisWrapper) {
-    if (mode === "vertical") {
+    if (
+      mode ===
+      "vertical"
+    ) {
       axisWrapper.classList.remove(
         "hidden"
       );
@@ -1433,12 +1977,16 @@ function updateSectionControls() {
 
   var length =
     Math.max(
-      range.max - range.min,
+      range.max -
+      range.min,
       0.001
     );
 
   var center =
-    (range.min + range.max) / 2;
+    (
+      range.min +
+      range.max
+    ) / 2;
 
   var thickness =
     Math.max(
@@ -1468,16 +2016,22 @@ function updateSectionControls() {
     length;
 
   thicknessElement.value =
-    thickness.toFixed(3);
+    thickness.toFixed(
+      3
+    );
 
   setText(
     "sectionPositionValue",
-    formatCoordinate(center)
+    formatCoordinate(
+      center
+    )
   );
 
   setText(
     "sectionThicknessValue",
-    formatCoordinate(thickness) +
+    formatCoordinate(
+      thickness
+    ) +
     " units"
   );
 }
@@ -1496,15 +2050,21 @@ function applySection() {
   }
 
   var modeElement =
-    getElement("sectionMode");
+    getElement(
+      "sectionMode"
+    );
 
   var mode =
     modeElement
       ? modeElement.value
       : "none";
 
-  if (mode === "none") {
+  if (
+    mode ===
+    "none"
+  ) {
     clearSection();
+
     return;
   }
 
@@ -1520,13 +2080,19 @@ function applySection() {
   var position =
     getNumberValue(
       "sectionPosition",
-      (range.min + range.max) / 2
+      (
+        range.min +
+        range.max
+      ) / 2
     );
 
   var thickness =
     getNumberValue(
       "sectionThickness",
-      (range.max - range.min) * 0.08
+      (
+        range.max -
+        range.min
+      ) * 0.08
     );
 
   thickness =
@@ -1543,18 +2109,27 @@ function applySection() {
     );
 
   var min = {
-    x: state.activeBounds.min.x,
-    y: state.activeBounds.min.y,
-    z: state.activeBounds.min.z
+    x:
+      state.activeBounds.min.x,
+    y:
+      state.activeBounds.min.y,
+    z:
+      state.activeBounds.min.z
   };
 
   var max = {
-    x: state.activeBounds.max.x,
-    y: state.activeBounds.max.y,
-    z: state.activeBounds.max.z
+    x:
+      state.activeBounds.max.x,
+    y:
+      state.activeBounds.max.y,
+    z:
+      state.activeBounds.max.z
   };
 
-  if (mode === "horizontal") {
+  if (
+    mode ===
+    "horizontal"
+  ) {
     min.z =
       safePosition -
       thickness / 2;
@@ -1564,9 +2139,14 @@ function applySection() {
       thickness / 2;
   }
 
-  if (mode === "vertical") {
+  if (
+    mode ===
+    "vertical"
+  ) {
     var axisElement =
-      getElement("sectionAxis");
+      getElement(
+        "sectionAxis"
+      );
 
     var axis =
       axisElement &&
@@ -1609,22 +2189,34 @@ function applySection() {
       : "Vertical section";
 
   volume.position.set(
-    (min.x + max.x) / 2,
-    (min.y + max.y) / 2,
-    (min.z + max.z) / 2
+    (
+      min.x +
+      max.x
+    ) / 2,
+    (
+      min.y +
+      max.y
+    ) / 2,
+    (
+      min.z +
+      max.z
+    ) / 2
   );
 
   volume.scale.set(
     Math.max(
-      max.x - min.x,
+      max.x -
+      min.x,
       0.001
     ),
     Math.max(
-      max.y - min.y,
+      max.y -
+      min.y,
       0.001
     ),
     Math.max(
-      max.z - min.z,
+      max.z -
+      min.z,
       0.001
     )
   );
@@ -1735,7 +2327,9 @@ function clearSection() {
   removeSectionVolume();
 
   var modeElement =
-    getElement("sectionMode");
+    getElement(
+      "sectionMode"
+    );
 
   if (modeElement) {
     modeElement.value =
@@ -1749,6 +2343,7 @@ function clearSection() {
     "idle"
   );
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* VIEW CONTROLS                                                              */
@@ -1767,17 +2362,59 @@ function fitActiveScan() {
     return;
   }
 
+  /*
+    Temporarily hide other scans while fitting.
+    Their original visibility is restored immediately afterward.
+  */
+  var pointclouds =
+    viewer.scene &&
+    viewer.scene.pointclouds;
+
+  var previousVisibility =
+    [];
+
   if (
-    typeof viewer.fitToScreen ===
+    pointclouds &&
+    typeof pointclouds.forEach ===
     "function"
   ) {
-    viewer.fitToScreen(
-      0.5
+    pointclouds.forEach(
+      function (cloud) {
+        previousVisibility.push(
+          {
+            cloud: cloud,
+            visible:
+              cloud.visible !== false
+          }
+        );
+
+        cloud.visible =
+          cloud ===
+          state.activeCloud;
+      }
+    );
+  }
+
+  try {
+    if (
+      typeof viewer.fitToScreen ===
+      "function"
+    ) {
+      viewer.fitToScreen(
+        0.5
+      );
+    }
+  } finally {
+    previousVisibility.forEach(
+      function (item) {
+        item.cloud.visible =
+          item.visible;
+      }
     );
   }
 
   setStatus(
-    "View fitted to active scan",
+    "Focused on active scan",
     "idle"
   );
 }
@@ -1799,7 +2436,9 @@ function activateOrbitMode() {
   }
 
   var button =
-    getElement("orbitMode");
+    getElement(
+      "orbitMode"
+    );
 
   if (button) {
     button.classList.add(
@@ -1854,6 +2493,7 @@ function downloadActiveScan() {
   link.remove();
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* EVENTS                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -1871,16 +2511,17 @@ function bindEvents() {
     "refreshLibrary",
     "click",
     function () {
-      loadCatalog().then(
-        function () {
-          renderLibrary();
+      loadCatalog()
+        .then(
+          function () {
+            renderLibrary();
 
-          setStatus(
-            "Library refreshed",
-            "idle"
-          );
-        }
-      );
+            setStatus(
+              "Library refreshed",
+              "idle"
+            );
+          }
+        );
     }
   );
 
@@ -1946,13 +2587,16 @@ function bindEvents() {
     "change",
     function () {
       var mode =
-        getElement("sectionMode");
+        getElement(
+          "sectionMode"
+        );
 
       updateSectionControls();
 
       if (
         mode &&
-        mode.value === "none"
+        mode.value ===
+        "none"
       ) {
         clearSection();
       }
@@ -1985,7 +2629,9 @@ function bindEvents() {
 
       setText(
         "sectionPositionValue",
-        formatCoordinate(value)
+        formatCoordinate(
+          value
+        )
       );
 
       if (
@@ -2008,7 +2654,9 @@ function bindEvents() {
 
       setText(
         "sectionThicknessValue",
-        formatCoordinate(value) +
+        formatCoordinate(
+          value
+        ) +
         " units"
       );
 
@@ -2032,6 +2680,7 @@ function bindEvents() {
     clearSection
   );
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* STATUS                                                                     */
@@ -2062,7 +2711,9 @@ function setViewerStatus(
   );
 
   var dot =
-    getElement("viewerStatusDot");
+    getElement(
+      "viewerStatusDot"
+    );
 
   if (!dot) {
     return;
@@ -2071,12 +2722,18 @@ function setViewerStatus(
   dot.className =
     "status-dot status-idle";
 
-  if (type === "loading") {
+  if (
+    type ===
+    "loading"
+  ) {
     dot.className =
       "status-dot status-loading";
   }
 
-  if (type === "error") {
+  if (
+    type ===
+    "error"
+  ) {
     dot.className =
       "status-dot status-error";
   }
@@ -2091,7 +2748,9 @@ function showLoading(
   );
 
   var overlay =
-    getElement("loadingOverlay");
+    getElement(
+      "loadingOverlay"
+    );
 
   if (overlay) {
     overlay.classList.remove(
@@ -2102,7 +2761,9 @@ function showLoading(
 
 function hideLoading() {
   var overlay =
-    getElement("loadingOverlay");
+    getElement(
+      "loadingOverlay"
+    );
 
   if (overlay) {
     overlay.classList.add(
@@ -2110,6 +2771,7 @@ function hideLoading() {
     );
   }
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* UTILITIES                                                                  */
@@ -2120,14 +2782,18 @@ function getNumberValue(
   fallback
 ) {
   var element =
-    getElement(id);
+    getElement(
+      id
+    );
 
   if (!element) {
     return fallback;
   }
 
   var value =
-    Number(element.value);
+    Number(
+      element.value
+    );
 
   return isFinite(value)
     ? value
@@ -2140,7 +2806,10 @@ function clamp(
   max
 ) {
   return Math.min(
-    Math.max(value, min),
+    Math.max(
+      value,
+      min
+    ),
     max
   );
 }
@@ -2162,13 +2831,14 @@ function formatBytes(
     "GiB"
   ];
 
-  var index = Math.min(
-    Math.floor(
-      Math.log(bytes) /
-      Math.log(1024)
-    ),
-    units.length - 1
-  );
+  var index =
+    Math.min(
+      Math.floor(
+        Math.log(bytes) /
+        Math.log(1024)
+      ),
+      units.length - 1
+    );
 
   var value =
     bytes /
@@ -2192,7 +2862,9 @@ function formatNumber(
   value
 ) {
   return new Intl.NumberFormat()
-    .format(value);
+    .format(
+      value
+    );
 }
 
 function formatCompactNumber(
@@ -2202,8 +2874,12 @@ function formatCompactNumber(
     value >= 1000000
   ) {
     return (
-      (value / 1000000)
-        .toFixed(1) +
+      (
+        value /
+        1000000
+      ).toFixed(
+        1
+      ) +
       "M"
     );
   }
@@ -2213,21 +2889,30 @@ function formatCompactNumber(
   ) {
     return (
       Math.round(
-        value / 1000
+        value /
+        1000
       ) +
       "K"
     );
   }
 
-  return String(value);
+  return String(
+    value
+  );
 }
 
 function formatCoordinate(
   value
 ) {
-  if (!isFinite(value)) {
+  if (
+    !isFinite(value)
+  ) {
     return "—";
   }
 
-  return Number(value).toFixed(3);
+  return Number(
+    value
+  ).toFixed(
+    3
+  );
 }
