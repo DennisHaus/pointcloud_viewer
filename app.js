@@ -3259,48 +3259,29 @@ function exportScreenshot() {
       ? camera.aspect
       : null;
 
-  var originalBackground =
-    viewer.background;
+      var originalBackgroundColor =
+        renderArea
+          ? renderArea.style.backgroundColor
+          : "";
 
-  var originalClearAlpha =
-    typeof renderer.getClearAlpha ===
-    "function"
-      ? renderer.getClearAlpha()
-      : 1;
+      var originalBackgroundImage =
+        renderArea
+          ? renderArea.style.backgroundImage
+          : "";
 
-  var originalClearColor =
-    null;
+      var originalClearAlpha =
+        typeof renderer.getClearAlpha === "function"
+          ? renderer.getClearAlpha()
+          : 1;
 
-  if (
-    typeof renderer.getClearColor ===
-      "function" &&
-    window.THREE &&
-    typeof window.THREE.Color ===
-      "function"
-  ) {
-    var originalBackgroundColor =
-    renderArea
-      ? renderArea.style.backgroundColor
-      : "";
-
-  var originalBackgroundImage =
-    renderArea
-      ? renderArea.style.backgroundImage
-      : "";
-
-  var originalClearAlpha =
-    typeof renderer.getClearAlpha === "function"
-      ? renderer.getClearAlpha()
-      : 1;
-
-  var originalClearColor =
-    typeof renderer.getClearColor === "function" &&
-    window.THREE &&
-    window.THREE.Color
-      ? renderer.getClearColor(
-          new window.THREE.Color()
-        ).clone()
-      : null;
+      var originalClearColor =
+        typeof renderer.getClearColor === "function" &&
+        window.THREE &&
+        window.THREE.Color
+          ? renderer.getClearColor(
+              new window.THREE.Color()
+            ).clone()
+          : null;
 
   var originalButtonText =
     button
