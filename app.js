@@ -3046,7 +3046,7 @@ function fitActiveScan() {
       "function"
     ) {
       viewer.fitToScreen(
-        0.5
+        1
       );
     }
   } finally {
