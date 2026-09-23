@@ -3349,8 +3349,7 @@ function exportScreenshot() {
       "function"
     ) {
       renderer.setClearColor(
-        0x000000,
-        originalClearAlpha
+        0x000000, 0
       );
     }
 
