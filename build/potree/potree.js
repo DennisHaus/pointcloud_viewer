@@ -88994,7 +88994,7 @@ ENDSEC
 			}
 
 			if(Utils.getParameterByName("edlEnabled")){
-				let enabled = Utils.getParameterByName("edlEnabled") === "true";
+				let enabled = Utils.getParameterByName("edlEnabled") === "false";
 				this.setEDLEnabled(enabled);
 			}
 
