@@ -648,6 +648,21 @@ function renderLibrary() {
     list.removeChild(
       list.firstChild
     );
+
+    if (scan.loading) {
+    scanState.classList.add(
+      "loading"
+    );
+  } else if (
+    state.loadedClouds.has(
+      scan.id
+    )
+  ) {
+    scanState.classList.add(
+      "loaded"
+    );
+  }
+  
   }
 
   updateScanCount();
@@ -871,6 +886,9 @@ function loadScan(scan) {
 
       pointcloud.name =
         scan.name;
+
+      pointcloud.visible =
+        true;
 
       if (
         viewer &&
@@ -1136,6 +1154,39 @@ function configurePointCloud(
 
   material.needsUpdate =
     true;
+}
+
+function toggleScanVisibility(scan) {
+  if (!scan) {
+    return;
+  }
+
+  var pointcloud =
+    state.loadedClouds.get(scan.id);
+
+  /*
+    If the scan has not been loaded yet,
+    load it first.
+  */
+  if (!pointcloud) {
+    loadScan(scan);
+    return;
+  }
+
+  pointcloud.visible =
+    pointcloud.visible === false;
+
+  renderLibrary();
+
+  setStatus(
+    scan.name +
+    (
+      pointcloud.visible
+        ? " shown"
+        : " hidden"
+    ),
+    "idle"
+  );
 }
 
 /* -------------------------------------------------------------------------- */
