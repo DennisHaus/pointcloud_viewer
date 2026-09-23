@@ -228,7 +228,7 @@ function initializeViewer() {
       "function"
     ) {
       viewer.setBackground(
-        "gradient"
+        "solid"
       );
     }
 
@@ -606,6 +606,24 @@ function buildRawUrl(path) {
 /* LIBRARY                                                                    */
 /* -------------------------------------------------------------------------- */
 
+function updateScanCount() {
+  var count =
+    Array.isArray(state.catalog)
+      ? state.catalog.length
+      : 0;
+
+  setText(
+    "scanCount",
+    count +
+    " " +
+    (
+      count === 1
+        ? "scan"
+        : "scans"
+    )
+  );
+}
+
 function renderLibrary() {
   var list =
     getElement("libraryList");
@@ -628,9 +646,6 @@ function renderLibrary() {
         .toLowerCase()
       : "";
 
-  /*
-    Clear the existing scan cards.
-  */
   while (list.firstChild) {
     list.removeChild(
       list.firstChild
@@ -639,9 +654,6 @@ function renderLibrary() {
 
   updateScanCount();
 
-  /*
-    Filter scans according to the search field.
-  */
   var visibleScans =
     state.catalog.filter(
       function (scan) {
@@ -658,9 +670,6 @@ function renderLibrary() {
       }
     );
 
-  /*
-    Show the empty message if no scans are available.
-  */
   if (
     visibleScans.length === 0
   ) {
@@ -679,9 +688,6 @@ function renderLibrary() {
     );
   }
 
-  /*
-    Create one card for every scan.
-  */
   visibleScans.forEach(
     function (scan) {
       var card =
@@ -720,9 +726,6 @@ function renderLibrary() {
       icon.className =
         "scan-card-icon";
 
-      icon.textContent =
-        "";
-
       var name =
         document.createElement(
           "div"
@@ -737,9 +740,6 @@ function renderLibrary() {
       name.title =
         scan.name;
 
-      /*
-        Loading/loaded status indicator.
-      */
       var scanState =
         document.createElement(
           "div"
@@ -764,9 +764,6 @@ function renderLibrary() {
         );
       }
 
-      /*
-        Visibility toggle.
-      */
       var pointcloud =
         state.loadedClouds.get(
           scan.id
@@ -872,9 +869,6 @@ function renderLibrary() {
         visibilityToggle
       );
 
-      /*
-        Metadata row.
-      */
       var metadata =
         document.createElement(
           "div"
@@ -911,9 +905,6 @@ function renderLibrary() {
         size
       );
 
-      /*
-        Assemble the card.
-      */
       card.appendChild(
         header
       );
@@ -922,11 +913,6 @@ function renderLibrary() {
         metadata
       );
 
-      /*
-        Clicking the card activates/fits the scan.
-        Clicking the visibility indicator is handled
-        separately above.
-      */
       card.addEventListener(
         "click",
         function () {
