@@ -59265,11 +59265,11 @@ void main() {
 			}
 
 			if (this.shape === PointShape.PARABOLOID) {
-				defines.push('#define square_point_shape');
+				defines.push('#define paraboloid_point_shape');
 			} else if (this.shape === PointShape.CIRCLE) {
 				defines.push('#define circle_point_shape');
 			} else if (this.shape === PointShape.SQUARE) {
-				defines.push('#define paraboloid_point_shape');
+				defines.push('#define square_point_shape');
 			}
 
 			if (this._useEDL) {
