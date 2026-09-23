@@ -378,9 +378,21 @@ function loadCatalog() {
         }
       );
 
+      console.log(
+        "Catalog scans:",
+        state.catalog.map(function (scan) {
+          return scan.id;
+        })
+      );
+
+      // Remove loaded clouds that no longer exist
+      // in the updated catalog.
+      reconcileLoadedClouds();
+
       updateScanCount();
 
       return state.catalog;
+
     })
     .catch(function (error) {
       state.catalog = [];
@@ -399,6 +411,87 @@ function loadCatalog() {
 
       return [];
     });
+}
+
+function reconcileLoadedClouds() {
+  var catalogIds = new Set(
+    state.catalog.map(function (scan) {
+      return scan.id;
+    })
+  );
+
+  var removedActiveCloud = false;
+
+  state.loadedClouds.forEach(
+    function (pointcloud, scanId) {
+      if (catalogIds.has(scanId)) {
+        return;
+      }
+
+      /*
+        Remove the deleted scan from the Potree scene.
+      */
+      if (
+        viewer &&
+        viewer.scene &&
+        typeof viewer.scene.removePointCloud ===
+        "function"
+      ) {
+        viewer.scene.removePointCloud(
+          pointcloud
+        );
+      }
+
+      state.loadedClouds.delete(
+        scanId
+      );
+
+      if (
+        state.activeScan &&
+        state.activeScan.id === scanId
+      ) {
+        removedActiveCloud = true;
+      }
+    }
+  );
+
+  /*
+    Clear the inspector if the active scan
+    was deleted from the catalog.
+  */
+  if (removedActiveCloud) {
+    removeSectionVolume();
+
+    state.activeScan = null;
+    state.activeCloud = null;
+    state.activeBounds = null;
+
+    setViewerStatus(
+      "No scan selected",
+      "idle"
+    );
+  }
+
+  /*
+    Refresh the active scan metadata if it still exists.
+  */
+  if (state.activeScan) {
+    var refreshedScan =
+      state.catalog.find(
+        function (scan) {
+          return scan.id ===
+            state.activeScan.id;
+        }
+      );
+
+    if (refreshedScan) {
+      state.activeScan =
+        refreshedScan;
+    }
+  }
+
+  updateInspector();
+  updateSectionControls();
 }
 
 function normalizeScan(scan, index) {
