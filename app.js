@@ -641,11 +641,12 @@ function renderLibrary() {
   var query =
     search &&
     search.value
-      ? search.value
-        .trim()
-        .toLowerCase()
+      ? search.value.trim().toLowerCase()
       : "";
 
+  /*
+    Remove the old cards.
+  */
   while (list.firstChild) {
     list.removeChild(
       list.firstChild
@@ -654,6 +655,9 @@ function renderLibrary() {
 
   updateScanCount();
 
+  /*
+    Filter the catalog according to the search text.
+  */
   var visibleScans =
     state.catalog.filter(
       function (scan) {
@@ -670,6 +674,9 @@ function renderLibrary() {
       }
     );
 
+  /*
+    Show the empty message when there are no scans.
+  */
   if (
     visibleScans.length === 0
   ) {
@@ -688,6 +695,9 @@ function renderLibrary() {
     );
   }
 
+  /*
+    Create one card for each scan.
+  */
   visibleScans.forEach(
     function (scan) {
       var card =
@@ -726,6 +736,9 @@ function renderLibrary() {
       icon.className =
         "scan-card-icon";
 
+      icon.textContent =
+        "";
+
       var name =
         document.createElement(
           "div"
@@ -740,6 +753,9 @@ function renderLibrary() {
       name.title =
         scan.name;
 
+      /*
+        Loaded/loading status.
+      */
       var scanState =
         document.createElement(
           "div"
@@ -764,6 +780,9 @@ function renderLibrary() {
         );
       }
 
+      /*
+        Visibility toggle.
+      */
       var pointcloud =
         state.loadedClouds.get(
           scan.id
@@ -869,6 +888,9 @@ function renderLibrary() {
         visibilityToggle
       );
 
+      /*
+        Metadata.
+      */
       var metadata =
         document.createElement(
           "div"
@@ -905,6 +927,9 @@ function renderLibrary() {
         size
       );
 
+      /*
+        Assemble the card.
+      */
       card.appendChild(
         header
       );
@@ -913,6 +938,10 @@ function renderLibrary() {
         metadata
       );
 
+      /*
+        Clicking the card loads or activates
+        the point cloud.
+      */
       card.addEventListener(
         "click",
         function () {
@@ -927,7 +956,6 @@ function renderLibrary() {
       );
     }
   );
-}
 
 /* -------------------------------------------------------------------------- */
 /* ACTIVE SCAN AND INSPECTOR                                                  */
