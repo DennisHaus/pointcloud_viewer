@@ -1035,7 +1035,7 @@ function configurePointCloud(
     undefined
   ) {
     material.shape =
-      potree.PointShape.SQUARE;
+      potree.PointShape.PARABOLOID;
   }
 
   applyColorMode(pointcloud);
