@@ -70823,7 +70823,7 @@ void main() {
 					depthMaterial.visibleNodesTexture = material.visibleNodesTexture;
 					depthMaterial.weighted = false;
 					depthMaterial.screenWidth = width;
-					depthMaterial.shape = PointShape.PARABOLID;
+					depthMaterial.shape = PointShape.CIRCLE;
 					depthMaterial.screenHeight = height;
 					depthMaterial.uniforms.visibleNodes.value = material.visibleNodesTexture;
 					depthMaterial.uniforms.octreeSize.value = octreeSize;
@@ -70867,7 +70867,7 @@ void main() {
 					attributeMaterial.weighted = true;
 					attributeMaterial.screenWidth = width;
 					attributeMaterial.screenHeight = height;
-					attributeMaterial.shape = PointShape.PARABOLID;
+					attributeMaterial.shape = PointShape.CIRCLE;
 					attributeMaterial.uniforms.visibleNodes.value = material.visibleNodesTexture;
 					attributeMaterial.uniforms.octreeSize.value = octreeSize;
 					attributeMaterial.spacing = pointcloud.pcoGeometry.spacing; // * Math.max(...pointcloud.scale.toArray());
@@ -75757,9 +75757,6 @@ ENDSEC
 		setPointCloud(pointcloud){
 
 			let material = pointcloud.material;
-
-			material.shape = PointShape.PARABOLOID;
-			material.needsUpdate = true;
 
 			let panel = $(`
 			<div class="scene_content selectable">
