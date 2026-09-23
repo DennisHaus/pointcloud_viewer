@@ -2764,8 +2764,17 @@ function getActiveViewerCamera() {
 }
 
 function exportScreenshot() {
-  var targetWidth = 3000;
-  var targetHeight = 4000;
+  var targetWidth =
+    Math.round(
+    CONFIG.screenshotWidth *
+    CONFIG.screenshotScale
+  );
+
+  var targetHeight =
+    Math.round(
+    CONFIG.screenshotHeight *
+    CONFIG.screenshotScale
+  );
 
   if (
     !viewer ||
@@ -2793,6 +2802,31 @@ function exportScreenshot() {
 
   var camera =
     getActiveViewerCamera();
+
+    var originalBackground =
+    viewer.background ||
+    "black";
+
+  var originalClearAlpha =
+    typeof renderer.getClearAlpha ===
+    "function"
+      ? renderer.getClearAlpha()
+      : 1;
+
+  var originalClearColor =
+    null;
+
+  if (
+    typeof renderer.getClearColor ===
+      "function" &&
+    window.THREE &&
+    window.THREE.Color
+  ) {
+    originalClearColor =
+      renderer.getClearColor(
+        new window.THREE.Color()
+      ).clone();
+  }
 
   var oldPixelRatio =
     typeof renderer.getPixelRatio ===
