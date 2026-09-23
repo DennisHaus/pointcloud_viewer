@@ -59059,7 +59059,7 @@ void main() {
 			let treeType = getValid(parameters.treeType, TreeType.OCTREE);
 
 			this._pointSizeType = PointSizeType.FIXED;
-			this._shape = PointShape.SQUARE;
+			this._shape = PointShape.PARABOLOID;
 			this._useClipBox = false;
 			this.clipBoxes = [];
 			this.clipPolygons = [];
@@ -70867,7 +70867,7 @@ void main() {
 					attributeMaterial.weighted = true;
 					attributeMaterial.screenWidth = width;
 					attributeMaterial.screenHeight = height;
-					attributeMaterial.shape = PointShape.CIRCLE;
+					attributeMaterial.shape = PointShape.PARABOLID;
 					attributeMaterial.uniforms.visibleNodes.value = material.visibleNodesTexture;
 					attributeMaterial.uniforms.octreeSize.value = octreeSize;
 					attributeMaterial.spacing = pointcloud.pcoGeometry.spacing; // * Math.max(...pointcloud.scale.toArray());
