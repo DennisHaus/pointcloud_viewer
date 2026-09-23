@@ -48,16 +48,6 @@
 <body>
   <div class="app-shell">
 
-    <button
-      id="interfaceToggle"
-      class="interface-toggle"
-      type="button"
-      aria-label="Hide interface"
-      aria-expanded="true"
-    >
-      ›
-    </button>
-
     <header class="topbar">
       <div class="brand">
         <div class="eyebrow">
@@ -72,10 +62,10 @@
 
         <div class="brand-subtitle">
           copc viewer | for collecting, storing and visualizing spatial recodings
-          of Brinz/Brinzauls during the Seminarweek 2026<br />
+          of Brinz/Brinzauls during the Seminarweek 2026 |
           beta version<br />
           <br />
-          developed by Dennis Häusler, Institute for Landscape and Urban Studies, ETH Zürich |
+          developed by Dennis Häusler, Professur Voser, Institute for Landscape and Urban Studies, ETH Zürich |
           haeusler@arch.ethz.ch | assisted by AI gpt 5.6
         </div>
       </div>
@@ -110,7 +100,11 @@
           id="exportScreenshot"
           class="toolbar-button"
           type="button"
+<<<<<<< HEAD
         >
+=======
+          >
+>>>>>>> parent of e2a9753 (full change!)
           Export PNG 3x
         </button>
 
@@ -229,7 +223,7 @@
             class="toolbar-button"
             type="button"
           >
-            Fit All
+            Reset
           </button>
 
           <button
@@ -268,297 +262,287 @@
           </span>
         </div>
 
-        <details
-          id="inspectorSettings"
-          class="inspector-settings"
-          open
+        <div
+          id="inspectorContent"
+          class="inspector-content hidden"
         >
-          <summary>
-            Scan settings
-          </summary>
+          <section class="inspector-section">
+            <div class="section-heading">
+              <span id="activeScanName">
+                Scan
+              </span>
+            </div>
 
-          <div
-            id="inspectorContent"
-            class="inspector-content hidden"
-          >
-            <section class="inspector-section">
-              <div class="section-heading">
-                <span id="activeScanName">
-                  Scan
-                </span>
+            <div class="metadata-grid">
+              <div>
+                <span>Format</span>
+                <strong>COPC LAZ</strong>
               </div>
 
-              <div class="metadata-grid">
-                <div>
-                  <span>Format</span>
-                  <strong>COPC LAZ</strong>
-                </div>
-
-                <div>
-                  <span>Points</span>
-                  <strong id="activePointCount">
-                    —
-                  </strong>
-                </div>
-
-                <div>
-                  <span>File size</span>
-                  <strong id="activeFileSize">
-                    —
-                  </strong>
-                </div>
-
-                <div>
-                  <span>CRS</span>
-                  <strong id="activeCrs">
-                    —
-                  </strong>
-                </div>
-              </div>
-            </section>
-
-            <section class="inspector-section">
-              <div class="section-heading">
-                Appearance
+              <div>
+                <span>Points</span>
+                <strong id="activePointCount">
+                  —
+                </strong>
               </div>
 
+              <div>
+                <span>File size</span>
+                <strong id="activeFileSize">
+                  —
+                </strong>
+              </div>
+
+              <div>
+                <span>CRS</span>
+                <strong id="activeCrs">
+                  —
+                </strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="inspector-section">
+            <div class="section-heading">
+              Appearance
+            </div>
+
+            <label
+              for="colorMode"
+              class="control-label"
+            >
+              Color mode
+            </label>
+
+            <select
+              id="colorMode"
+              class="control-input"
+            >
+              <option value="RGB">
+                RGB
+              </option>
+
+              <option value="ELEVATION">
+                Elevation
+              </option>
+
+              <option value="INTENSITY">
+                Intensity
+              </option>
+
+              <option value="CLASSIFICATION">
+                Classification
+              </option>
+
+              <option value="RETURN_NUMBER">
+                Return number
+              </option>
+            </select>
+
+            <label
+              for="pointSize"
+              class="control-label"
+            >
+              Point size
+
+              <output id="pointSizeValue">
+                1.5
+              </output>
+            </label>
+
+            <input
+              id="pointSize"
+              class="range-input"
+              type="range"
+              min="0.5"
+              max="8"
+              step="0.1"
+              value="1.5"
+            />
+
+            <label
+              for="pointOpacity"
+              class="control-label"
+            >
+              Opacity
+
+              <output id="pointOpacityValue">
+                100%
+              </output>
+            </label>
+
+            <input
+              id="pointOpacity"
+              class="range-input"
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.05"
+              value="1"
+            />
+
+            <label
+              for="pointBudget"
+              class="control-label"
+            >
+              Point budget
+
+              <output id="pointBudgetValue">
+                3.0M
+              </output>
+            </label>
+
+            <input
+              id="pointBudget"
+              class="range-input"
+              type="range"
+              min="250000"
+              max="100000000"
+              step="250000"
+              value="3000000"
+            />
+          </section>
+
+          <section class="inspector-section">
+            <div class="section-heading">
+              Sections
+            </div>
+
+            <label
+              for="sectionMode"
+              class="control-label"
+            >
+              Section type
+            </label>
+
+            <select
+              id="sectionMode"
+              class="control-input"
+            >
+              <option value="none">
+                No section
+              </option>
+
+              <option value="horizontal">
+                Horizontal section
+              </option>
+
+              <option value="vertical">
+                Vertical section
+              </option>
+            </select>
+
+            <div
+              id="sectionAxisWrapper"
+              class="hidden"
+            >
               <label
-                for="colorMode"
+                for="sectionAxis"
                 class="control-label"
               >
-                Color mode
+                Vertical axis
               </label>
 
               <select
-                id="colorMode"
+                id="sectionAxis"
                 class="control-input"
               >
-                <option value="RGB">
-                  RGB
+                <option value="x">
+                  X axis
                 </option>
 
-                <option value="ELEVATION">
-                  Elevation
-                </option>
-
-                <option value="INTENSITY">
-                  Intensity
-                </option>
-
-                <option value="CLASSIFICATION">
-                  Classification
-                </option>
-
-                <option value="RETURN_NUMBER">
-                  Return number
+                <option value="y">
+                  Y axis
                 </option>
               </select>
+            </div>
 
-              <label
-                for="pointSize"
-                class="control-label"
+            <label
+              for="sectionPosition"
+              class="control-label"
+            >
+              Position
+
+              <output id="sectionPositionValue">
+                —
+              </output>
+            </label>
+
+            <input
+              id="sectionPosition"
+              class="range-input"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.5"
+              disabled
+            />
+
+            <label
+              for="sectionThickness"
+              class="control-label"
+            >
+              Thickness
+
+              <output id="sectionThicknessValue">
+                —
+              </output>
+            </label>
+
+            <input
+              id="sectionThickness"
+              class="number-input"
+              type="number"
+              min="0.001"
+              step="0.01"
+              value="1"
+              disabled
+            />
+
+            <div class="section-buttons">
+              <button
+                id="applySection"
+                class="button button-secondary"
+                type="button"
               >
-                Point size
+                Apply
+              </button>
 
-                <output id="pointSizeValue">
-                  1.5
-                </output>
-              </label>
-
-              <input
-                id="pointSize"
-                class="range-input"
-                type="range"
-                min="0.5"
-                max="8"
-                step="0.1"
-                value="1.5"
-              />
-
-              <label
-                for="pointOpacity"
-                class="control-label"
+              <button
+                id="clearSection"
+                class="button button-ghost"
+                type="button"
               >
-                Opacity
+                Clear
+              </button>
+            </div>
+          </section>
 
-                <output id="pointOpacityValue">
-                  100%
-                </output>
-              </label>
+          <section class="inspector-section">
+            <div class="section-heading">
+              <span>⌖</span>
+              Bounds
+            </div>
 
-              <input
-                id="pointOpacity"
-                class="range-input"
-                type="range"
-                min="0.1"
-                max="1"
-                step="0.05"
-                value="1"
-              />
-
-              <label
-                for="pointBudget"
-                class="control-label"
-              >
-                Point budget
-
-                <output id="pointBudgetValue">
-                  3.0M
-                </output>
-              </label>
-
-              <input
-                id="pointBudget"
-                class="range-input"
-                type="range"
-                min="250000"
-                max="100000000"
-                step="250000"
-                value="3000000"
-              />
-            </section>
-
-            <section class="inspector-section">
-              <div class="section-heading">
-                Sections
+            <div class="bounds-list">
+              <div>
+                <span>X</span>
+                <strong id="boundsX">—</strong>
               </div>
 
-              <label
-                for="sectionMode"
-                class="control-label"
-              >
-                Section type
-              </label>
-
-              <select
-                id="sectionMode"
-                class="control-input"
-              >
-                <option value="none">
-                  No section
-                </option>
-
-                <option value="horizontal">
-                  Horizontal section
-                </option>
-
-                <option value="vertical">
-                  Vertical section
-                </option>
-              </select>
-
-              <div
-                id="sectionAxisWrapper"
-                class="hidden"
-              >
-                <label
-                  for="sectionAxis"
-                  class="control-label"
-                >
-                  Vertical axis
-                </label>
-
-                <select
-                  id="sectionAxis"
-                  class="control-input"
-                >
-                  <option value="x">
-                    X axis
-                  </option>
-
-                  <option value="y">
-                    Y axis
-                  </option>
-                </select>
+              <div>
+                <span>Y</span>
+                <strong id="boundsY">—</strong>
               </div>
 
-              <label
-                for="sectionPosition"
-                class="control-label"
-              >
-                Position
-
-                <output id="sectionPositionValue">
-                  —
-                </output>
-              </label>
-
-              <input
-                id="sectionPosition"
-                class="range-input"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value="0.5"
-                disabled
-              />
-
-              <label
-                for="sectionThickness"
-                class="control-label"
-              >
-                Thickness
-
-                <output id="sectionThicknessValue">
-                  —
-                </output>
-              </label>
-
-              <input
-                id="sectionThickness"
-                class="number-input"
-                type="number"
-                min="0.001"
-                step="0.01"
-                value="1"
-                disabled
-              />
-
-              <div class="section-buttons">
-                <button
-                  id="applySection"
-                  class="button button-secondary"
-                  type="button"
-                >
-                  Apply
-                </button>
-
-                <button
-                  id="clearSection"
-                  class="button button-ghost"
-                  type="button"
-                >
-                  Clear
-                </button>
+              <div>
+                <span>Z</span>
+                <strong id="boundsZ">—</strong>
               </div>
-            </section>
-
-            <section class="inspector-section">
-              <div class="section-heading">
-                <span>⌖</span>
-                Bounds
-              </div>
-
-              <div class="bounds-list">
-                <div>
-                  <span>X</span>
-                  <strong id="boundsX">—</strong>
-                </div>
-
-                <div>
-                  <span>Y</span>
-                  <strong id="boundsY">—</strong>
-                </div>
-
-                <div>
-                  <span>Z</span>
-                  <strong id="boundsZ">—</strong>
-                </div>
-              </div>
-            </section>
-          </div>
-        </details>
+            </div>
+          </section>
+        </div>
       </aside>
     </main>
 
