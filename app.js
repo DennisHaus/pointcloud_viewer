@@ -1028,12 +1028,12 @@ function configurePointCloud(
       potree.PointSizeType.ADAPTIVE;
   }
 
-  /*if (
+  if (
     potree &&
     potree.PointShape &&
     potree.PointShape.CIRCLE !==
     undefined
-  ) {*/
+  ) {
     material.shape =
       potree.PointShape.PARABOLOID;
   }
