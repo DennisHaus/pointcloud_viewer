@@ -3270,7 +3270,7 @@ function exportScreenshot() {
   var originalBackgroundImage =
     renderArea
       ? renderArea.style.backgroundImage
-      : "";
+      : "none";
 
   var originalClearAlpha =
     typeof renderer.getClearAlpha === "function"
@@ -3341,8 +3341,7 @@ function exportScreenshot() {
       "function"
     ) {
       renderer.setClearColor(
-        originalClearColor,
-        originalClearAlpha
+        0x000000, 0
       );
     } else if (
       typeof renderer.setClearColor ===
