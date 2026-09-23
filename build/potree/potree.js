@@ -75758,6 +75758,9 @@ ENDSEC
 
 			let material = pointcloud.material;
 
+			material.shape = PointShape.PARABOLOID;
+			material.needsUpdate = true;
+
 			let panel = $(`
 			<div class="scene_content selectable">
 				<ul class="pv-menu-list">
