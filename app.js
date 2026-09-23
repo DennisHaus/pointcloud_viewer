@@ -270,7 +270,7 @@ function initializeViewer() {
       "function"
     ) {
       viewer.setBackground(
-        "black"
+        "none"
       );
     }
 
@@ -3262,30 +3262,30 @@ function exportScreenshot() {
   var originalBackground =
     viewer.background;
 
-    var originalBackgroundColor =
-      renderArea
-        ? renderArea.style.backgroundColor
-        : "";
+  var originalBackgroundColor =
+    renderArea
+      ? renderArea.style.backgroundColor
+      : "";
 
-    var originalBackgroundImage =
-      renderArea
-        ? renderArea.style.backgroundImage
-        : "";
+  var originalBackgroundImage =
+    renderArea
+      ? renderArea.style.backgroundImage
+      : "";
 
-    var originalClearAlpha =
-      typeof renderer.getClearAlpha === "function"
-        ? renderer.getClearAlpha()
-        : 1;
+  var originalClearAlpha =
+    typeof renderer.getClearAlpha === "function"
+      ? renderer.getClearAlpha()
+      : 1;
 
-    var originalClearColor =
-      typeof renderer.getClearColor === "function" &&
+  var originalClearColor =
+    typeof renderer.getClearColor === "function" &&
       window.THREE &&
       window.THREE.Color
         ? renderer.getClearColor(
             new window.THREE.Color()
           ).clone()
         : null;
-        
+
   var originalButtonText =
     button
       ? button.textContent
