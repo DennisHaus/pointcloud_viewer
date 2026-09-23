@@ -75758,7 +75758,7 @@ ENDSEC
 
 			let material = pointcloud.material;
 
-			let panel = $(`
+			let panel = $(
 			<div class="scene_content selectable">
 				<ul class="pv-menu-list">
 
