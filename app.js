@@ -17,17 +17,6 @@ var CONFIG = {
 
   defaultPointBudget: 3000000,
 
-  useRawBaseForPaths: false,
-
-  rawBaseUrl:
-    "https://raw.githubusercontent.com/DennisHaus/pointcloud_viewer/main"
-};
-
-var CONFIG = {
-  catalogUrl: "./catalog.json",
-
-  defaultPointBudget: 3000000,
-
   screenshotWidth: 3000,
   screenshotHeight: 4000,
   screenshotWarmupMs: 600,
