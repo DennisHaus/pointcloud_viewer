@@ -1031,11 +1031,11 @@ function configurePointCloud(
   if (
     potree &&
     potree.PointShape &&
-    potree.PointShape.PARABOLOID !==
+    potree.PointShape.CIRCLE !==
     undefined
   ) {
     material.shape =
-      potree.PointShape.PARABOLOID;
+      potree.PointShape.CIRCLE;
   }
 
   applyColorMode(pointcloud);
