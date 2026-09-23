@@ -2,18 +2,28 @@
   "version": 1,
   "scans": [
     {
-      "id": "output-001",
-      "name": "Output Test",
-      "filename": "output.copc.laz",
-      "path": "./scans/output.copc.laz",
-      "url": "./scans/output.copc.laz",
+      "id": "scans-birch-tree",
+      "name": "Birch Tree",
+      "filename": "birch_tree.copc.laz",
+      "path": "./scans/birch_tree.copc.laz",
+      "url": "./scans/birch_tree.copc.laz",
       "format": "copc",
-      "sizeBytes": 73400320,
-      "pointCount": 12800000,
+      "sizeBytes": 9792501,
+      "pointCount": null,
       "crs": null,
-      "uploadedAt": "2026-09-21"
+      "uploadedAt": "2026-09-23"
+    },
+    {
+      "id": "scans-lion-takanawa",
+      "name": "Lion Takanawa",
+      "filename": "lion_takanawa.copc.laz",
+      "path": "./scans/lion_takanawa.copc.laz",
+      "url": "./scans/lion_takanawa.copc.laz",
+      "format": "copc",
+      "sizeBytes": 2735983,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-09-23"
     }
-
-
   ]
 }
