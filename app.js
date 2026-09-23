@@ -3259,30 +3259,33 @@ function exportScreenshot() {
       ? camera.aspect
       : null;
 
-      var originalBackgroundColor =
-        renderArea
-          ? renderArea.style.backgroundColor
-          : "";
+  var originalBackground =
+    viewer.background;
 
-      var originalBackgroundImage =
-        renderArea
-          ? renderArea.style.backgroundImage
-          : "";
+    var originalBackgroundColor =
+      renderArea
+        ? renderArea.style.backgroundColor
+        : "";
 
-      var originalClearAlpha =
-        typeof renderer.getClearAlpha === "function"
-          ? renderer.getClearAlpha()
-          : 1;
+    var originalBackgroundImage =
+      renderArea
+        ? renderArea.style.backgroundImage
+        : "";
 
-      var originalClearColor =
-        typeof renderer.getClearColor === "function" &&
-        window.THREE &&
-        window.THREE.Color
-          ? renderer.getClearColor(
-              new window.THREE.Color()
-            ).clone()
-          : null;
+    var originalClearAlpha =
+      typeof renderer.getClearAlpha === "function"
+        ? renderer.getClearAlpha()
+        : 1;
 
+    var originalClearColor =
+      typeof renderer.getClearColor === "function" &&
+      window.THREE &&
+      window.THREE.Color
+        ? renderer.getClearColor(
+            new window.THREE.Color()
+          ).clone()
+        : null;
+        
   var originalButtonText =
     button
       ? button.textContent
