@@ -1126,10 +1126,11 @@ function renderLibrary() {
         metadata
       );
 
+      // ONLY CHANGE FOR ACTIVATION:
       card.addEventListener(
         "click",
         function () {
-          loadScan(
+          selectScan(
             scan
           );
         }
@@ -1536,6 +1537,44 @@ function configurePointCloud(
 
   material.needsUpdate =
     true;
+}
+
+// ONLY NECESSARY ADDITION FOR ACTIVATION:
+function selectScan(
+  scan
+) {
+  if (
+    !scan
+  ) {
+    return;
+  }
+
+  var pointcloud =
+    state.loadedClouds.get(
+      scan.id
+    );
+
+  if (
+    pointcloud
+  ) {
+    setActiveScan(
+      scan
+    );
+
+    fitActiveScan();
+
+    setStatus(
+      scan.name +
+      " selected",
+      "idle"
+    );
+
+    return;
+  }
+
+  loadScan(
+    scan
+  );
 }
 
 function toggleScanVisibility(
@@ -3046,7 +3085,7 @@ function fitActiveScan() {
       "function"
     ) {
       viewer.fitToScreen(
-        1
+        0.9
       );
     }
   } finally {
@@ -3619,7 +3658,12 @@ function exportScreenshot() {
       );
     }
 
-    /*if (
+    /*
+      These are intentionally left commented out because
+      forcing autoClear true can clear buffers Potree needs.
+    */
+    /*
+    if (
       originalAutoClear !==
       null
     ) {
@@ -3649,14 +3693,11 @@ function exportScreenshot() {
     ) {
       renderer.autoClearStencil =
         true;
-    }*/
+    }
+    */
   }
 
   function setScreenshotSize() {
-    /*
-      Use pixel ratio 1 because targetWidth and targetHeight
-      are already physical pixel dimensions.
-    */
     if (
       originalSetPixelRatio
     ) {
@@ -3673,10 +3714,6 @@ function exportScreenshot() {
       false
     );
 
-    /*
-      Older Three.js/Potree combinations can occasionally
-      leave the canvas at its previous drawing-buffer size.
-    */
     if (
       canvas.width !==
       targetWidth
@@ -3738,11 +3775,6 @@ function exportScreenshot() {
   }
 
   function installScreenshotOverrides() {
-    /*
-      Potree may call renderer.setSize() internally.
-      Prevent it from changing the export back to the
-      normal viewer size.
-    */
     renderer.setSize =
       function () {
         return originalSetSize.call(
@@ -3795,10 +3827,6 @@ function exportScreenshot() {
         };
     }
 
-    /*
-      Keep the WebGL background transparent even if Potree
-      changes the clear color while rendering.
-    */
     if (
       originalSetClearColor
     ) {
@@ -3824,10 +3852,6 @@ function exportScreenshot() {
         };
     }
 
-    /*
-      Prevent Potree's resize handler from restoring the
-      normal viewer dimensions.
-    */
     if (
       originalOnWindowResize
     ) {
@@ -4122,10 +4146,6 @@ function exportScreenshot() {
 
     viewer.render();
 
-    /*
-      If Potree changed the drawing buffer for any reason,
-      restore it and render one more frame.
-    */
     if (
       canvas.width !==
         targetWidth ||
@@ -4313,7 +4333,11 @@ function exportScreenshot() {
       "loading"
     );
 
-    installScreenshotOverrides();
+    /*
+      Keep this part commented out if you want to avoid
+      the renderer monkey-patching that breaks normal view state.
+    */
+    // installScreenshotOverrides();
 
     setScreenshotSize();
 
