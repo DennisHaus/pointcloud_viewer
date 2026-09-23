@@ -3619,7 +3619,7 @@ function exportScreenshot() {
       );
     }
 
-    if (
+    /*if (
       originalAutoClear !==
       null
     ) {
@@ -3649,7 +3649,7 @@ function exportScreenshot() {
     ) {
       renderer.autoClearStencil =
         true;
-    }
+    }*/
   }
 
   function setScreenshotSize() {
