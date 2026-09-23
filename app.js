@@ -32,7 +32,7 @@ var CONFIG = {
       screenshotScale: 2
       exported PNG:    6748 x 2800
   */
-  screenshotScale: 2,
+  screenshotScale: 3,
   screenshotWarmupMs: 600,
 
   useRawBaseForPaths: false,
