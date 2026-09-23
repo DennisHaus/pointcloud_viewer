@@ -3237,7 +3237,8 @@ function exportScreenshot() {
   }
 
   var originalWidth =
-    (canvas.clientWidth * 1.5);
+    canvas.clientWidth ||
+    1;
 
   var originalHeight =
     canvas.clientHeight ||
