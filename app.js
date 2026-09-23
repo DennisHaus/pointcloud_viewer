@@ -3167,7 +3167,7 @@ function getScreenshotFilename(
 
   return (
     name +
-    "-" +
+    "_" +
     width +
     "x" +
     height +
@@ -3292,7 +3292,7 @@ function exportScreenshot() {
   var originalBackgroundColor =
     renderArea
       ? renderArea.style.backgroundColor
-      : "";
+      : "transparent";
 
   var originalButtonText =
     button
