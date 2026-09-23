@@ -2,18 +2,6 @@
   "version": 1,
   "scans": [
     {
-      "id": "scans-birch-tree",
-      "name": "Birch Tree",
-      "filename": "birch_tree.copc.laz",
-      "path": "./scans/birch_tree.copc.laz",
-      "url": "./scans/birch_tree.copc.laz",
-      "format": "copc",
-      "sizeBytes": 9792501,
-      "pointCount": null,
-      "crs": null,
-      "uploadedAt": "2026-09-23"
-    },
-    {
       "id": "scans-lion-takanawa",
       "name": "Lion Takanawa",
       "filename": "lion_takanawa.copc.laz",
