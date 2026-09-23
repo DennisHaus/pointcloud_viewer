@@ -12,10 +12,17 @@
   5. app.js
 */
 
+
+/* -------------------------------------------------------------------------- */
+/* CONFIGURATION                                                              */
+/* -------------------------------------------------------------------------- */
+
 var CONFIG = {
   catalogUrl: "./catalog.json",
 
   defaultPointBudget: 3000000,
+
+  navigationSpeed: 0.35,
 
   screenshotWidth: 3000,
   screenshotHeight: 4000,
@@ -27,6 +34,11 @@ var CONFIG = {
   rawBaseUrl:
     "https://raw.githubusercontent.com/DennisHaus/pointcloud_viewer/main"
 };
+
+
+/* -------------------------------------------------------------------------- */
+/* APPLICATION STATE                                                          */
+/* -------------------------------------------------------------------------- */
 
 var state = {
   catalog: [],
@@ -59,39 +71,48 @@ function initialize() {
     return;
   }
 
-  loadCatalog()
-    .then(function () {
-      renderLibrary();
+  bindNavigationKeyboard();
 
-      if (state.catalog.length > 0) {
-        return loadScan(
-          state.catalog[0]
+  loadCatalog()
+    .then(
+      function () {
+        renderLibrary();
+
+        if (
+          state.catalog.length >
+          0
+        ) {
+          return loadScan(
+            state.catalog[0]
+          );
+        }
+
+        setViewerStatus(
+          "No scans available",
+          "idle"
+        );
+
+        setStatus(
+          "No scans found in catalog.json",
+          "idle"
+        );
+
+        return null;
+      }
+    )
+    .catch(
+      function (error) {
+        console.error(
+          "Application startup failed:",
+          error
+        );
+
+        setStatus(
+          "Application startup failed.",
+          "error"
         );
       }
-
-      setViewerStatus(
-        "No scans available",
-        "idle"
-      );
-
-      setStatus(
-        "No scans found in catalog.json",
-        "idle"
-      );
-
-      return null;
-    })
-    .catch(function (error) {
-      console.error(
-        "Application startup failed:",
-        error
-      );
-
-      setStatus(
-        "Application startup failed.",
-        "error"
-      );
-    });
+    );
 }
 
 
@@ -99,17 +120,30 @@ function initialize() {
 /* DOM HELPERS                                                                */
 /* -------------------------------------------------------------------------- */
 
-function getElement(id) {
-  return document.getElementById(id);
+function getElement(
+  id
+) {
+  return document.getElementById(
+    id
+  );
 }
 
-function setText(id, value) {
+function setText(
+  id,
+  value
+) {
   var element =
-    getElement(id);
+    getElement(
+      id
+    );
 
-  if (element) {
+  if (
+    element
+  ) {
     element.textContent =
-      String(value);
+      String(
+        value
+      );
   }
 }
 
@@ -119,9 +153,13 @@ function addEvent(
   handler
 ) {
   var element =
-    getElement(id);
+    getElement(
+      id
+    );
 
-  if (element) {
+  if (
+    element
+  ) {
     element.addEventListener(
       eventName,
       handler
@@ -145,14 +183,16 @@ function initializeViewer() {
   var potree =
     window.Potree;
 
-  if (!potree) {
+  if (
+    !potree
+  ) {
     setStatus(
       "Potree is not loaded.",
       "error"
     );
 
     console.error(
-      "window.Potree is undefined. Check build/potree/potree.js."
+      "window.Potree is undefined."
     );
 
     return false;
@@ -179,7 +219,9 @@ function initializeViewer() {
       "potree_render_area"
     );
 
-  if (!renderArea) {
+  if (
+    !renderArea
+  ) {
     setStatus(
       "The Potree render area is missing.",
       "error"
@@ -223,9 +265,6 @@ function initializeViewer() {
       );
     }
 
-    /*
-      Completely black background.
-    */
     if (
       typeof viewer.setBackground ===
       "function"
@@ -235,9 +274,6 @@ function initializeViewer() {
       );
     }
 
-    /*
-      Use orbit controls.
-    */
     if (
       viewer.orbitControls &&
       typeof viewer.setControls ===
@@ -272,7 +308,9 @@ function initializeViewer() {
     );
 
     return true;
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "Potree initialization failed:",
       error
@@ -293,7 +331,9 @@ function initializeViewer() {
 }
 
 function disableXROnViewer() {
-  if (!viewer) {
+  if (
+    !viewer
+  ) {
     return;
   }
 
@@ -313,7 +353,6 @@ function disableXROnViewer() {
 
   var renderer =
     viewer.renderer ||
-    viewer.pRenderer ||
     null;
 
   if (
@@ -332,7 +371,9 @@ function disableXROnViewer() {
 
 function loadCatalog() {
   var separator =
-    CONFIG.catalogUrl.indexOf("?") === -1
+    CONFIG.catalogUrl.indexOf(
+      "?"
+    ) === -1
       ? "?"
       : "&";
 
@@ -348,209 +389,106 @@ function loadCatalog() {
       cache: "no-store"
     }
   )
-    .then(function (response) {
-      if (!response.ok) {
-        throw new Error(
-          "Catalog request failed with HTTP " +
-          response.status
-        );
-      }
-
-      return response.json();
-    })
-    .then(function (data) {
-      var scans = [];
-
-      if (
-        Array.isArray(data)
-      ) {
-        scans =
-          data;
-      } else if (
-        data &&
-        Array.isArray(data.scans)
-      ) {
-        scans =
-          data.scans;
-      }
-
-      var previousScans =
-        new Map();
-
-      state.catalog.forEach(
-        function (oldScan) {
-          previousScans.set(
-            oldScan.id,
-            oldScan
+    .then(
+      function (response) {
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            "Catalog request failed with HTTP " +
+            response.status
           );
         }
-      );
 
-      state.catalog =
-        scans.map(
-          function (scan, index) {
-            var normalized =
-              normalizeScan(
-                scan,
-                index
-              );
+        return response.json();
+      }
+    )
+    .then(
+      function (data) {
+        var scans =
+          [];
 
-            var previous =
-              previousScans.get(
-                normalized.id
-              );
+        if (
+          Array.isArray(
+            data
+          )
+        ) {
+          scans =
+            data;
+        } else if (
+          data &&
+          Array.isArray(
+            data.scans
+          )
+        ) {
+          scans =
+            data.scans;
+        }
 
-            if (
-              previous &&
-              previous.loading
+        var previousScans =
+          new Map();
+
+        state.catalog.forEach(
+          function (oldScan) {
+            previousScans.set(
+              oldScan.id,
+              oldScan
+            );
+          }
+        );
+
+        state.catalog =
+          scans.map(
+            function (
+              scan,
+              index
             ) {
-              normalized.loading =
-                true;
+              var normalized =
+                normalizeScan(
+                  scan,
+                  index
+                );
+
+              var previous =
+                previousScans.get(
+                  normalized.id
+                );
+
+              if (
+                previous &&
+                previous.loading
+              ) {
+                normalized.loading =
+                  true;
+              }
+
+              return normalized;
             }
-
-            return normalized;
-          }
-        );
-
-      console.log(
-        "Catalog scans:",
-        state.catalog.map(
-          function (scan) {
-            return scan.id;
-          }
-        )
-      );
-
-      reconcileLoadedClouds();
-      updateScanCount();
-
-      return state.catalog;
-    })
-    .catch(function (error) {
-      console.error(
-        "Could not load catalog.json:",
-        error
-      );
-
-      setStatus(
-        "Could not load catalog.json.",
-        "error"
-      );
-
-      /*
-        Keep the current catalog if a refresh
-        fails temporarily.
-      */
-      updateScanCount();
-
-      return state.catalog;
-    });
-}
-
-function reconcileLoadedClouds() {
-  var catalogIds =
-    new Set(
-      state.catalog.map(
-        function (scan) {
-          return scan.id;
-        }
-      )
-    );
-
-  var removedActiveCloud =
-    false;
-
-  state.loadedClouds.forEach(
-    function (pointcloud, scanId) {
-      if (
-        catalogIds.has(scanId)
-      ) {
-        return;
-      }
-
-      console.log(
-        "Removing deleted point cloud:",
-        scanId
-      );
-
-      if (
-        viewer &&
-        viewer.scene &&
-        typeof viewer.scene.removePointCloud ===
-        "function"
-      ) {
-        viewer.scene.removePointCloud(
-          pointcloud
-        );
-      }
-
-      state.loadedClouds.delete(
-        scanId
-      );
-
-      if (
-        state.activeScan &&
-        state.activeScan.id === scanId
-      ) {
-        removedActiveCloud =
-          true;
-      }
-    }
-  );
-
-  if (
-    removedActiveCloud
-  ) {
-    removeSectionVolume();
-
-    state.activeScan =
-      null;
-
-    state.activeCloud =
-      null;
-
-    state.activeBounds =
-      null;
-
-    setViewerStatus(
-      "No scan selected",
-      "idle"
-    );
-  }
-
-  if (
-    state.activeScan
-  ) {
-    var refreshedScan =
-      state.catalog.find(
-        function (scan) {
-          return (
-            scan.id ===
-            state.activeScan.id
           );
-        }
-      );
 
-    if (
-      refreshedScan
-    ) {
-      state.activeScan =
-        refreshedScan;
+        reconcileLoadedClouds();
+        updateScanCount();
 
-      state.activeCloud =
-        state.loadedClouds.get(
-          refreshedScan.id
+        return state.catalog;
+      }
+    )
+    .catch(
+      function (error) {
+        console.error(
+          "Could not load catalog.json:",
+          error
         );
 
-      state.activeBounds =
-        getPointCloudBounds(
-          state.activeCloud
+        setStatus(
+          "Could not load catalog.json.",
+          "error"
         );
-    }
-  }
 
-  updateInspector();
-  updateSectionControls();
+        updateScanCount();
+
+        return state.catalog;
+      }
+    );
 }
 
 function normalizeScan(
@@ -558,11 +496,15 @@ function normalizeScan(
   index
 ) {
   scan =
-    scan || {};
+    scan ||
+    {};
 
   var fallbackId =
     "scan-" +
-    (index + 1);
+    (
+      index +
+      1
+    );
 
   var id =
     String(
@@ -657,13 +599,17 @@ function normalizeScan(
   };
 }
 
-function resolveUrl(value) {
+function resolveUrl(
+  value
+) {
   try {
     return new URL(
       value,
       document.baseURI
     ).href;
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "Invalid scan URL:",
       value,
@@ -674,7 +620,9 @@ function resolveUrl(value) {
   }
 }
 
-function buildRawUrl(path) {
+function buildRawUrl(
+  path
+) {
   var base =
     CONFIG.rawBaseUrl.replace(
       /\/+$/,
@@ -683,7 +631,9 @@ function buildRawUrl(path) {
 
   var encodedPath =
     path
-      .split("/")
+      .split(
+        "/"
+      )
       .map(
         function (part) {
           return encodeURIComponent(
@@ -691,13 +641,122 @@ function buildRawUrl(path) {
           );
         }
       )
-      .join("/");
+      .join(
+        "/"
+      );
 
   return (
     base +
     "/" +
     encodedPath
   );
+}
+
+function reconcileLoadedClouds() {
+  var catalogIds =
+    new Set(
+      state.catalog.map(
+        function (scan) {
+          return scan.id;
+        }
+      )
+    );
+
+  var removedActiveCloud =
+    false;
+
+  state.loadedClouds.forEach(
+    function (
+      pointcloud,
+      scanId
+    ) {
+      if (
+        catalogIds.has(
+          scanId
+        )
+      ) {
+        return;
+      }
+
+      if (
+        viewer &&
+        viewer.scene &&
+        typeof viewer.scene.removePointCloud ===
+        "function"
+      ) {
+        viewer.scene.removePointCloud(
+          pointcloud
+        );
+      }
+
+      state.loadedClouds.delete(
+        scanId
+      );
+
+      if (
+        state.activeScan &&
+        state.activeScan.id ===
+        scanId
+      ) {
+        removedActiveCloud =
+          true;
+      }
+    }
+  );
+
+  if (
+    removedActiveCloud
+  ) {
+    removeSectionVolume();
+
+    state.activeScan =
+      null;
+
+    state.activeCloud =
+      null;
+
+    state.activeBounds =
+      null;
+
+    setViewerStatus(
+      "No scan selected",
+      "idle"
+    );
+  }
+
+  if (
+    state.activeScan
+  ) {
+    var refreshedScan =
+      state.catalog.find(
+        function (scan) {
+          return (
+            scan.id ===
+            state.activeScan.id
+          );
+        }
+      );
+
+    if (
+      refreshedScan
+    ) {
+      state.activeScan =
+        refreshedScan;
+
+      state.activeCloud =
+        state.loadedClouds.get(
+          refreshedScan.id
+        );
+
+      state.activeBounds =
+        getPointCloudBounds(
+          state.activeCloud
+        );
+    }
+  }
+
+  updateInspector();
+  updateSectionControls();
 }
 
 
@@ -707,7 +766,9 @@ function buildRawUrl(path) {
 
 function updateScanCount() {
   var count =
-    Array.isArray(state.catalog)
+    Array.isArray(
+      state.catalog
+    )
       ? state.catalog.length
       : 0;
 
@@ -739,7 +800,9 @@ function renderLibrary() {
       "scanSearch"
     );
 
-  if (!list) {
+  if (
+    !list
+  ) {
     return;
   }
 
@@ -783,7 +846,9 @@ function renderLibrary() {
     visibleScans.length ===
     0
   ) {
-    if (empty) {
+    if (
+      empty
+    ) {
       empty.classList.remove(
         "hidden"
       );
@@ -792,7 +857,9 @@ function renderLibrary() {
     return;
   }
 
-  if (empty) {
+  if (
+    empty
+  ) {
     empty.classList.add(
       "hidden"
     );
@@ -836,9 +903,6 @@ function renderLibrary() {
 
       icon.className =
         "scan-card-icon";
-
-      icon.textContent =
-        "";
 
       var name =
         document.createElement(
@@ -1051,14 +1115,20 @@ function renderLibrary() {
 /* POINT-CLOUD LOADING                                                        */
 /* -------------------------------------------------------------------------- */
 
-function loadScan(scan) {
-  if (!scan) {
+function loadScan(
+  scan
+) {
+  if (
+    !scan
+  ) {
     return Promise.resolve(
       null
     );
   }
 
-  if (!scan.url) {
+  if (
+    !scan.url
+  ) {
     setStatus(
       "This scan has no valid COPC URL.",
       "error"
@@ -1123,7 +1193,9 @@ function loadScan(scan) {
   )
     .then(
       function (pointcloud) {
-        if (!pointcloud) {
+        if (
+          !pointcloud
+        ) {
           throw new Error(
             "Potree returned no point cloud."
           );
@@ -1136,19 +1208,19 @@ function loadScan(scan) {
           true;
 
         if (
-          viewer &&
-          viewer.scene &&
-          typeof viewer.scene.addPointCloud ===
+          !viewer ||
+          !viewer.scene ||
+          typeof viewer.scene.addPointCloud !==
           "function"
         ) {
-          viewer.scene.addPointCloud(
-            pointcloud
-          );
-        } else {
           throw new Error(
             "Potree scene is unavailable."
           );
         }
+
+        viewer.scene.addPointCloud(
+          pointcloud
+        );
 
         configurePointCloud(
           pointcloud
@@ -1219,9 +1291,14 @@ function loadScan(scan) {
     );
 }
 
-function loadCopcPointCloud(scan) {
+function loadCopcPointCloud(
+  scan
+) {
   return new Promise(
-    function (resolve, reject) {
+    function (
+      resolve,
+      reject
+    ) {
       var potree =
         window.Potree;
 
@@ -1263,7 +1340,9 @@ function loadCopcPointCloud(scan) {
       function finishWithError(
         error
       ) {
-        if (finished) {
+        if (
+          finished
+        ) {
           return;
         }
 
@@ -1274,7 +1353,9 @@ function loadCopcPointCloud(scan) {
           error instanceof Error
             ? error
             : new Error(
-                String(error)
+                String(
+                  error
+                )
               )
         );
       }
@@ -1285,7 +1366,9 @@ function loadCopcPointCloud(scan) {
             scan.url,
             scan.name,
             function (event) {
-              if (!event) {
+              if (
+                !event
+              ) {
                 return;
               }
 
@@ -1358,7 +1441,9 @@ function loadCopcPointCloud(scan) {
             result.pointcloud
           );
         }
-      } catch (error) {
+      } catch (
+        error
+      ) {
         finishWithError(
           error
         );
@@ -1424,7 +1509,9 @@ function configurePointCloud(
 function toggleScanVisibility(
   scan
 ) {
-  if (!scan) {
+  if (
+    !scan
+  ) {
     return;
   }
 
@@ -1433,7 +1520,9 @@ function toggleScanVisibility(
       scan.id
     );
 
-  if (!pointcloud) {
+  if (
+    !pointcloud
+  ) {
     loadScan(
       scan
     );
@@ -1473,7 +1562,9 @@ function setActiveScan(
       "sectionMode"
     );
 
-  if (sectionMode) {
+  if (
+    sectionMode
+  ) {
     sectionMode.value =
       "none";
   }
@@ -1511,13 +1602,17 @@ function updateInspector() {
     !state.activeScan ||
     !state.activeCloud
   ) {
-    if (empty) {
+    if (
+      empty
+    ) {
       empty.classList.remove(
         "hidden"
       );
     }
 
-    if (content) {
+    if (
+      content
+    ) {
       content.classList.add(
         "hidden"
       );
@@ -1526,13 +1621,17 @@ function updateInspector() {
     return;
   }
 
-  if (empty) {
+  if (
+    empty
+  ) {
     empty.classList.add(
       "hidden"
     );
   }
 
-  if (content) {
+  if (
+    content
+  ) {
     content.classList.remove(
       "hidden"
     );
@@ -1593,7 +1692,7 @@ function updateInspector() {
     formatCoordinate(
       state.activeBounds.min.x
     ) +
-    " → " +
+    " -> " +
     formatCoordinate(
       state.activeBounds.max.x
     )
@@ -1604,7 +1703,7 @@ function updateInspector() {
     formatCoordinate(
       state.activeBounds.min.y
     ) +
-    " → " +
+    " -> " +
     formatCoordinate(
       state.activeBounds.max.y
     )
@@ -1615,7 +1714,7 @@ function updateInspector() {
     formatCoordinate(
       state.activeBounds.min.z
     ) +
-    " → " +
+    " -> " +
     formatCoordinate(
       state.activeBounds.max.z
     )
@@ -1625,7 +1724,9 @@ function updateInspector() {
 function getPointCloudBounds(
   pointcloud
 ) {
-  if (!pointcloud) {
+  if (
+    !pointcloud
+  ) {
     return null;
   }
 
@@ -1740,7 +1841,9 @@ function applyColorMode(
       "colorMode"
     );
 
-  if (!select) {
+  if (
+    !select
+  ) {
     return;
   }
 
@@ -1750,7 +1853,8 @@ function applyColorMode(
     ];
 
   if (
-    colorType !== undefined
+    colorType !==
+    undefined
   ) {
     cloud.material.pointColorType =
       colorType;
@@ -1798,7 +1902,8 @@ function applyOpacity(
   setText(
     "pointOpacityValue",
     Math.round(
-      value * 100
+      value *
+      100
     ) +
     "%"
   );
@@ -1938,7 +2043,9 @@ function updateSectionControls() {
       state.activeBounds
     );
 
-  if (axisWrapper) {
+  if (
+    axisWrapper
+  ) {
     if (
       mode ===
       "vertical"
@@ -1959,7 +2066,9 @@ function updateSectionControls() {
   thicknessElement.disabled =
     !active;
 
-  if (!active) {
+  if (
+    !active
+  ) {
     setText(
       "sectionPositionValue",
       "—"
@@ -1976,7 +2085,9 @@ function updateSectionControls() {
   var range =
     getSectionRange();
 
-  if (!range) {
+  if (
+    !range
+  ) {
     return;
   }
 
@@ -1995,7 +2106,8 @@ function updateSectionControls() {
 
   var thickness =
     Math.max(
-      length * 0.08,
+      length *
+      0.08,
       0.01
     );
 
@@ -2007,7 +2119,8 @@ function updateSectionControls() {
 
   positionElement.step =
     Math.max(
-      length / 1000,
+      length /
+      1000,
       0.000001
     );
 
@@ -2076,7 +2189,9 @@ function applySection() {
   var range =
     getSectionRange();
 
-  if (!range) {
+  if (
+    !range
+  ) {
     return;
   }
 
@@ -2097,7 +2212,8 @@ function applySection() {
       (
         range.max -
         range.min
-      ) * 0.08
+      ) *
+      0.08
     );
 
   thickness =
@@ -2137,11 +2253,13 @@ function applySection() {
   ) {
     min.z =
       safePosition -
-      thickness / 2;
+      thickness /
+      2;
 
     max.z =
       safePosition +
-      thickness / 2;
+      thickness /
+      2;
   }
 
   if (
@@ -2161,11 +2279,13 @@ function applySection() {
 
     min[axis] =
       safePosition -
-      thickness / 2;
+      thickness /
+      2;
 
     max[axis] =
       safePosition +
-      thickness / 2;
+      thickness /
+      2;
   }
 
   var potree =
@@ -2336,7 +2456,9 @@ function clearSection() {
       "sectionMode"
     );
 
-  if (modeElement) {
+  if (
+    modeElement
+  ) {
     modeElement.value =
       "none";
   }
@@ -2351,22 +2473,8 @@ function clearSection() {
 
 
 /* -------------------------------------------------------------------------- */
-/* VIEW CONTROLS                                                              */
+/* KEYBOARD NAVIGATION                                                        */
 /* -------------------------------------------------------------------------- */
-
-/*
-  Keyboard navigation
-  -------------------
-
-  W / Arrow Up    = Forward
-  S / Arrow Down  = Backward
-  A / Arrow Left  = Left
-  D / Arrow Right = Right
-
-  The keys are tracked continuously so holding a key down
-  produces continuous movement rather than one movement
-  per keypress.
-*/
 
 var navigationKeys = {
   forward: false,
@@ -2375,15 +2483,18 @@ var navigationKeys = {
   right: false
 };
 
-var navigationKeyboardBound = false;
+var navigationKeyboardBound =
+  false;
 
+var navigationLastTime =
+  0;
 
-/* -------------------------------------------------------------------------- */
-/* KEYBOARD HELPERS                                                           */
-/* -------------------------------------------------------------------------- */
-
-function isTypingInField(target) {
-  if (!target) {
+function isTypingInField(
+  target
+) {
+  if (
+    !target
+  ) {
     return false;
   }
 
@@ -2396,45 +2507,21 @@ function isTypingInField(target) {
     tagName === "input" ||
     tagName === "textarea" ||
     tagName === "select" ||
-    target.isContentEditable === true
+    target.isContentEditable ===
+      true
   );
 }
 
-
-function setNavigationKey(
-  key,
-  pressed
+function getNavigationKey(
+  event
 ) {
-  switch (key) {
-    case "w":
-    case "arrowup":
-      navigationKeys.forward =
-        pressed;
-      break;
+  var key =
+    String(
+      event.key ||
+      ""
+    ).toLowerCase();
 
-    case "s":
-    case "arrowdown":
-      navigationKeys.backward =
-        pressed;
-      break;
-
-    case "a":
-    case "arrowleft":
-      navigationKeys.left =
-        pressed;
-      break;
-
-    case "d":
-    case "arrowright":
-      navigationKeys.right =
-        pressed;
-      break;
-  }
-}
-
-
-function isNavigationKey(key) {
-  return (
+  if (
     key === "w" ||
     key === "a" ||
     key === "s" ||
@@ -2443,21 +2530,358 @@ function isNavigationKey(key) {
     key === "arrowdown" ||
     key === "arrowleft" ||
     key === "arrowright"
+  ) {
+    return key;
+  }
+
+  var code =
+    String(
+      event.code ||
+      ""
+    ).toLowerCase();
+
+  if (
+    code ===
+    "keyw"
+  ) {
+    return "w";
+  }
+
+  if (
+    code ===
+    "keya"
+  ) {
+    return "a";
+  }
+
+  if (
+    code ===
+    "keys"
+  ) {
+    return "s";
+  }
+
+  if (
+    code ===
+    "keyd"
+  ) {
+    return "d";
+  }
+
+  if (
+    code ===
+    "arrowup"
+  ) {
+    return "arrowup";
+  }
+
+  if (
+    code ===
+    "arrowdown"
+  ) {
+    return "arrowdown";
+  }
+
+  if (
+    code ===
+    "arrowleft"
+  ) {
+    return "arrowleft";
+  }
+
+  if (
+    code ===
+    "arrowright"
+  ) {
+    return "arrowright";
+  }
+
+  return "";
+}
+
+function setNavigationKey(
+  key,
+  pressed
+) {
+  if (
+    key === "w" ||
+    key === "arrowup"
+  ) {
+    navigationKeys.forward =
+      pressed;
+  }
+
+  if (
+    key === "s" ||
+    key === "arrowdown"
+  ) {
+    navigationKeys.backward =
+      pressed;
+  }
+
+  if (
+    key === "a" ||
+    key === "arrowleft"
+  ) {
+    navigationKeys.left =
+      pressed;
+  }
+
+  if (
+    key === "d" ||
+    key === "arrowright"
+  ) {
+    navigationKeys.right =
+      pressed;
+  }
+}
+
+function clearNavigationKeys() {
+  navigationKeys.forward =
+    false;
+
+  navigationKeys.backward =
+    false;
+
+  navigationKeys.left =
+    false;
+
+  navigationKeys.right =
+    false;
+}
+
+function moveViewerWithKeyboard(
+  deltaSeconds
+) {
+  if (
+    !viewer ||
+    !viewer.scene ||
+    !viewer.scene.view
+  ) {
+    return;
+  }
+
+  var view =
+    viewer.scene.view;
+
+  if (
+    !view.position
+  ) {
+    return;
+  }
+
+  var moving =
+    navigationKeys.forward ||
+    navigationKeys.backward ||
+    navigationKeys.left ||
+    navigationKeys.right;
+
+  if (
+    !moving
+  ) {
+    return;
+  }
+
+  var direction =
+    null;
+
+  if (
+    view.direction &&
+    typeof view.direction.clone ===
+    "function"
+  ) {
+    direction =
+      view.direction.clone();
+  } else if (
+    typeof view.getDirection ===
+    "function"
+  ) {
+    direction =
+      view.getDirection();
+  }
+
+  if (
+    !direction ||
+    typeof direction.normalize !==
+    "function"
+  ) {
+    return;
+  }
+
+  direction.normalize();
+
+  var right =
+    direction.clone();
+
+  if (
+    typeof right.cross !==
+    "function"
+  ) {
+    return;
+  }
+
+  right.cross(
+    direction.clone().set(
+      0,
+      0,
+      1
+    )
+  );
+
+  if (
+    typeof right.lengthSq ===
+    "function" &&
+    right.lengthSq() <
+    0.000001
+  ) {
+    right.set(
+      1,
+      0,
+      0
+    );
+  } else {
+    right.normalize();
+  }
+
+  var movement =
+    direction.clone().set(
+      0,
+      0,
+      0
+    );
+
+  if (
+    navigationKeys.forward
+  ) {
+    movement.add(
+      direction
+    );
+  }
+
+  if (
+    navigationKeys.backward
+  ) {
+    movement.sub(
+      direction
+    );
+  }
+
+  if (
+    navigationKeys.left
+  ) {
+    movement.sub(
+      right
+    );
+  }
+
+  if (
+    navigationKeys.right
+  ) {
+    movement.add(
+      right
+    );
+  }
+
+  if (
+    typeof movement.lengthSq ===
+    "function" &&
+    movement.lengthSq() <
+    0.000001
+  ) {
+    return;
+  }
+
+  movement.normalize();
+
+  var radius =
+    Number(
+      view.radius
+    );
+
+  if (
+    !isFinite(
+      radius
+    ) ||
+    radius <= 0
+  ) {
+    radius =
+      1;
+  }
+
+  var speed =
+    radius *
+    Number(
+      CONFIG.navigationSpeed
+    );
+
+  if (
+    !isFinite(
+      speed
+    ) ||
+    speed <= 0
+  ) {
+    speed =
+      1;
+  }
+
+  movement.multiplyScalar(
+    speed *
+    deltaSeconds
+  );
+
+  view.position.add(
+    movement
   );
 }
 
+function navigationAnimationLoop(
+  timestamp
+) {
+  if (
+    !navigationLastTime
+  ) {
+    navigationLastTime =
+      timestamp;
+  }
 
-/*
-  Bind keyboard navigation once.
-*/
+  var deltaSeconds =
+    (
+      timestamp -
+      navigationLastTime
+    ) / 1000;
+
+  navigationLastTime =
+    timestamp;
+
+  if (
+    !isFinite(
+      deltaSeconds
+    ) ||
+    deltaSeconds <= 0 ||
+    deltaSeconds > 0.1
+  ) {
+    deltaSeconds =
+      0.016;
+  }
+
+  moveViewerWithKeyboard(
+    deltaSeconds
+  );
+
+  window.requestAnimationFrame(
+    navigationAnimationLoop
+  );
+}
+
 function bindNavigationKeyboard() {
-  if (navigationKeyboardBound) {
+  if (
+    navigationKeyboardBound
+  ) {
     return;
   }
 
   navigationKeyboardBound =
     true;
-
 
   document.addEventListener(
     "keydown",
@@ -2471,20 +2895,16 @@ function bindNavigationKeyboard() {
       }
 
       var key =
-        String(
-          event.key || ""
-        ).toLowerCase();
+        getNavigationKey(
+          event
+        );
 
       if (
-        !isNavigationKey(key)
+        !key
       ) {
         return;
       }
 
-      /*
-        Prevent the browser from scrolling
-        the page when arrow keys are used.
-      */
       event.preventDefault();
 
       setNavigationKey(
@@ -2492,22 +2912,19 @@ function bindNavigationKeyboard() {
         true
       );
     },
-    {
-      passive: false
-    }
+    true
   );
-
 
   document.addEventListener(
     "keyup",
     function (event) {
       var key =
-        String(
-          event.key || ""
-        ).toLowerCase();
+        getNavigationKey(
+          event
+        );
 
       if (
-        !isNavigationKey(key)
+        !key
       ) {
         return;
       }
@@ -2519,58 +2936,27 @@ function bindNavigationKeyboard() {
         false
       );
     },
-    {
-      passive: false
-    }
+    true
   );
 
-
-  /*
-    If the browser window loses focus while
-    a key is being held, clear the movement
-    state. This prevents "stuck" movement.
-  */
   window.addEventListener(
     "blur",
-    function () {
-      navigationKeys.forward =
-        false;
-
-      navigationKeys.backward =
-        false;
-
-      navigationKeys.left =
-        false;
-
-      navigationKeys.right =
-        false;
-    }
+    clearNavigationKeys
   );
 
-
-  /*
-    Clear movement when the document becomes
-    hidden, for example when changing tabs.
-  */
   document.addEventListener(
     "visibilitychange",
     function () {
       if (
         document.hidden
       ) {
-        navigationKeys.forward =
-          false;
-
-        navigationKeys.backward =
-          false;
-
-        navigationKeys.left =
-          false;
-
-        navigationKeys.right =
-          false;
+        clearNavigationKeys();
       }
     }
+  );
+
+  window.requestAnimationFrame(
+    navigationAnimationLoop
   );
 }
 
@@ -2592,10 +2978,6 @@ function fitActiveScan() {
     return;
   }
 
-  /*
-    Temporarily hide other scans while fitting.
-    Their original visibility is restored immediately afterward.
-  */
   var pointclouds =
     viewer.scene &&
     viewer.scene.pointclouds;
@@ -2614,7 +2996,8 @@ function fitActiveScan() {
           {
             cloud: cloud,
             visible:
-              cloud.visible !== false
+              cloud.visible !==
+              false
           }
         );
 
@@ -2649,11 +3032,9 @@ function fitActiveScan() {
   );
 }
 
-
 function resetView() {
   fitActiveScan();
 }
-
 
 function activateOrbitMode() {
   if (
@@ -2672,7 +3053,9 @@ function activateOrbitMode() {
       "orbitMode"
     );
 
-  if (button) {
+  if (
+    button
+  ) {
     button.classList.add(
       "active"
     );
@@ -2683,7 +3066,6 @@ function activateOrbitMode() {
     "idle"
   );
 }
-
 
 function downloadActiveScan() {
   if (
@@ -2728,24 +3110,14 @@ function downloadActiveScan() {
 
 
 /* -------------------------------------------------------------------------- */
-/* INITIALISE KEYBOARD NAVIGATION                                             */
-/* -------------------------------------------------------------------------- */
-
-/*
-  Call this once after your viewer/application
-  has been initialised.
-
-  If this file is loaded after the viewer is
-  created, this can simply run immediately.
-*/
-bindNavigationKeyboard();
-
-/* -------------------------------------------------------------------------- */
 /* SCREENSHOT EXPORT                                                          */
 /* -------------------------------------------------------------------------- */
 
 function getActiveViewerCamera() {
-  if (!viewer || !viewer.scene) {
+  if (
+    !viewer ||
+    !viewer.scene
+  ) {
     return null;
   }
 
@@ -2763,18 +3135,58 @@ function getActiveViewerCamera() {
   );
 }
 
+function getScreenshotFilename(
+  width,
+  height
+) {
+  var name =
+    state.activeScan &&
+    state.activeScan.name
+      ? state.activeScan.name
+      : "potree-viewer";
+
+  name =
+    String(
+      name
+    )
+      .replace(
+        /[^\w-]+/g,
+        "-"
+      )
+      .replace(
+        /^-+|-+$/g,
+        ""
+      );
+
+  if (
+    !name
+  ) {
+    name =
+      "potree-viewer";
+  }
+
+  return (
+    name +
+    "-" +
+    width +
+    "x" +
+    height +
+    ".png"
+  );
+}
+
 function exportScreenshot() {
   var targetWidth =
     Math.round(
-    CONFIG.screenshotWidth *
-    CONFIG.screenshotScale
-  );
+      CONFIG.screenshotWidth *
+      CONFIG.screenshotScale
+    );
 
   var targetHeight =
     Math.round(
-    CONFIG.screenshotHeight *
-    CONFIG.screenshotScale
-  );
+      CONFIG.screenshotHeight *
+      CONFIG.screenshotScale
+    );
 
   if (
     !viewer ||
@@ -2803,9 +3215,52 @@ function exportScreenshot() {
   var camera =
     getActiveViewerCamera();
 
-    var originalBackground =
-    viewer.background ||
-    "black";
+  var button =
+    getElement(
+      "exportScreenshot"
+    );
+
+  var originalPixelRatio =
+    typeof renderer.getPixelRatio ===
+    "function"
+      ? renderer.getPixelRatio()
+      : 1;
+
+  if (
+    !isFinite(
+      originalPixelRatio
+    ) ||
+    originalPixelRatio <= 0
+  ) {
+    originalPixelRatio =
+      1;
+  }
+
+  var originalWidth =
+    canvas.clientWidth ||
+    (
+      renderArea &&
+      renderArea.clientWidth
+    ) ||
+    1;
+
+  var originalHeight =
+    canvas.clientHeight ||
+    (
+      renderArea &&
+      renderArea.clientHeight
+    ) ||
+    1;
+
+  var originalAspect =
+    camera &&
+    typeof camera.aspect ===
+    "number"
+      ? camera.aspect
+      : null;
+
+  var originalBackground =
+    viewer.background;
 
   var originalClearAlpha =
     typeof renderer.getClearAlpha ===
@@ -2820,7 +3275,8 @@ function exportScreenshot() {
     typeof renderer.getClearColor ===
       "function" &&
     window.THREE &&
-    window.THREE.Color
+    typeof window.THREE.Color ===
+      "function"
   ) {
     originalClearColor =
       renderer.getClearColor(
@@ -2828,68 +3284,17 @@ function exportScreenshot() {
       ).clone();
   }
 
-  var oldPixelRatio =
-    typeof renderer.getPixelRatio ===
-    "function"
-      ? renderer.getPixelRatio()
-      : 1;
+  var originalBackgroundImage =
+    renderArea
+      ? renderArea.style.backgroundImage
+      : "";
 
-  if (
-    !oldPixelRatio ||
-    !isFinite(oldPixelRatio)
-  ) {
-    oldPixelRatio =
-      1;
-  }
+  var originalBackgroundColor =
+    renderArea
+      ? renderArea.style.backgroundColor
+      : "";
 
-  var oldWidth =
-    renderArea &&
-    renderArea.clientWidth
-      ? renderArea.clientWidth
-      : Math.round(
-          canvas.width /
-          oldPixelRatio
-        );
-
-  var oldHeight =
-    renderArea &&
-    renderArea.clientHeight
-      ? renderArea.clientHeight
-      : Math.round(
-          canvas.height /
-          oldPixelRatio
-        );
-
-  oldWidth =
-    Math.max(
-      1,
-      oldWidth
-    );
-
-  oldHeight =
-    Math.max(
-      1,
-      oldHeight
-    );
-
-  var oldAspect =
-    null;
-
-  if (
-    camera &&
-    typeof camera.aspect ===
-    "number"
-  ) {
-    oldAspect =
-      camera.aspect;
-  }
-
-  var button =
-    getElement(
-      "exportScreenshot"
-    );
-
-  var oldButtonText =
+  var originalButtonText =
     button
       ? button.textContent
       : "";
@@ -2898,7 +3303,9 @@ function exportScreenshot() {
     false;
 
   function restoreViewer() {
-    if (restored) {
+    if (
+      restored
+    ) {
       return;
     }
 
@@ -2906,12 +3313,94 @@ function exportScreenshot() {
       true;
 
     if (
+      renderArea
+    ) {
+      renderArea.style.backgroundImage =
+        originalBackgroundImage;
+
+      renderArea.style.backgroundColor =
+        originalBackgroundColor;
+    }
+
+    if (
+      viewer &&
+      typeof viewer.setBackground ===
+      "function" &&
+      originalBackground !==
+      undefined
+    ) {
+      try {
+        viewer.setBackground(
+          originalBackground
+        );
+      } catch (
+        error
+      ) {
+        console.warn(
+          "Could not restore Potree background:",
+          error
+        );
+      }
+    }
+
+    if (
+      originalClearColor &&
+      typeof renderer.setClearColor ===
+      "function"
+    ) {
+      renderer.setClearColor(
+        originalClearColor,
+        originalClearAlpha
+      );
+    } else if (
+      typeof renderer.setClearColor ===
+      "function"
+    ) {
+      renderer.setClearColor(
+        0x000000,
+        originalClearAlpha
+      );
+    }
+
+    if (
+      typeof renderer.setClearAlpha ===
+      "function"
+    ) {
+      renderer.setClearAlpha(
+        originalClearAlpha
+      );
+    }
+
+    if (
+      typeof renderer.setPixelRatio ===
+      "function"
+    ) {
+      renderer.setPixelRatio(
+        originalPixelRatio
+      );
+    }
+
+    renderer.setSize(
+      originalWidth,
+      originalHeight,
+      false
+    );
+
+    if (
+      viewer &&
+      typeof viewer.onWindowResize ===
+      "function"
+    ) {
+      viewer.onWindowResize();
+    }
+
+    if (
       camera &&
-      oldAspect !==
+      originalAspect !==
       null
     ) {
       camera.aspect =
-        oldAspect;
+        originalAspect;
 
       if (
         typeof camera.updateProjectionMatrix ===
@@ -2922,73 +3411,24 @@ function exportScreenshot() {
     }
 
     if (
-      typeof renderer.setPixelRatio ===
-      "function"
-    ) {
-      renderer.setPixelRatio(
-        oldPixelRatio
-      );
-    }
-
-    if (
-      viewer &&
-      typeof viewer.onWindowResize ===
-      "function"
-    ) {
-      viewer.onWindowResize();
-    } else {
-      renderer.setSize(
-        oldWidth,
-        oldHeight,
-        false
-      );
-    }
-
-    if (
       button
     ) {
       button.disabled =
         false;
 
       button.textContent =
-        oldButtonText;
+        originalButtonText;
     }
   }
 
   function downloadImage(
     dataUrl
   ) {
-    var scanName =
-      state.activeScan &&
-      state.activeScan.name
-        ? state.activeScan.name
-        : "potree-viewer";
-
-    scanName =
-      String(
-        scanName
-      )
-        .replace(
-          /[^\w-]+/g,
-          "-"
-        )
-        .replace(
-          /^-+|-+$/g,
-          ""
-        );
-
-    if (!scanName) {
-      scanName =
-        "potree-viewer";
-    }
-
     var filename =
-      scanName +
-      "-" +
-      targetWidth +
-      "x" +
-      targetHeight +
-      ".png";
+      getScreenshotFilename(
+        targetWidth,
+        targetHeight
+      );
 
     var link =
       document.createElement(
@@ -3010,7 +3450,8 @@ function exportScreenshot() {
     link.remove();
 
     setStatus(
-      "Screenshot exported.",
+      "Screenshot exported: " +
+      filename,
       "idle"
     );
   }
@@ -3033,7 +3474,8 @@ function exportScreenshot() {
       window.requestAnimationFrame(
         function () {
           captureAfterFrames(
-            frame + 1
+            frame +
+            1
           );
         }
       );
@@ -3056,11 +3498,12 @@ function exportScreenshot() {
         );
 
       restoreViewer();
-
       downloadImage(
         dataUrl
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Screenshot export failed:",
         error
@@ -3102,9 +3545,8 @@ function exportScreenshot() {
           targetWidth +
           " x " +
           targetHeight +
-          ". Maximum: " +
-          maxSize +
-          " pixels."
+          ". Maximum renderbuffer size: " +
+          maxSize
         );
       }
     }
@@ -3125,8 +3567,57 @@ function exportScreenshot() {
     );
 
     /*
-      One device pixel equals one output pixel.
+      Make the output transparent.
+      This requires the WebGL renderer to have
+      been created with alpha: true.
     */
+    if (
+      renderArea
+    ) {
+      renderArea.style.backgroundImage =
+        "none";
+
+      renderArea.style.backgroundColor =
+        "transparent";
+    }
+
+    if (
+      viewer &&
+      typeof viewer.setBackground ===
+      "function"
+    ) {
+      try {
+        viewer.setBackground(
+          "none"
+        );
+      } catch (
+        error
+      ) {
+        console.warn(
+          "Potree does not support the 'none' background setting."
+        );
+      }
+    }
+
+    if (
+      typeof renderer.setClearColor ===
+      "function"
+    ) {
+      renderer.setClearColor(
+        0x000000,
+        0
+      );
+    }
+
+    if (
+      typeof renderer.setClearAlpha ===
+      "function"
+    ) {
+      renderer.setClearAlpha(
+        0
+      );
+    }
+
     if (
       typeof renderer.setPixelRatio ===
       "function"
@@ -3136,10 +3627,6 @@ function exportScreenshot() {
       );
     }
 
-    /*
-      Change the WebGL drawing buffer size,
-      but do not change the visible CSS size.
-    */
     renderer.setSize(
       targetWidth,
       targetHeight,
@@ -3148,8 +3635,8 @@ function exportScreenshot() {
 
     if (
       camera &&
-      oldAspect !==
-      null
+      typeof camera.aspect ===
+      "number"
     ) {
       camera.aspect =
         targetWidth /
@@ -3166,7 +3653,9 @@ function exportScreenshot() {
     captureAfterFrames(
       0
     );
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       "Could not prepare screenshot:",
       error
@@ -3180,6 +3669,7 @@ function exportScreenshot() {
     );
   }
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* EVENTS                                                                     */
@@ -3264,9 +3754,7 @@ function bindEvents() {
   addEvent(
     "pointOpacity",
     "input",
-    function () {
-      applyOpacity();
-    }
+    applyOpacity
   );
 
   addEvent(
@@ -3408,7 +3896,9 @@ function setViewerStatus(
       "viewerStatusDot"
     );
 
-  if (!dot) {
+  if (
+    !dot
+  ) {
     return;
   }
 
@@ -3445,7 +3935,9 @@ function showLoading(
       "loadingOverlay"
     );
 
-  if (overlay) {
+  if (
+    overlay
+  ) {
     overlay.classList.remove(
       "hidden"
     );
@@ -3458,7 +3950,9 @@ function hideLoading() {
       "loadingOverlay"
     );
 
-  if (overlay) {
+  if (
+    overlay
+  ) {
     overlay.classList.add(
       "hidden"
     );
@@ -3479,7 +3973,9 @@ function getNumberValue(
       id
     );
 
-  if (!element) {
+  if (
+    !element
+  ) {
     return fallback;
   }
 
@@ -3488,7 +3984,9 @@ function getNumberValue(
       element.value
     );
 
-  return isFinite(value)
+  return isFinite(
+    value
+  )
     ? value
     : fallback;
 }
@@ -3527,10 +4025,15 @@ function formatBytes(
   var index =
     Math.min(
       Math.floor(
-        Math.log(bytes) /
-        Math.log(1024)
+        Math.log(
+          bytes
+        ) /
+        Math.log(
+          1024
+        )
       ),
-      units.length - 1
+      units.length -
+      1
     );
 
   var value =
@@ -3542,7 +4045,8 @@ function formatBytes(
 
   return (
     value.toFixed(
-      index === 0
+      index ===
+      0
         ? 0
         : 1
     ) +
@@ -3564,7 +4068,8 @@ function formatCompactNumber(
   value
 ) {
   if (
-    value >= 1000000
+    value >=
+    1000000
   ) {
     return (
       (
@@ -3578,7 +4083,8 @@ function formatCompactNumber(
   }
 
   if (
-    value >= 1000
+    value >=
+    1000
   ) {
     return (
       Math.round(
@@ -3598,7 +4104,9 @@ function formatCoordinate(
   value
 ) {
   if (
-    !isFinite(value)
+    !isFinite(
+      value
+    )
   ) {
     return "—";
   }
