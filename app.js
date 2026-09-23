@@ -26,7 +26,7 @@ var CONFIG = {
 
   screenshotWidth: 3000,
   screenshotHeight: 4000,
-  screenshotScale: 1.5,
+  screenshotScale: 2,
   screenshotWarmupMs: 600,
 
   useRawBaseForPaths: false,
@@ -3245,7 +3245,7 @@ function exportScreenshot() {
     1;
 
   var originalHeight =
-    canvas.clientHeight ||
+    (canvas.clientHeight * 1.5) ||
     (
       renderArea &&
       renderArea.clientHeight
