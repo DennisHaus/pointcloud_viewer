@@ -2755,10 +2755,7 @@ bindNavigationKeyboard();
 /* -------------------------------------------------------------------------- */
 
 function getActiveViewerCamera() {
-  if (
-    !viewer ||
-    !viewer.scene
-  ) {
+  if (!viewer || !viewer.scene) {
     return null;
   }
 
@@ -2776,342 +2773,105 @@ function getActiveViewerCamera() {
   );
 }
 
-function renderViewerFrameForScreenshot() {
-  /*
-    Potree normally renders continuously.
-    If this Potree build exposes viewer.render(),
-    render one explicit frame.
-  */
-  if (
-    viewer &&
-    typeof viewer.render ===
-    "function"
-  ) {
-    viewer.render();
-  }
-}
-
-function getScreenshotFilename() {
-  var name =
-    state.activeScan &&
-    state.activeScan.name
-      ? state.activeScan.name
-      : "potree-viewer";
-
-  name =
-    String(name)
-      .replace(
-        /[^\w\-]+/g,
-        "-"
-      )
-      .replace(
-        /^-+|-+$/g,
-        ""
-      );
-
-  if (!name) {
-    name =
-      "potree-viewer";
-  }
-
-  return (
-    name +
-    "-" +
-    CONFIG.screenshotWidth +
-    "x" +
-    CONFIG.screenshotHeight +
-    ".png"
-  );
-}
-
-function downloadScreenshotDataUrl(
-  dataUrl,
-  filename
-) {
-  var link =
-    document.createElement(
-      "a"
-    );
-
-  link.href =
-    dataUrl;
-
-  link.download =
-    filename;
-
-  document.body.appendChild(
-    link
-  );
-
-  link.click();
-
-  link.remove();
-}
-
 function exportScreenshot() {
+  var targetWidth = 3000;
+  var targetHeight = 4000;
+
   if (
     !viewer ||
-    !state.activeCloud
+    !viewer.renderer ||
+    !viewer.renderer.domElement
   ) {
     setStatus(
-      "Load a scan before exporting a screenshot.",
+      "Potree renderer is unavailable.",
       "error"
     );
 
     return;
   }
 
-  /*
-    viewer.renderer is the THREE.WebGLRenderer
-    used by Potree. viewer.pRenderer is Potree's
-    point-cloud renderer and is not the canvas itself.
-  */
   var renderer =
     viewer.renderer;
 
   var canvas =
-    renderer &&
     renderer.domElement;
-
-  if (
-    !renderer ||
-    !canvas ||
-    typeof renderer.setSize !==
-    "function"
-  ) {
-    setStatus(
-      "Potree's WebGL renderer is unavailable.",
-      "error"
-    );
-
-    console.error(
-      "Could not find viewer.renderer.domElement."
-    );
-
-    return;
-  }
-
-  var targetWidth =
-    Math.round(
-      Number(
-        CONFIG.screenshotWidth
-      )
-    );
-
-  var targetHeight =
-    Math.round(
-      Number(
-        CONFIG.screenshotHeight
-      )
-    );
-
-  if (
-    targetWidth <= 0 ||
-    targetHeight <= 0
-  ) {
-    setStatus(
-      "Invalid screenshot dimensions.",
-      "error"
-    );
-
-    return;
-  }
-
-  /*
-    Check the GPU's maximum supported render size.
-  */
-  try {
-    if (
-      typeof renderer.getContext ===
-      "function"
-    ) {
-      var gl =
-        renderer.getContext();
-
-      var maxRenderbufferSize =
-        gl.getParameter(
-          gl.MAX_RENDERBUFFER_SIZE
-        );
-
-      var maxWidth =
-        maxRenderbufferSize ||
-        Infinity;
-
-      var maxHeight =
-        maxRenderbufferSize ||
-        Infinity;
-
-      var maxViewport =
-        gl.getParameter(
-          gl.MAX_VIEWPORT_DIMS
-        );
-
-      if (
-        maxViewport &&
-        maxViewport.length >= 2
-      ) {
-        maxWidth =
-          Math.min(
-            maxWidth,
-            maxViewport[0]
-          );
-
-        maxHeight =
-          Math.min(
-            maxHeight,
-            maxViewport[1]
-          );
-      }
-
-      if (
-        targetWidth > maxWidth ||
-        targetHeight > maxHeight
-      ) {
-        setStatus(
-          "This GPU supports a maximum screenshot size of " +
-          maxWidth +
-          " × " +
-          maxHeight +
-          ".",
-          "error"
-        );
-
-        return;
-      }
-    }
-  } catch (error) {
-    console.warn(
-      "Could not check WebGL screenshot limits:",
-      error
-    );
-  }
 
   var renderArea =
     getElement(
       "potree_render_area"
     );
 
-  var originalPixelRatio =
+  var camera =
+    getActiveViewerCamera();
+
+  var oldPixelRatio =
     typeof renderer.getPixelRatio ===
     "function"
       ? renderer.getPixelRatio()
       : 1;
 
   if (
-    !originalPixelRatio ||
-    !isFinite(originalPixelRatio)
+    !oldPixelRatio ||
+    !isFinite(oldPixelRatio)
   ) {
-    originalPixelRatio =
+    oldPixelRatio =
       1;
   }
 
-  var originalWidth =
-    canvas.clientWidth ||
-    (
-      renderArea &&
-      renderArea.clientWidth
-    ) ||
-    Math.round(
-      canvas.width /
-      originalPixelRatio
-    );
+  var oldWidth =
+    renderArea &&
+    renderArea.clientWidth
+      ? renderArea.clientWidth
+      : Math.round(
+          canvas.width /
+          oldPixelRatio
+        );
 
-  var originalHeight =
-    canvas.clientHeight ||
-    (
-      renderArea &&
-      renderArea.clientHeight
-    ) ||
-    Math.round(
-      canvas.height /
-      originalPixelRatio
-    );
+  var oldHeight =
+    renderArea &&
+    renderArea.clientHeight
+      ? renderArea.clientHeight
+      : Math.round(
+          canvas.height /
+          oldPixelRatio
+        );
 
-  originalWidth =
+  oldWidth =
     Math.max(
       1,
-      Math.round(
-        originalWidth
-      )
+      oldWidth
     );
 
-  originalHeight =
+  oldHeight =
     Math.max(
       1,
-      Math.round(
-        originalHeight
-      )
+      oldHeight
     );
 
-  var originalCanvasStyleWidth =
-    canvas.style.width;
+  var oldAspect =
+    null;
 
-  var originalCanvasStyleHeight =
-    canvas.style.height;
+  if (
+    camera &&
+    typeof camera.aspect ===
+    "number"
+  ) {
+    oldAspect =
+      camera.aspect;
+  }
 
-  var camera =
-    getActiveViewerCamera();
-
-  var cameraState =
-    camera
-      ? {
-          aspect:
-            typeof camera.aspect ===
-            "number"
-              ? camera.aspect
-              : null,
-
-          left:
-            typeof camera.left ===
-            "number"
-              ? camera.left
-              : null,
-
-          right:
-            typeof camera.right ===
-            "number"
-              ? camera.right
-              : null,
-
-          top:
-            typeof camera.top ===
-            "number"
-              ? camera.top
-              : null,
-
-          bottom:
-            typeof camera.bottom ===
-            "number"
-              ? camera.bottom
-              : null
-        }
-      : null;
-
-  var exportButton =
+  var button =
     getElement(
       "exportScreenshot"
     );
 
-  var previousButtonText =
-    exportButton
-      ? exportButton.textContent
+  var oldButtonText =
+    button
+      ? button.textContent
       : "";
 
   var restored =
     false;
-
-  if (exportButton) {
-    exportButton.disabled =
-      true;
-
-    exportButton.textContent =
-      "Rendering PNG...";
-  }
-
-  setStatus(
-    "Rendering high-resolution screenshot...",
-    "loading"
-  );
 
   function restoreViewer() {
     if (restored) {
@@ -3121,88 +2881,13 @@ function exportScreenshot() {
     restored =
       true;
 
-    /*
-      Restore the normal renderer size.
-    */
-    if (
-      typeof renderer.setPixelRatio ===
-      "function"
-    ) {
-      renderer.setPixelRatio(
-        originalPixelRatio
-      );
-    }
-
-    renderer.setSize(
-      originalWidth,
-      originalHeight,
-      false
-    );
-
-    canvas.style.width =
-      originalCanvasStyleWidth;
-
-    canvas.style.height =
-      originalCanvasStyleHeight;
-
-    /*
-      Restore Potree's normal responsive
-      renderer and camera dimensions.
-    */
-    if (
-      viewer &&
-      typeof viewer.onWindowResize ===
-      "function"
-    ) {
-      viewer.onWindowResize();
-    }
-
-    /*
-      Restore the exact camera projection.
-    */
     if (
       camera &&
-      cameraState
+      oldAspect !==
+      null
     ) {
-      if (
-        cameraState.aspect !==
-        null
-      ) {
-        camera.aspect =
-          cameraState.aspect;
-      }
-
-      if (
-        cameraState.left !==
-        null
-      ) {
-        camera.left =
-          cameraState.left;
-      }
-
-      if (
-        cameraState.right !==
-        null
-      ) {
-        camera.right =
-          cameraState.right;
-      }
-
-      if (
-        cameraState.top !==
-        null
-      ) {
-        camera.top =
-          cameraState.top;
-      }
-
-      if (
-        cameraState.bottom !==
-        null
-      ) {
-        camera.bottom =
-          cameraState.bottom;
-      }
+      camera.aspect =
+        oldAspect;
 
       if (
         typeof camera.updateProjectionMatrix ===
@@ -3213,80 +2898,143 @@ function exportScreenshot() {
     }
 
     if (
-      typeof viewer.render ===
+      typeof renderer.setPixelRatio ===
       "function"
     ) {
-      viewer.render();
+      renderer.setPixelRatio(
+        oldPixelRatio
+      );
     }
 
-    if (exportButton) {
-      exportButton.disabled =
+    if (
+      viewer &&
+      typeof viewer.onWindowResize ===
+      "function"
+    ) {
+      viewer.onWindowResize();
+    } else {
+      renderer.setSize(
+        oldWidth,
+        oldHeight,
+        false
+      );
+    }
+
+    if (
+      button
+    ) {
+      button.disabled =
         false;
 
-      exportButton.textContent =
-        previousButtonText;
+      button.textContent =
+        oldButtonText;
     }
   }
 
-  function captureScreenshot() {
-    try {
-      /*
-        Render immediately before reading the canvas.
-      */
-      renderViewerFrameForScreenshot();
+  function downloadImage(
+    dataUrl
+  ) {
+    var scanName =
+      state.activeScan &&
+      state.activeScan.name
+        ? state.activeScan.name
+        : "potree-viewer";
 
-      if (
-        canvas.width !==
-          targetWidth ||
-        canvas.height !==
-          targetHeight
-      ) {
-        throw new Error(
-          "The renderer created a " +
-          canvas.width +
-          " × " +
-          canvas.height +
-          " canvas instead of " +
-          targetWidth +
-          " × " +
-          targetHeight +
-          "."
+    scanName =
+      String(
+        scanName
+      )
+        .replace(
+          /[^\w-]+/g,
+          "-"
+        )
+        .replace(
+          /^-+|-+$/g,
+          ""
         );
+
+    if (!scanName) {
+      scanName =
+        "potree-viewer";
+    }
+
+    var filename =
+      scanName +
+      "-" +
+      targetWidth +
+      "x" +
+      targetHeight +
+      ".png";
+
+    var link =
+      document.createElement(
+        "a"
+      );
+
+    link.href =
+      dataUrl;
+
+    link.download =
+      filename;
+
+    document.body.appendChild(
+      link
+    );
+
+    link.click();
+
+    link.remove();
+
+    setStatus(
+      "Screenshot exported.",
+      "idle"
+    );
+  }
+
+  function captureAfterFrames(
+    frame
+  ) {
+    if (
+      frame <
+      3
+    ) {
+      if (
+        viewer &&
+        typeof viewer.render ===
+        "function"
+      ) {
+        viewer.render();
       }
 
-      /*
-        PNG is used because point clouds usually
-        look better without JPEG compression.
-      */
+      window.requestAnimationFrame(
+        function () {
+          captureAfterFrames(
+            frame + 1
+          );
+        }
+      );
+
+      return;
+    }
+
+    try {
+      if (
+        viewer &&
+        typeof viewer.render ===
+        "function"
+      ) {
+        viewer.render();
+      }
+
       var dataUrl =
         canvas.toDataURL(
           "image/png"
         );
 
-      if (
-        !dataUrl ||
-        dataUrl ===
-          "data:,"
-      ) {
-        throw new Error(
-          "The canvas returned an empty image."
-        );
-      }
-
-      var filename =
-        getScreenshotFilename();
-
       restoreViewer();
 
-      downloadScreenshotDataUrl(
-        dataUrl,
-        filename
-      );
-
-      setStatus(
-        "Screenshot exported: " +
-        filename,
-        "idle"
+      downloadImage(
+        dataUrl
       );
     } catch (error) {
       console.error(
@@ -3304,10 +3052,56 @@ function exportScreenshot() {
   }
 
   try {
+    if (
+      typeof renderer.getContext ===
+      "function"
+    ) {
+      var gl =
+        renderer.getContext();
+
+      var maxSize =
+        gl.getParameter(
+          gl.MAX_RENDERBUFFER_SIZE
+        );
+
+      if (
+        maxSize &&
+        (
+          targetWidth >
+          maxSize ||
+          targetHeight >
+          maxSize
+        )
+      ) {
+        throw new Error(
+          "The GPU does not support " +
+          targetWidth +
+          " x " +
+          targetHeight +
+          ". Maximum: " +
+          maxSize +
+          " pixels."
+        );
+      }
+    }
+
+    if (
+      button
+    ) {
+      button.disabled =
+        true;
+
+      button.textContent =
+        "Rendering...";
+    }
+
+    setStatus(
+      "Rendering high-resolution screenshot...",
+      "loading"
+    );
+
     /*
-      Use one device pixel per output pixel.
-      Otherwise a devicePixelRatio of 2 could
-      accidentally produce a 6000 × 8000 image.
+      One device pixel equals one output pixel.
     */
     if (
       typeof renderer.setPixelRatio ===
@@ -3318,113 +3112,24 @@ function exportScreenshot() {
       );
     }
 
+    /*
+      Change the WebGL drawing buffer size,
+      but do not change the visible CSS size.
+    */
     renderer.setSize(
       targetWidth,
       targetHeight,
       false
     );
 
-    /*
-      Some newer Three.js versions expose this
-      method in addition to setSize().
-    */
     if (
-      canvas.width !==
-        targetWidth ||
-      canvas.height !==
-        targetHeight
+      camera &&
+      oldAspect !==
+      null
     ) {
-      if (
-        typeof renderer.setDrawingBufferSize ===
-        "function"
-      ) {
-        renderer.setDrawingBufferSize(
-          targetWidth,
-          targetHeight,
-          1
-        );
-      }
-    }
-
-    /*
-      Adapt the camera to the portrait output.
-    */
-    if (
-      camera
-    ) {
-      var isOrthographic =
-        camera.isOrthographicCamera ===
-          true ||
-        camera.type ===
-          "OrthographicCamera";
-
-      if (
-        !isOrthographic &&
-        typeof camera.aspect ===
-          "number"
-      ) {
-        camera.aspect =
-          targetWidth /
-          targetHeight;
-      }
-
-      /*
-        Handle orthographic cameras without
-        stretching the image.
-      */
-      if (
-        isOrthographic &&
-        cameraState &&
-        cameraState.left !==
-          null &&
-        cameraState.right !==
-          null &&
-        cameraState.top !==
-          null &&
-        cameraState.bottom !==
-          null
-      ) {
-        var centerX =
-          (
-            cameraState.left +
-            cameraState.right
-          ) / 2;
-
-        var centerY =
-          (
-            cameraState.top +
-            cameraState.bottom
-          ) / 2;
-
-        var halfHeight =
-          (
-            cameraState.top -
-            cameraState.bottom
-          ) / 2;
-
-        var halfWidth =
-          halfHeight *
-          (
-            targetWidth /
-            targetHeight
-          );
-
-        camera.left =
-          centerX -
-          halfWidth;
-
-        camera.right =
-          centerX +
-          halfWidth;
-
-        camera.top =
-          centerY +
-          halfHeight;
-
-        camera.bottom =
-          centerY -
-          halfHeight;
-      }
+      camera.aspect =
+        targetWidth /
+        targetHeight;
 
       if (
         typeof camera.updateProjectionMatrix ===
@@ -3434,61 +3139,19 @@ function exportScreenshot() {
       }
     }
 
-    if (
-      typeof renderer.setViewport ===
-      "function"
-    ) {
-      renderer.setViewport(
-        0,
-        0,
-        targetWidth,
-        targetHeight
-      );
-    }
-
-    /*
-      Allow Potree to render a few high-resolution
-      frames and request any additional visible
-      point-cloud nodes.
-    */
-    var frameCount =
-      0;
-
-    function warmupFrame() {
-      renderViewerFrameForScreenshot();
-
-      frameCount +=
-        1;
-
-      if (
-        frameCount < 3
-      ) {
-        window.requestAnimationFrame(
-          warmupFrame
-        );
-
-        return;
-      }
-
-      window.setTimeout(
-        captureScreenshot,
-        CONFIG.screenshotWarmupMs
-      );
-    }
-
-    window.requestAnimationFrame(
-      warmupFrame
+    captureAfterFrames(
+      0
     );
   } catch (error) {
     console.error(
-      "Could not prepare screenshot renderer:",
+      "Could not prepare screenshot:",
       error
     );
 
     restoreViewer();
 
     setStatus(
-      "Could not prepare screenshot renderer.",
+      "Could not prepare screenshot.",
       "error"
     );
   }
@@ -3547,6 +3210,12 @@ function bindEvents() {
     "downloadScan",
     "click",
     downloadActiveScan
+  );
+
+  addEvent(
+    "exportScreenshot",
+    "click",
+    exportScreenshot
   );
 
   addEvent(
