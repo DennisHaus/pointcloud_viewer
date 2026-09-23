@@ -19,6 +19,7 @@ var CONFIG = {
 
   screenshotWidth: 3000,
   screenshotHeight: 4000,
+  screenshotScale: 3,
   screenshotWarmupMs: 600,
 
   useRawBaseForPaths: false,
