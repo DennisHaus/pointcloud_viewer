@@ -26,7 +26,7 @@ var CONFIG = {
 
   screenshotWidth: 3000,
   screenshotHeight: 4000,
-  screenshotScale: 3,
+  screenshotScale: 1.5,
   screenshotWarmupMs: 600,
 
   useRawBaseForPaths: false,
@@ -3578,7 +3578,7 @@ function exportScreenshot() {
         "none";
 
       renderArea.style.backgroundColor =
-        "transparent";
+        "";
     }
 
     if (
