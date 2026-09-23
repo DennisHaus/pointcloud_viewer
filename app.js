@@ -24,8 +24,14 @@ var CONFIG = {
 
   navigationSpeed: 0.35,
 
-  screenshotWidth: 3000,
-  screenshotHeight: 4000,
+  /*
+    The screenshot uses the current renderer size.
+
+    Example:
+      current renderer: 3374 x 1400
+      screenshotScale: 2
+      exported PNG:    6748 x 2800
+  */
   screenshotScale: 2,
   screenshotWarmupMs: 600,
 
@@ -275,11 +281,7 @@ function initializeViewer() {
     }
 
     /*
-      Initialize the renderer with a transparent clear color.
-
-      Potree normally creates an alpha-enabled renderer. These settings
-      also ensure that the normal viewer and the screenshot export start
-      with a transparent WebGL background.
+      Start with a transparent WebGL clear color.
     */
     if (
       viewer.renderer
@@ -3206,58 +3208,6 @@ function getScreenshotFilename(
 }
 
 function exportScreenshot() {
-  /*
-    screenshotWidth and screenshotHeight are the logical dimensions.
-
-    screenshotScale is applied to the renderer pixel ratio.
-
-    Example:
-      3000 x 4000 with scale 2
-      becomes a 6000 x 8000 PNG.
-  */
-  var logicalWidth =
-    Math.max(
-      1,
-      Math.round(
-        Number(
-          CONFIG.screenshotWidth
-        ) ||
-        1
-      )
-    );
-
-  var logicalHeight =
-    Math.max(
-      1,
-      Math.round(
-        Number(
-          CONFIG.screenshotHeight
-        ) ||
-        1
-      )
-    );
-
-  var screenshotScale =
-    Math.max(
-      1,
-      Number(
-        CONFIG.screenshotScale
-      ) ||
-      1
-    );
-
-  var outputWidth =
-    Math.round(
-      logicalWidth *
-      screenshotScale
-    );
-
-  var outputHeight =
-    Math.round(
-      logicalHeight *
-      screenshotScale
-    );
-
   if (
     !viewer ||
     !viewer.renderer ||
@@ -3290,6 +3240,119 @@ function exportScreenshot() {
       "exportScreenshot"
     );
 
+  var screenshotScale =
+    Math.max(
+      1,
+      Number(
+        CONFIG.screenshotScale
+      ) ||
+      1
+    );
+
+  /*
+    Use the current physical drawing-buffer dimensions.
+
+    Example:
+      current viewer canvas: 3374 x 1400
+      scale: 2
+      export: 6748 x 2800
+  */
+  var baseWidth =
+    Number(
+      canvas.width
+    );
+
+  var baseHeight =
+    Number(
+      canvas.height
+    );
+
+  if (
+    !isFinite(
+      baseWidth
+    ) ||
+    baseWidth <= 0
+  ) {
+    var fallbackPixelRatio =
+      typeof renderer.getPixelRatio ===
+      "function"
+        ? renderer.getPixelRatio()
+        : 1;
+
+    baseWidth =
+      Math.round(
+        (
+          canvas.clientWidth ||
+          (
+            renderArea &&
+            renderArea.clientWidth
+          ) ||
+          1
+        ) *
+        fallbackPixelRatio
+      );
+  }
+
+  if (
+    !isFinite(
+      baseHeight
+    ) ||
+    baseHeight <= 0
+  ) {
+    var fallbackHeightPixelRatio =
+      typeof renderer.getPixelRatio ===
+      "function"
+        ? renderer.getPixelRatio()
+        : 1;
+
+    baseHeight =
+      Math.round(
+        (
+          canvas.clientHeight ||
+          (
+            renderArea &&
+            renderArea.clientHeight
+          ) ||
+          1
+        ) *
+        fallbackHeightPixelRatio
+      );
+  }
+
+  baseWidth =
+    Math.max(
+      1,
+      Math.round(
+        baseWidth
+      )
+    );
+
+  baseHeight =
+    Math.max(
+      1,
+      Math.round(
+        baseHeight
+      )
+    );
+
+  var targetWidth =
+    Math.max(
+      1,
+      Math.round(
+        baseWidth *
+        screenshotScale
+      )
+    );
+
+  var targetHeight =
+    Math.max(
+      1,
+      Math.round(
+        baseHeight *
+        screenshotScale
+      )
+    );
+
   var originalPixelRatio =
     typeof renderer.getPixelRatio ===
     "function"
@@ -3305,30 +3368,6 @@ function exportScreenshot() {
     originalPixelRatio =
       1;
   }
-
-  var originalCanvasWidth =
-    canvas.width ||
-    1;
-
-  var originalCanvasHeight =
-    canvas.height ||
-    1;
-
-  var originalClientWidth =
-    canvas.clientWidth ||
-    (
-      renderArea &&
-      renderArea.clientWidth
-    ) ||
-    1;
-
-  var originalClientHeight =
-    canvas.clientHeight ||
-    (
-      renderArea &&
-      renderArea.clientHeight
-    ) ||
-    1;
 
   var originalRendererSize =
     null;
@@ -3352,7 +3391,21 @@ function exportScreenshot() {
     }
   }
 
-  var originalAspect =
+  var originalCanvasWidth =
+    canvas.width;
+
+  var originalCanvasHeight =
+    canvas.height;
+
+  var originalCanvasStyle =
+    canvas.style.cssText;
+
+  var originalRenderAreaStyle =
+    renderArea
+      ? renderArea.style.cssText
+      : "";
+
+  var originalCameraAspect =
     camera &&
     typeof camera.aspect ===
     "number"
@@ -3362,34 +3415,16 @@ function exportScreenshot() {
   var originalViewerBackground =
     viewer.background;
 
-  var viewerHasBackgroundProperty =
-    "background" in viewer;
-
-  var originalSceneBackground =
-    viewer.scene &&
-    viewer.scene.background;
-
-  var sceneHasBackgroundProperty =
+  var hasSceneBackground =
     Boolean(
       viewer.scene &&
       "background" in viewer.scene
     );
 
-  var originalRenderAreaBackgroundColor =
-    renderArea
-      ? renderArea.style.backgroundColor
-      : "";
-
-  var originalRenderAreaBackgroundImage =
-    renderArea
-      ? renderArea.style.backgroundImage
-      : "";
-
-  var originalCanvasBackgroundColor =
-    canvas.style.backgroundColor;
-
-  var originalCanvasBackgroundImage =
-    canvas.style.backgroundImage;
+  var originalSceneBackground =
+    hasSceneBackground
+      ? viewer.scene.background
+      : null;
 
   var originalClearAlpha =
     typeof renderer.getClearAlpha ===
@@ -3443,13 +3478,50 @@ function exportScreenshot() {
       ? renderer.autoClearStencil
       : null;
 
+  var originalSetSize =
+    renderer.setSize;
+
+  var originalSetPixelRatio =
+    typeof renderer.setPixelRatio ===
+    "function"
+      ? renderer.setPixelRatio
+      : null;
+
+  var originalSetViewport =
+    typeof renderer.setViewport ===
+    "function"
+      ? renderer.setViewport
+      : null;
+
+  var originalSetScissor =
+    typeof renderer.setScissor ===
+    "function"
+      ? renderer.setScissor
+      : null;
+
+  var originalSetClearColor =
+    typeof renderer.setClearColor ===
+    "function"
+      ? renderer.setClearColor
+      : null;
+
+  var originalSetClearAlpha =
+    typeof renderer.setClearAlpha ===
+    "function"
+      ? renderer.setClearAlpha
+      : null;
+
+  var originalOnWindowResize =
+    viewer &&
+    typeof viewer.onWindowResize ===
+    "function"
+      ? viewer.onWindowResize
+      : null;
+
   var originalButtonText =
     button
       ? button.textContent
       : "";
-
-  var backgroundWarningShown =
-    false;
 
   var restored =
     false;
@@ -3458,18 +3530,42 @@ function exportScreenshot() {
     if (
       renderArea
     ) {
-      renderArea.style.backgroundImage =
-        "none";
+      renderArea.style.setProperty(
+        "background",
+        "transparent",
+        "important"
+      );
 
-      renderArea.style.backgroundColor =
-        "transparent";
+      renderArea.style.setProperty(
+        "background-image",
+        "none",
+        "important"
+      );
+
+      renderArea.style.setProperty(
+        "background-color",
+        "transparent",
+        "important"
+      );
     }
 
-    canvas.style.backgroundImage =
-      "none";
+    canvas.style.setProperty(
+      "background",
+      "transparent",
+      "important"
+    );
 
-    canvas.style.backgroundColor =
-      "transparent";
+    canvas.style.setProperty(
+      "background-image",
+      "none",
+      "important"
+    );
+
+    canvas.style.setProperty(
+      "background-color",
+      "transparent",
+      "important"
+    );
 
     if (
       viewer &&
@@ -3483,62 +3579,46 @@ function exportScreenshot() {
       } catch (
         error
       ) {
-        if (
-          !backgroundWarningShown
-        ) {
-          console.warn(
-            "Potree does not support the 'none' background setting.",
-            error
-          );
-
-          backgroundWarningShown =
-            true;
-        }
+        console.warn(
+          "Could not set Potree background to none:",
+          error
+        );
       }
     }
 
     /*
-      Potree uses viewer.background during rendering.
-      Assigning it directly as well makes the export robust
-      across different Potree versions.
+      Potree versions differ in how they store the background.
+      Set both representations.
     */
-    if (
-      viewer
-    ) {
-      viewer.background =
-        "none";
-    }
+    viewer.background =
+      "none";
 
     if (
-      viewer.scene &&
-      sceneHasBackgroundProperty
+      hasSceneBackground
     ) {
       viewer.scene.background =
         null;
     }
 
     if (
-      typeof renderer.setClearColor ===
-      "function"
+      originalSetClearColor
     ) {
-      renderer.setClearColor(
+      originalSetClearColor.call(
+        renderer,
         0x000000,
         0
       );
     }
 
     if (
-      typeof renderer.setClearAlpha ===
-      "function"
+      originalSetClearAlpha
     ) {
-      renderer.setClearAlpha(
+      originalSetClearAlpha.call(
+        renderer,
         0
       );
     }
 
-    /*
-      Make sure the renderer clears the color buffer with alpha 0.
-    */
     if (
       originalAutoClear !==
       null
@@ -3572,60 +3652,68 @@ function exportScreenshot() {
     }
   }
 
-  function configureHighResolutionRenderer() {
+  function setScreenshotSize() {
     /*
-      The important part for the 2x export is:
-
-        setPixelRatio(screenshotScale)
-        setSize(logicalWidth, logicalHeight, false)
-
-      The internal canvas drawing buffer then becomes:
-
-        logicalWidth  * screenshotScale
-        logicalHeight * screenshotScale
+      Use pixel ratio 1 because targetWidth and targetHeight
+      are already physical pixel dimensions.
     */
     if (
-      typeof renderer.setPixelRatio ===
-      "function"
+      originalSetPixelRatio
     ) {
-      renderer.setPixelRatio(
-        screenshotScale
+      originalSetPixelRatio.call(
+        renderer,
+        1
       );
     }
 
-    renderer.setSize(
-      logicalWidth,
-      logicalHeight,
+    originalSetSize.call(
+      renderer,
+      targetWidth,
+      targetHeight,
       false
     );
 
     /*
-      Some older Three.js/Potree combinations can leave the canvas
-      drawing buffer at its previous size. Force the backing buffer
-      dimensions if necessary.
+      Older Three.js/Potree combinations can occasionally
+      leave the canvas at its previous drawing-buffer size.
     */
     if (
       canvas.width !==
-        outputWidth ||
-      canvas.height !==
-        outputHeight
+      targetWidth
     ) {
       canvas.width =
-        outputWidth;
-
-      canvas.height =
-        outputHeight;
+        targetWidth;
     }
 
     if (
-      typeof renderer.setViewport ===
-      "function"
+      canvas.height !==
+      targetHeight
     ) {
-      renderer.setViewport(
+      canvas.height =
+        targetHeight;
+    }
+
+    if (
+      originalSetViewport
+    ) {
+      originalSetViewport.call(
+        renderer,
         0,
         0,
-        logicalWidth,
-        logicalHeight
+        targetWidth,
+        targetHeight
+      );
+    }
+
+    if (
+      originalSetScissor
+    ) {
+      originalSetScissor.call(
+        renderer,
+        0,
+        0,
+        targetWidth,
+        targetHeight
       );
     }
 
@@ -3635,8 +3723,8 @@ function exportScreenshot() {
       "number"
     ) {
       camera.aspect =
-        logicalWidth /
-        logicalHeight;
+        targetWidth /
+        targetHeight;
 
       if (
         typeof camera.updateProjectionMatrix ===
@@ -3649,6 +3737,107 @@ function exportScreenshot() {
     forceTransparentBackground();
   }
 
+  function installScreenshotOverrides() {
+    /*
+      Potree may call renderer.setSize() internally.
+      Prevent it from changing the export back to the
+      normal viewer size.
+    */
+    renderer.setSize =
+      function () {
+        return originalSetSize.call(
+          renderer,
+          targetWidth,
+          targetHeight,
+          false
+        );
+      };
+
+    if (
+      originalSetPixelRatio
+    ) {
+      renderer.setPixelRatio =
+        function () {
+          return originalSetPixelRatio.call(
+            renderer,
+            1
+          );
+        };
+    }
+
+    if (
+      originalSetViewport
+    ) {
+      renderer.setViewport =
+        function () {
+          return originalSetViewport.call(
+            renderer,
+            0,
+            0,
+            targetWidth,
+            targetHeight
+          );
+        };
+    }
+
+    if (
+      originalSetScissor
+    ) {
+      renderer.setScissor =
+        function () {
+          return originalSetScissor.call(
+            renderer,
+            0,
+            0,
+            targetWidth,
+            targetHeight
+          );
+        };
+    }
+
+    /*
+      Keep the WebGL background transparent even if Potree
+      changes the clear color while rendering.
+    */
+    if (
+      originalSetClearColor
+    ) {
+      renderer.setClearColor =
+        function () {
+          return originalSetClearColor.call(
+            renderer,
+            0x000000,
+            0
+          );
+        };
+    }
+
+    if (
+      originalSetClearAlpha
+    ) {
+      renderer.setClearAlpha =
+        function () {
+          return originalSetClearAlpha.call(
+            renderer,
+            0
+          );
+        };
+    }
+
+    /*
+      Prevent Potree's resize handler from restoring the
+      normal viewer dimensions.
+    */
+    if (
+      originalOnWindowResize
+    ) {
+      viewer.onWindowResize =
+        function () {
+          setScreenshotSize();
+        };
+    }
+  }
+
   function restoreViewer() {
     if (
       restored
@@ -3659,83 +3848,122 @@ function exportScreenshot() {
     restored =
       true;
 
+    renderer.setSize =
+      originalSetSize;
+
+    if (
+      originalSetPixelRatio
+    ) {
+      renderer.setPixelRatio =
+        originalSetPixelRatio;
+    }
+
+    if (
+      originalSetViewport
+    ) {
+      renderer.setViewport =
+        originalSetViewport;
+    }
+
+    if (
+      originalSetScissor
+    ) {
+      renderer.setScissor =
+        originalSetScissor;
+    }
+
+    if (
+      originalSetClearColor
+    ) {
+      renderer.setClearColor =
+        originalSetClearColor;
+    }
+
+    if (
+      originalSetClearAlpha
+    ) {
+      renderer.setClearAlpha =
+        originalSetClearAlpha;
+    }
+
+    if (
+      originalOnWindowResize
+    ) {
+      viewer.onWindowResize =
+        originalOnWindowResize;
+    }
+
     if (
       renderArea
     ) {
-      renderArea.style.backgroundImage =
-        originalRenderAreaBackgroundImage;
-
-      renderArea.style.backgroundColor =
-        originalRenderAreaBackgroundColor;
+      renderArea.style.cssText =
+        originalRenderAreaStyle;
     }
 
-    canvas.style.backgroundImage =
-      originalCanvasBackgroundImage;
-
-    canvas.style.backgroundColor =
-      originalCanvasBackgroundColor;
+    canvas.style.cssText =
+      originalCanvasStyle;
 
     if (
-      viewer &&
-      typeof viewer.setBackground ===
-      "function" &&
-      originalViewerBackground !==
-      undefined
+      originalSetPixelRatio
     ) {
-      try {
-        viewer.setBackground(
-          originalViewerBackground
-        );
-      } catch (
-        error
-      ) {
-        console.warn(
-          "Could not restore Potree background:",
-          error
-        );
-      }
+      originalSetPixelRatio.call(
+        renderer,
+        originalPixelRatio
+      );
     }
 
     if (
-      viewer &&
-      viewerHasBackgroundProperty
+      originalRendererSize
     ) {
-      viewer.background =
-        originalViewerBackground;
+      originalSetSize.call(
+        renderer,
+        originalRendererSize.x,
+        originalRendererSize.y,
+        false
+      );
+    } else {
+      originalSetSize.call(
+        renderer,
+        canvas.clientWidth ||
+        1,
+        canvas.clientHeight ||
+        1,
+        false
+      );
     }
 
     if (
-      viewer.scene &&
-      sceneHasBackgroundProperty
+      canvas.width !==
+      originalCanvasWidth
     ) {
-      viewer.scene.background =
-        originalSceneBackground;
+      canvas.width =
+        originalCanvasWidth;
+    }
+
+    if (
+      canvas.height !==
+      originalCanvasHeight
+    ) {
+      canvas.height =
+        originalCanvasHeight;
     }
 
     if (
       originalClearColor &&
-      typeof renderer.setClearColor ===
-      "function"
+      originalSetClearColor
     ) {
-      renderer.setClearColor(
+      originalSetClearColor.call(
+        renderer,
         originalClearColor,
-        originalClearAlpha
-      );
-    } else if (
-      typeof renderer.setClearColor ===
-      "function"
-    ) {
-      renderer.setClearColor(
-        0x000000,
         originalClearAlpha
       );
     }
 
     if (
-      typeof renderer.setClearAlpha ===
-      "function"
+      originalSetClearAlpha
     ) {
-      renderer.setClearAlpha(
+      originalSetClearAlpha.call(
+        renderer,
         originalClearAlpha
       );
     }
@@ -3773,79 +4001,63 @@ function exportScreenshot() {
     }
 
     if (
-      typeof renderer.setPixelRatio ===
-      "function"
-    ) {
-      renderer.setPixelRatio(
-        originalPixelRatio
-      );
-    }
-
-    var restoreWidth =
-      originalRendererSize &&
-      isFinite(
-        originalRendererSize.x
-      ) &&
-      originalRendererSize.x > 0
-        ? Math.round(
-            originalRendererSize.x
-          )
-        : originalClientWidth;
-
-    var restoreHeight =
-      originalRendererSize &&
-      isFinite(
-        originalRendererSize.y
-      ) &&
-      originalRendererSize.y > 0
-        ? Math.round(
-            originalRendererSize.y
-          )
-        : originalClientHeight;
-
-    renderer.setSize(
-      restoreWidth,
-      restoreHeight,
-      false
-    );
-
-    /*
-      Restore the exact original drawing-buffer size if required.
-    */
-    if (
-      canvas.width !==
-        originalCanvasWidth ||
-      canvas.height !==
-        originalCanvasHeight
-    ) {
-      canvas.width =
-        originalCanvasWidth;
-
-      canvas.height =
-        originalCanvasHeight;
-    }
-
-    if (
       viewer &&
-      typeof viewer.onWindowResize ===
-      "function"
+      typeof viewer.setBackground ===
+      "function" &&
+      originalViewerBackground !==
+      undefined
     ) {
-      viewer.onWindowResize();
+      try {
+        viewer.setBackground(
+          originalViewerBackground
+        );
+      } catch (
+        error
+      ) {
+        console.warn(
+          "Could not restore Potree background:",
+          error
+        );
+      }
+    }
+
+    if (
+      hasSceneBackground
+    ) {
+      viewer.scene.background =
+        originalSceneBackground;
     }
 
     if (
       camera &&
-      originalAspect !==
+      originalCameraAspect !==
       null
     ) {
       camera.aspect =
-        originalAspect;
+        originalCameraAspect;
 
       if (
         typeof camera.updateProjectionMatrix ===
         "function"
       ) {
         camera.updateProjectionMatrix();
+      }
+    }
+
+    if (
+      originalOnWindowResize
+    ) {
+      try {
+        originalOnWindowResize.call(
+          viewer
+        );
+      } catch (
+        error
+      ) {
+        console.warn(
+          "Could not restore Potree window size:",
+          error
+        );
       }
     }
 
@@ -3865,8 +4077,8 @@ function exportScreenshot() {
   ) {
     var filename =
       getScreenshotFilename(
-        outputWidth,
-        outputHeight
+        targetWidth,
+        targetHeight
       );
 
     var link =
@@ -3895,38 +4107,73 @@ function exportScreenshot() {
     );
   }
 
-  function renderHighResolutionFrame() {
-    configureHighResolutionRenderer();
+  function renderScreenshotFrame() {
+    setScreenshotSize();
 
     if (
-      viewer &&
-      typeof viewer.render ===
+      !viewer ||
+      typeof viewer.render !==
       "function"
     ) {
+      throw new Error(
+        "viewer.render() is unavailable."
+      );
+    }
+
+    viewer.render();
+
+    /*
+      If Potree changed the drawing buffer for any reason,
+      restore it and render one more frame.
+    */
+    if (
+      canvas.width !==
+        targetWidth ||
+      canvas.height !==
+        targetHeight
+    ) {
+      setScreenshotSize();
+
       viewer.render();
     }
   }
 
-  var warmupMs =
-    Math.max(
-      0,
-      Number(
-        CONFIG.screenshotWarmupMs
-      ) ||
-      0
-    );
-
-  var warmupStartedAt =
-    Date.now();
-
   function captureAfterFrames(
-    frame
+    frame,
+    startedAt
   ) {
-    renderHighResolutionFrame();
+    try {
+      renderScreenshotFrame();
+    } catch (
+      error
+    ) {
+      console.error(
+        "Screenshot rendering failed:",
+        error
+      );
+
+      restoreViewer();
+
+      setStatus(
+        "Screenshot export failed.",
+        "error"
+      );
+
+      return;
+    }
 
     var elapsed =
       Date.now() -
-      warmupStartedAt;
+      startedAt;
+
+    var warmupMs =
+      Math.max(
+        0,
+        Number(
+          CONFIG.screenshotWarmupMs
+        ) ||
+        0
+      );
 
     if (
       frame < 3 ||
@@ -3936,7 +4183,8 @@ function exportScreenshot() {
         function () {
           captureAfterFrames(
             frame +
-            1
+            1,
+            startedAt
           );
         }
       );
@@ -3945,32 +4193,20 @@ function exportScreenshot() {
     }
 
     try {
-      /*
-        Verify that the final drawing buffer has the requested
-        high-resolution dimensions.
-      */
       if (
         canvas.width !==
-          outputWidth ||
+          targetWidth ||
         canvas.height !==
-          outputHeight
+          targetHeight
       ) {
-        configureHighResolutionRenderer();
-
-        if (
-          viewer &&
-          typeof viewer.render ===
-          "function"
-        ) {
-          viewer.render();
-        }
+        renderScreenshotFrame();
       }
 
       if (
         canvas.width !==
-          outputWidth ||
+          targetWidth ||
         canvas.height !==
-          outputHeight
+          targetHeight
       ) {
         throw new Error(
           "The renderer produced " +
@@ -3978,9 +4214,9 @@ function exportScreenshot() {
           " x " +
           canvas.height +
           " instead of " +
-          outputWidth +
+          targetWidth +
           " x " +
-          outputHeight +
+          targetHeight +
           "."
         );
       }
@@ -4013,13 +4249,15 @@ function exportScreenshot() {
   }
 
   try {
-    if (
+    var gl =
       typeof renderer.getContext ===
       "function"
-    ) {
-      var gl =
-        renderer.getContext();
+        ? renderer.getContext()
+        : null;
 
+    if (
+      gl
+    ) {
       var maxRenderbufferSize =
         gl.getParameter(
           gl.MAX_RENDERBUFFER_SIZE
@@ -4028,17 +4266,17 @@ function exportScreenshot() {
       if (
         maxRenderbufferSize &&
         (
-          outputWidth >
+          targetWidth >
           maxRenderbufferSize ||
-          outputHeight >
+          targetHeight >
           maxRenderbufferSize
         )
       ) {
         throw new Error(
           "The GPU does not support " +
-          outputWidth +
+          targetWidth +
           " x " +
-          outputHeight +
+          targetHeight +
           ". Maximum renderbuffer size: " +
           maxRenderbufferSize
         );
@@ -4054,8 +4292,8 @@ function exportScreenshot() {
         false
       ) {
         console.warn(
-          "The Potree WebGL context was created without alpha support. " +
-          "Transparent PNG output requires an alpha-enabled renderer."
+          "The WebGL renderer was created without alpha support. " +
+          "Transparent PNG output requires an alpha-enabled WebGL context."
         );
       }
     }
@@ -4075,10 +4313,13 @@ function exportScreenshot() {
       "loading"
     );
 
-    configureHighResolutionRenderer();
+    installScreenshotOverrides();
+
+    setScreenshotSize();
 
     captureAfterFrames(
-      0
+      0,
+      Date.now()
     );
   } catch (
     error
