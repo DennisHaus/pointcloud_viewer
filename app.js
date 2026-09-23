@@ -3245,7 +3245,7 @@ function exportScreenshot() {
     1;
 
   var originalHeight =
-    (canvas.clientHeight * 1.5) ||
+    canvas.clientHeight ||
     (
       renderArea &&
       renderArea.clientHeight
@@ -3278,21 +3278,29 @@ function exportScreenshot() {
     typeof window.THREE.Color ===
       "function"
   ) {
-    originalClearColor =
-      renderer.getClearColor(
-        new window.THREE.Color()
-      ).clone();
-  }
+    var originalBackgroundColor =
+    renderArea
+      ? renderArea.style.backgroundColor
+      : "";
 
   var originalBackgroundImage =
     renderArea
       ? renderArea.style.backgroundImage
       : "";
 
-  var originalBackgroundColor =
-    renderArea
-      ? renderArea.style.backgroundColor
-      : "transparent";
+  var originalClearAlpha =
+    typeof renderer.getClearAlpha === "function"
+      ? renderer.getClearAlpha()
+      : 1;
+
+  var originalClearColor =
+    typeof renderer.getClearColor === "function" &&
+    window.THREE &&
+    window.THREE.Color
+      ? renderer.getClearColor(
+          new window.THREE.Color()
+        ).clone()
+      : null;
 
   var originalButtonText =
     button
