@@ -12,26 +12,13 @@
   5. app.js
 */
 
-
-/* -------------------------------------------------------------------------- */
-/* CONFIGURATION                                                              */
-/* -------------------------------------------------------------------------- */
-
 var CONFIG = {
   catalogUrl: "./catalog.json",
 
   defaultPointBudget: 3000000,
 
-  navigationSpeed: 0.35,
-
-  /*
-    The screenshot uses the current renderer size.
-
-    Example:
-      current renderer: 3374 x 1400
-      screenshotScale: 2
-      exported PNG:    6748 x 2800
-  */
+  screenshotWidth: 3000,
+  screenshotHeight: 4000,
   screenshotScale: 3,
   screenshotWarmupMs: 600,
 
@@ -41,22 +28,17 @@ var CONFIG = {
     "https://raw.githubusercontent.com/DennisHaus/pointcloud_viewer/main"
 };
 
-
-/* -------------------------------------------------------------------------- */
-/* APPLICATION STATE                                                          */
-/* -------------------------------------------------------------------------- */
-
 var state = {
   catalog: [],
   loadedClouds: new Map(),
   activeScan: null,
   activeCloud: null,
   activeBounds: null,
-  sectionVolume: null
+  sectionVolume: null,
+  interfaceCollapsed: false
 };
 
 var viewer = null;
-
 
 /* -------------------------------------------------------------------------- */
 /* STARTUP                                                                    */
@@ -77,79 +59,56 @@ function initialize() {
     return;
   }
 
-  bindNavigationKeyboard();
-
   loadCatalog()
-    .then(
-      function () {
-        renderLibrary();
+    .then(function () {
+      renderLibrary();
 
-        if (
-          state.catalog.length >
-          0
-        ) {
-          return loadScan(
-            state.catalog[0]
-          );
-        }
-
-        setViewerStatus(
-          "No scans available",
-          "idle"
-        );
-
-        setStatus(
-          "No scans found in catalog.json",
-          "idle"
-        );
-
-        return null;
-      }
-    )
-    .catch(
-      function (error) {
-        console.error(
-          "Application startup failed:",
-          error
-        );
-
-        setStatus(
-          "Application startup failed.",
-          "error"
+      if (state.catalog.length > 0) {
+        return loadScan(
+          state.catalog[0]
         );
       }
-    );
+
+      setViewerStatus(
+        "No scans available",
+        "idle"
+      );
+
+      setStatus(
+        "No scans found in catalog.json",
+        "idle"
+      );
+
+      return null;
+    })
+    .catch(function (error) {
+      console.error(
+        "Application startup failed:",
+        error
+      );
+
+      setStatus(
+        "Application startup failed.",
+        "error"
+      );
+    });
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* DOM HELPERS                                                                */
 /* -------------------------------------------------------------------------- */
 
-function getElement(
-  id
-) {
-  return document.getElementById(
-    id
-  );
+function getElement(id) {
+  return document.getElementById(id);
 }
 
-function setText(
-  id,
-  value
-) {
+function setText(id, value) {
   var element =
-    getElement(
-      id
-    );
+    getElement(id);
 
-  if (
-    element
-  ) {
+  if (element) {
     element.textContent =
-      String(
-        value
-      );
+      String(value);
   }
 }
 
@@ -159,13 +118,9 @@ function addEvent(
   handler
 ) {
   var element =
-    getElement(
-      id
-    );
+    getElement(id);
 
-  if (
-    element
-  ) {
+  if (element) {
     element.addEventListener(
       eventName,
       handler
@@ -178,8 +133,57 @@ function initializeControls() {
   applyOpacity();
   applyPointBudget();
   updateSectionControls();
+  syncInterfaceToggle();
 }
 
+/* -------------------------------------------------------------------------- */
+/* INTERFACE TOGGLE                                                           */
+/* -------------------------------------------------------------------------- */
+
+function syncInterfaceToggle() {
+  var shell =
+    document.querySelector(
+      ".app-shell"
+    );
+
+  var button =
+    getElement(
+      "interfaceToggle"
+    );
+
+  if (!shell || !button) {
+    return;
+  }
+
+  shell.classList.toggle(
+    "interface-collapsed",
+    state.interfaceCollapsed
+  );
+
+  button.setAttribute(
+    "aria-expanded",
+    String(!state.interfaceCollapsed)
+  );
+
+  button.setAttribute(
+    "aria-label",
+    state.interfaceCollapsed
+      ? "Show interface"
+      : "Hide interface"
+  );
+
+  button.textContent =
+    state.interfaceCollapsed
+      ? "‹"
+      : "›";
+}
+
+function toggleInterface() {
+  state.interfaceCollapsed =
+    !state.interfaceCollapsed;
+
+  syncInterfaceToggle();
+}
 
 /* -------------------------------------------------------------------------- */
 /* POTREE INITIALIZATION                                                      */
@@ -189,16 +193,14 @@ function initializeViewer() {
   var potree =
     window.Potree;
 
-  if (
-    !potree
-  ) {
+  if (!potree) {
     setStatus(
       "Potree is not loaded.",
       "error"
     );
 
     console.error(
-      "window.Potree is undefined."
+      "window.Potree is undefined. Check build/potree/potree.js."
     );
 
     return false;
@@ -225,9 +227,7 @@ function initializeViewer() {
       "potree_render_area"
     );
 
-  if (
-    !renderArea
-  ) {
+  if (!renderArea) {
     setStatus(
       "The Potree render area is missing.",
       "error"
@@ -271,41 +271,21 @@ function initializeViewer() {
       );
     }
 
+    /*
+      Completely black background.
+    */
     if (
       typeof viewer.setBackground ===
       "function"
     ) {
       viewer.setBackground(
-        "none"
+        "black"
       );
     }
 
     /*
-      Start with a transparent WebGL clear color.
+      Use orbit controls.
     */
-    if (
-      viewer.renderer
-    ) {
-      if (
-        typeof viewer.renderer.setClearColor ===
-        "function"
-      ) {
-        viewer.renderer.setClearColor(
-          0x000000,
-          0
-        );
-      }
-
-      if (
-        typeof viewer.renderer.setClearAlpha ===
-        "function"
-      ) {
-        viewer.renderer.setClearAlpha(
-          0
-        );
-      }
-    }
-
     if (
       viewer.orbitControls &&
       typeof viewer.setControls ===
@@ -340,9 +320,7 @@ function initializeViewer() {
     );
 
     return true;
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "Potree initialization failed:",
       error
@@ -363,9 +341,7 @@ function initializeViewer() {
 }
 
 function disableXROnViewer() {
-  if (
-    !viewer
-  ) {
+  if (!viewer) {
     return;
   }
 
@@ -385,6 +361,7 @@ function disableXROnViewer() {
 
   var renderer =
     viewer.renderer ||
+    viewer.pRenderer ||
     null;
 
   if (
@@ -396,16 +373,13 @@ function disableXROnViewer() {
   }
 }
 
-
 /* -------------------------------------------------------------------------- */
 /* CATALOG                                                                    */
 /* -------------------------------------------------------------------------- */
 
 function loadCatalog() {
   var separator =
-    CONFIG.catalogUrl.indexOf(
-      "?"
-    ) === -1
+    CONFIG.catalogUrl.indexOf("?") === -1
       ? "?"
       : "&";
 
@@ -421,106 +395,209 @@ function loadCatalog() {
       cache: "no-store"
     }
   )
-    .then(
-      function (response) {
-        if (
-          !response.ok
-        ) {
-          throw new Error(
-            "Catalog request failed with HTTP " +
-            response.status
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error(
+          "Catalog request failed with HTTP " +
+          response.status
+        );
+      }
+
+      return response.json();
+    })
+    .then(function (data) {
+      var scans = [];
+
+      if (
+        Array.isArray(data)
+      ) {
+        scans =
+          data;
+      } else if (
+        data &&
+        Array.isArray(data.scans)
+      ) {
+        scans =
+          data.scans;
+      }
+
+      var previousScans =
+        new Map();
+
+      state.catalog.forEach(
+        function (oldScan) {
+          previousScans.set(
+            oldScan.id,
+            oldScan
           );
         }
+      );
 
-        return response.json();
-      }
-    )
-    .then(
-      function (data) {
-        var scans =
-          [];
+      state.catalog =
+        scans.map(
+          function (scan, index) {
+            var normalized =
+              normalizeScan(
+                scan,
+                index
+              );
 
-        if (
-          Array.isArray(
-            data
-          )
-        ) {
-          scans =
-            data;
-        } else if (
-          data &&
-          Array.isArray(
-            data.scans
-          )
-        ) {
-          scans =
-            data.scans;
-        }
+            var previous =
+              previousScans.get(
+                normalized.id
+              );
 
-        var previousScans =
-          new Map();
+            if (
+              previous &&
+              previous.loading
+            ) {
+              normalized.loading =
+                true;
+            }
 
-        state.catalog.forEach(
-          function (oldScan) {
-            previousScans.set(
-              oldScan.id,
-              oldScan
-            );
+            return normalized;
           }
         );
 
-        state.catalog =
-          scans.map(
-            function (
-              scan,
-              index
-            ) {
-              var normalized =
-                normalizeScan(
-                  scan,
-                  index
-                );
+      console.log(
+        "Catalog scans:",
+        state.catalog.map(
+          function (scan) {
+            return scan.id;
+          }
+        )
+      );
 
-              var previous =
-                previousScans.get(
-                  normalized.id
-                );
+      reconcileLoadedClouds();
+      updateScanCount();
 
-              if (
-                previous &&
-                previous.loading
-              ) {
-                normalized.loading =
-                  true;
-              }
+      return state.catalog;
+    })
+    .catch(function (error) {
+      console.error(
+        "Could not load catalog.json:",
+        error
+      );
 
-              return normalized;
-            }
-          );
+      setStatus(
+        "Could not load catalog.json.",
+        "error"
+      );
 
-        reconcileLoadedClouds();
-        updateScanCount();
+      /*
+        Keep the current catalog if a refresh
+        fails temporarily.
+      */
+      updateScanCount();
 
-        return state.catalog;
-      }
-    )
-    .catch(
-      function (error) {
-        console.error(
-          "Could not load catalog.json:",
-          error
-        );
+      return state.catalog;
+    });
+}
 
-        setStatus(
-          "Could not load catalog.json.",
-          "error"
-        );
-
-        updateScanCount();
-
-        return state.catalog;
-      }
+function reconcileLoadedClouds() {
+  var catalogIds =
+    new Set(
+      state.catalog.map(
+        function (scan) {
+          return scan.id;
+        }
+      )
     );
+
+  var removedActiveCloud =
+    false;
+
+  state.loadedClouds.forEach(
+    function (pointcloud, scanId) {
+      if (
+        catalogIds.has(scanId)
+      ) {
+        return;
+      }
+
+      console.log(
+        "Removing deleted point cloud:",
+        scanId
+      );
+
+      if (
+        viewer &&
+        viewer.scene &&
+        typeof viewer.scene.removePointCloud ===
+        "function"
+      ) {
+        viewer.scene.removePointCloud(
+          pointcloud
+        );
+      }
+
+      state.loadedClouds.delete(
+        scanId
+      );
+
+      if (
+        state.activeScan &&
+        state.activeScan.id === scanId
+      ) {
+        removedActiveCloud =
+          true;
+      }
+    }
+  );
+
+  if (
+    removedActiveCloud
+  ) {
+    removeSectionVolume();
+
+    state.activeScan =
+      null;
+
+    state.activeCloud =
+      null;
+
+    state.activeBounds =
+      null;
+
+    setViewerStatus(
+      "No scan selected",
+      "idle"
+    );
+  }
+
+  if (
+    state.activeScan
+  ) {
+    var refreshedScan =
+      state.catalog.find(
+        function (scan) {
+          return (
+            scan.id ===
+            state.activeScan.id
+          );
+        }
+      );
+
+    if (
+      refreshedScan
+    ) {
+      state.activeScan =
+        refreshedScan;
+
+      state.activeCloud =
+        state.loadedClouds.get(
+          refreshedScan.id
+        );
+
+      state.activeBounds =
+        getPointCloudBounds(
+          state.activeCloud
+        );
+    }
+  }
+
+  updateInspector();
+  updateSectionControls();
 }
 
 function normalizeScan(
@@ -528,15 +605,11 @@ function normalizeScan(
   index
 ) {
   scan =
-    scan ||
-    {};
+    scan || {};
 
   var fallbackId =
     "scan-" +
-    (
-      index +
-      1
-    );
+    (index + 1);
 
   var id =
     String(
@@ -631,17 +704,13 @@ function normalizeScan(
   };
 }
 
-function resolveUrl(
-  value
-) {
+function resolveUrl(value) {
   try {
     return new URL(
       value,
       document.baseURI
     ).href;
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "Invalid scan URL:",
       value,
@@ -652,9 +721,7 @@ function resolveUrl(
   }
 }
 
-function buildRawUrl(
-  path
-) {
+function buildRawUrl(path) {
   var base =
     CONFIG.rawBaseUrl.replace(
       /\/+$/,
@@ -663,9 +730,7 @@ function buildRawUrl(
 
   var encodedPath =
     path
-      .split(
-        "/"
-      )
+      .split("/")
       .map(
         function (part) {
           return encodeURIComponent(
@@ -673,9 +738,7 @@ function buildRawUrl(
           );
         }
       )
-      .join(
-        "/"
-      );
+      .join("/");
 
   return (
     base +
@@ -684,123 +747,13 @@ function buildRawUrl(
   );
 }
 
-function reconcileLoadedClouds() {
-  var catalogIds =
-    new Set(
-      state.catalog.map(
-        function (scan) {
-          return scan.id;
-        }
-      )
-    );
-
-  var removedActiveCloud =
-    false;
-
-  state.loadedClouds.forEach(
-    function (
-      pointcloud,
-      scanId
-    ) {
-      if (
-        catalogIds.has(
-          scanId
-        )
-      ) {
-        return;
-      }
-
-      if (
-        viewer &&
-        viewer.scene &&
-        typeof viewer.scene.removePointCloud ===
-        "function"
-      ) {
-        viewer.scene.removePointCloud(
-          pointcloud
-        );
-      }
-
-      state.loadedClouds.delete(
-        scanId
-      );
-
-      if (
-        state.activeScan &&
-        state.activeScan.id ===
-        scanId
-      ) {
-        removedActiveCloud =
-          true;
-      }
-    }
-  );
-
-  if (
-    removedActiveCloud
-  ) {
-    removeSectionVolume();
-
-    state.activeScan =
-      null;
-
-    state.activeCloud =
-      null;
-
-    state.activeBounds =
-      null;
-
-    setViewerStatus(
-      "No scan selected",
-      "idle"
-    );
-  }
-
-  if (
-    state.activeScan
-  ) {
-    var refreshedScan =
-      state.catalog.find(
-        function (scan) {
-          return (
-            scan.id ===
-            state.activeScan.id
-          );
-        }
-      );
-
-    if (
-      refreshedScan
-    ) {
-      state.activeScan =
-        refreshedScan;
-
-      state.activeCloud =
-        state.loadedClouds.get(
-          refreshedScan.id
-        );
-
-      state.activeBounds =
-        getPointCloudBounds(
-          state.activeCloud
-        );
-    }
-  }
-
-  updateInspector();
-  updateSectionControls();
-}
-
-
 /* -------------------------------------------------------------------------- */
 /* LIBRARY                                                                    */
 /* -------------------------------------------------------------------------- */
 
 function updateScanCount() {
   var count =
-    Array.isArray(
-      state.catalog
-    )
+    Array.isArray(state.catalog)
       ? state.catalog.length
       : 0;
 
@@ -832,9 +785,7 @@ function renderLibrary() {
       "scanSearch"
     );
 
-  if (
-    !list
-  ) {
+  if (!list) {
     return;
   }
 
@@ -878,9 +829,7 @@ function renderLibrary() {
     visibleScans.length ===
     0
   ) {
-    if (
-      empty
-    ) {
+    if (empty) {
       empty.classList.remove(
         "hidden"
       );
@@ -889,9 +838,7 @@ function renderLibrary() {
     return;
   }
 
-  if (
-    empty
-  ) {
+  if (empty) {
     empty.classList.add(
       "hidden"
     );
@@ -935,6 +882,9 @@ function renderLibrary() {
 
       icon.className =
         "scan-card-icon";
+
+      icon.textContent =
+        "";
 
       var name =
         document.createElement(
@@ -1054,7 +1004,7 @@ function renderLibrary() {
             event.key ===
               "Enter" ||
             event.key ===
-            " "
+              " "
           ) {
             event.preventDefault();
             event.stopPropagation();
@@ -1126,7 +1076,6 @@ function renderLibrary() {
         metadata
       );
 
-      // ONLY CHANGE FOR ACTIVATION:
       card.addEventListener(
         "click",
         function () {
@@ -1143,25 +1092,42 @@ function renderLibrary() {
   );
 }
 
-
 /* -------------------------------------------------------------------------- */
 /* POINT-CLOUD LOADING                                                        */
 /* -------------------------------------------------------------------------- */
 
-function loadScan(
-  scan
-) {
+function selectScan(scan) {
+  if (!scan) {
+    return;
+  }
+
   if (
-    !scan
+    state.loadedClouds.has(
+      scan.id
+    )
   ) {
+    setActiveScan(
+      scan
+    );
+
+    fitActiveScan();
+
+    return;
+  }
+
+  loadScan(
+    scan
+  );
+}
+
+function loadScan(scan) {
+  if (!scan) {
     return Promise.resolve(
       null
     );
   }
 
-  if (
-    !scan.url
-  ) {
+  if (!scan.url) {
     setStatus(
       "This scan has no valid COPC URL.",
       "error"
@@ -1226,9 +1192,7 @@ function loadScan(
   )
     .then(
       function (pointcloud) {
-        if (
-          !pointcloud
-        ) {
+        if (!pointcloud) {
           throw new Error(
             "Potree returned no point cloud."
           );
@@ -1241,19 +1205,19 @@ function loadScan(
           true;
 
         if (
-          !viewer ||
-          !viewer.scene ||
-          typeof viewer.scene.addPointCloud !==
+          viewer &&
+          viewer.scene &&
+          typeof viewer.scene.addPointCloud ===
           "function"
         ) {
+          viewer.scene.addPointCloud(
+            pointcloud
+          );
+        } else {
           throw new Error(
             "Potree scene is unavailable."
           );
         }
-
-        viewer.scene.addPointCloud(
-          pointcloud
-        );
 
         configurePointCloud(
           pointcloud
@@ -1324,14 +1288,9 @@ function loadScan(
     );
 }
 
-function loadCopcPointCloud(
-  scan
-) {
+function loadCopcPointCloud(scan) {
   return new Promise(
-    function (
-      resolve,
-      reject
-    ) {
+    function (resolve, reject) {
       var potree =
         window.Potree;
 
@@ -1373,9 +1332,7 @@ function loadCopcPointCloud(
       function finishWithError(
         error
       ) {
-        if (
-          finished
-        ) {
+        if (finished) {
           return;
         }
 
@@ -1386,9 +1343,7 @@ function loadCopcPointCloud(
           error instanceof Error
             ? error
             : new Error(
-                String(
-                  error
-                )
+                String(error)
               )
         );
       }
@@ -1399,9 +1354,7 @@ function loadCopcPointCloud(
             scan.url,
             scan.name,
             function (event) {
-              if (
-                !event
-              ) {
+              if (!event) {
                 return;
               }
 
@@ -1474,9 +1427,7 @@ function loadCopcPointCloud(
             result.pointcloud
           );
         }
-      } catch (
-        error
-      ) {
+      } catch (error) {
         finishWithError(
           error
         );
@@ -1539,50 +1490,10 @@ function configurePointCloud(
     true;
 }
 
-// ONLY NECESSARY ADDITION FOR ACTIVATION:
-function selectScan(
-  scan
-) {
-  if (
-    !scan
-  ) {
-    return;
-  }
-
-  var pointcloud =
-    state.loadedClouds.get(
-      scan.id
-    );
-
-  if (
-    pointcloud
-  ) {
-    setActiveScan(
-      scan
-    );
-
-    fitActiveScan();
-
-    setStatus(
-      scan.name +
-      " selected",
-      "idle"
-    );
-
-    return;
-  }
-
-  loadScan(
-    scan
-  );
-}
-
 function toggleScanVisibility(
   scan
 ) {
-  if (
-    !scan
-  ) {
+  if (!scan) {
     return;
   }
 
@@ -1591,9 +1502,7 @@ function toggleScanVisibility(
       scan.id
     );
 
-  if (
-    !pointcloud
-  ) {
+  if (!pointcloud) {
     loadScan(
       scan
     );
@@ -1618,7 +1527,6 @@ function toggleScanVisibility(
   );
 }
 
-
 /* -------------------------------------------------------------------------- */
 /* ACTIVE SCAN AND INSPECTOR                                                  */
 /* -------------------------------------------------------------------------- */
@@ -1633,9 +1541,7 @@ function setActiveScan(
       "sectionMode"
     );
 
-  if (
-    sectionMode
-  ) {
+  if (sectionMode) {
     sectionMode.value =
       "none";
   }
@@ -1673,17 +1579,13 @@ function updateInspector() {
     !state.activeScan ||
     !state.activeCloud
   ) {
-    if (
-      empty
-    ) {
+    if (empty) {
       empty.classList.remove(
         "hidden"
       );
     }
 
-    if (
-      content
-    ) {
+    if (content) {
       content.classList.add(
         "hidden"
       );
@@ -1692,17 +1594,13 @@ function updateInspector() {
     return;
   }
 
-  if (
-    empty
-  ) {
+  if (empty) {
     empty.classList.add(
       "hidden"
     );
   }
 
-  if (
-    content
-  ) {
+  if (content) {
     content.classList.remove(
       "hidden"
     );
@@ -1763,7 +1661,7 @@ function updateInspector() {
     formatCoordinate(
       state.activeBounds.min.x
     ) +
-    " -> " +
+    " → " +
     formatCoordinate(
       state.activeBounds.max.x
     )
@@ -1774,7 +1672,7 @@ function updateInspector() {
     formatCoordinate(
       state.activeBounds.min.y
     ) +
-    " -> " +
+    " → " +
     formatCoordinate(
       state.activeBounds.max.y
     )
@@ -1785,7 +1683,7 @@ function updateInspector() {
     formatCoordinate(
       state.activeBounds.min.z
     ) +
-    " -> " +
+    " → " +
     formatCoordinate(
       state.activeBounds.max.z
     )
@@ -1795,9 +1693,7 @@ function updateInspector() {
 function getPointCloudBounds(
   pointcloud
 ) {
-  if (
-    !pointcloud
-  ) {
+  if (!pointcloud) {
     return null;
   }
 
@@ -1883,7 +1779,6 @@ function getVectorValue(
   return 0;
 }
 
-
 /* -------------------------------------------------------------------------- */
 /* APPEARANCE                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -1912,9 +1807,7 @@ function applyColorMode(
       "colorMode"
     );
 
-  if (
-    !select
-  ) {
+  if (!select) {
     return;
   }
 
@@ -1924,8 +1817,7 @@ function applyColorMode(
     ];
 
   if (
-    colorType !==
-    undefined
+    colorType !== undefined
   ) {
     cloud.material.pointColorType =
       colorType;
@@ -1973,8 +1865,7 @@ function applyOpacity(
   setText(
     "pointOpacityValue",
     Math.round(
-      value *
-      100
+      value * 100
     ) +
     "%"
   );
@@ -2022,7 +1913,6 @@ function applyPointBudget() {
     )
   );
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* SECTION TOOLS                                                              */
@@ -2114,9 +2004,7 @@ function updateSectionControls() {
       state.activeBounds
     );
 
-  if (
-    axisWrapper
-  ) {
+  if (axisWrapper) {
     if (
       mode ===
       "vertical"
@@ -2137,9 +2025,7 @@ function updateSectionControls() {
   thicknessElement.disabled =
     !active;
 
-  if (
-    !active
-  ) {
+  if (!active) {
     setText(
       "sectionPositionValue",
       "—"
@@ -2156,9 +2042,7 @@ function updateSectionControls() {
   var range =
     getSectionRange();
 
-  if (
-    !range
-  ) {
+  if (!range) {
     return;
   }
 
@@ -2177,8 +2061,7 @@ function updateSectionControls() {
 
   var thickness =
     Math.max(
-      length *
-      0.08,
+      length * 0.08,
       0.01
     );
 
@@ -2190,8 +2073,7 @@ function updateSectionControls() {
 
   positionElement.step =
     Math.max(
-      length /
-      1000,
+      length / 1000,
       0.000001
     );
 
@@ -2260,9 +2142,7 @@ function applySection() {
   var range =
     getSectionRange();
 
-  if (
-    !range
-  ) {
+  if (!range) {
     return;
   }
 
@@ -2283,8 +2163,7 @@ function applySection() {
       (
         range.max -
         range.min
-      ) *
-      0.08
+      ) * 0.08
     );
 
   thickness =
@@ -2324,13 +2203,11 @@ function applySection() {
   ) {
     min.z =
       safePosition -
-      thickness /
-      2;
+      thickness / 2;
 
     max.z =
       safePosition +
-      thickness /
-      2;
+      thickness / 2;
   }
 
   if (
@@ -2350,13 +2227,11 @@ function applySection() {
 
     min[axis] =
       safePosition -
-      thickness /
-      2;
+      thickness / 2;
 
     max[axis] =
       safePosition +
-      thickness /
-      2;
+      thickness / 2;
   }
 
   var potree =
@@ -2527,9 +2402,7 @@ function clearSection() {
       "sectionMode"
     );
 
-  if (
-    modeElement
-  ) {
+  if (modeElement) {
     modeElement.value =
       "none";
   }
@@ -2542,10 +2415,23 @@ function clearSection() {
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* VIEW CONTROLS                                                              */
+/* -------------------------------------------------------------------------- */
 
-/* -------------------------------------------------------------------------- */
-/* KEYBOARD NAVIGATION                                                        */
-/* -------------------------------------------------------------------------- */
+/*
+  Keyboard navigation
+  -------------------
+
+  W / Arrow Up    = Forward
+  S / Arrow Down  = Backward
+  A / Arrow Left  = Left
+  D / Arrow Right = Right
+
+  The keys are tracked continuously so holding a key down
+  produces continuous movement rather than one movement
+  per keypress.
+*/
 
 var navigationKeys = {
   forward: false,
@@ -2554,18 +2440,14 @@ var navigationKeys = {
   right: false
 };
 
-var navigationKeyboardBound =
-  false;
+var navigationKeyboardBound = false;
 
-var navigationLastTime =
-  0;
+/* -------------------------------------------------------------------------- */
+/* KEYBOARD HELPERS                                                           */
+/* -------------------------------------------------------------------------- */
 
-function isTypingInField(
-  target
-) {
-  if (
-    !target
-  ) {
+function isTypingInField(target) {
+  if (!target) {
     return false;
   }
 
@@ -2578,21 +2460,43 @@ function isTypingInField(
     tagName === "input" ||
     tagName === "textarea" ||
     tagName === "select" ||
-    target.isContentEditable ===
-      true
+    target.isContentEditable === true
   );
 }
 
-function getNavigationKey(
-  event
+function setNavigationKey(
+  key,
+  pressed
 ) {
-  var key =
-    String(
-      event.key ||
-      ""
-    ).toLowerCase();
+  switch (key) {
+    case "w":
+    case "arrowup":
+      navigationKeys.forward =
+        pressed;
+      break;
 
-  if (
+    case "s":
+    case "arrowdown":
+      navigationKeys.backward =
+        pressed;
+      break;
+
+    case "a":
+    case "arrowleft":
+      navigationKeys.left =
+        pressed;
+      break;
+
+    case "d":
+    case "arrowright":
+      navigationKeys.right =
+        pressed;
+      break;
+  }
+}
+
+function isNavigationKey(key) {
+  return (
     key === "w" ||
     key === "a" ||
     key === "s" ||
@@ -2601,353 +2505,14 @@ function getNavigationKey(
     key === "arrowdown" ||
     key === "arrowleft" ||
     key === "arrowright"
-  ) {
-    return key;
-  }
-
-  var code =
-    String(
-      event.code ||
-      ""
-    ).toLowerCase();
-
-  if (
-    code ===
-    "keyw"
-  ) {
-    return "w";
-  }
-
-  if (
-    code ===
-    "keya"
-  ) {
-    return "a";
-  }
-
-  if (
-    code ===
-    "keys"
-  ) {
-    return "s";
-  }
-
-  if (
-    code ===
-    "keyd"
-  ) {
-    return "d";
-  }
-
-  if (
-    code ===
-    "arrowup"
-  ) {
-    return "arrowup";
-  }
-
-  if (
-    code ===
-    "arrowdown"
-  ) {
-    return "arrowdown";
-  }
-
-  if (
-    code ===
-    "arrowleft"
-  ) {
-    return "arrowleft";
-  }
-
-  if (
-    code ===
-    "arrowright"
-  ) {
-    return "arrowright";
-  }
-
-  return "";
-}
-
-function setNavigationKey(
-  key,
-  pressed
-) {
-  if (
-    key === "w" ||
-    key === "arrowup"
-  ) {
-    navigationKeys.forward =
-      pressed;
-  }
-
-  if (
-    key === "s" ||
-    key === "arrowdown"
-  ) {
-    navigationKeys.backward =
-      pressed;
-  }
-
-  if (
-    key === "a" ||
-    key === "arrowleft"
-  ) {
-    navigationKeys.left =
-      pressed;
-  }
-
-  if (
-    key === "d" ||
-    key === "arrowright"
-  ) {
-    navigationKeys.right =
-      pressed;
-  }
-}
-
-function clearNavigationKeys() {
-  navigationKeys.forward =
-    false;
-
-  navigationKeys.backward =
-    false;
-
-  navigationKeys.left =
-    false;
-
-  navigationKeys.right =
-    false;
-}
-
-function moveViewerWithKeyboard(
-  deltaSeconds
-) {
-  if (
-    !viewer ||
-    !viewer.scene ||
-    !viewer.scene.view
-  ) {
-    return;
-  }
-
-  var view =
-    viewer.scene.view;
-
-  if (
-    !view.position
-  ) {
-    return;
-  }
-
-  var moving =
-    navigationKeys.forward ||
-    navigationKeys.backward ||
-    navigationKeys.left ||
-    navigationKeys.right;
-
-  if (
-    !moving
-  ) {
-    return;
-  }
-
-  var direction =
-    null;
-
-  if (
-    view.direction &&
-    typeof view.direction.clone ===
-    "function"
-  ) {
-    direction =
-      view.direction.clone();
-  } else if (
-    typeof view.getDirection ===
-    "function"
-  ) {
-    direction =
-      view.getDirection();
-  }
-
-  if (
-    !direction ||
-    typeof direction.normalize !==
-    "function"
-  ) {
-    return;
-  }
-
-  direction.normalize();
-
-  var right =
-    direction.clone();
-
-  if (
-    typeof right.cross !==
-    "function"
-  ) {
-    return;
-  }
-
-  right.cross(
-    direction.clone().set(
-      0,
-      0,
-      1
-    )
-  );
-
-  if (
-    typeof right.lengthSq ===
-    "function" &&
-    right.lengthSq() <
-    0.000001
-  ) {
-    right.set(
-      1,
-      0,
-      0
-    );
-  } else {
-    right.normalize();
-  }
-
-  var movement =
-    direction.clone().set(
-      0,
-      0,
-      0
-    );
-
-  if (
-    navigationKeys.forward
-  ) {
-    movement.add(
-      direction
-    );
-  }
-
-  if (
-    navigationKeys.backward
-  ) {
-    movement.sub(
-      direction
-    );
-  }
-
-  if (
-    navigationKeys.left
-  ) {
-    movement.sub(
-      right
-    );
-  }
-
-  if (
-    navigationKeys.right
-  ) {
-    movement.add(
-      right
-    );
-  }
-
-  if (
-    typeof movement.lengthSq ===
-    "function" &&
-    movement.lengthSq() <
-    0.000001
-  ) {
-    return;
-  }
-
-  movement.normalize();
-
-  var radius =
-    Number(
-      view.radius
-    );
-
-  if (
-    !isFinite(
-      radius
-    ) ||
-    radius <= 0
-  ) {
-    radius =
-      1;
-  }
-
-  var speed =
-    radius *
-    Number(
-      CONFIG.navigationSpeed
-    );
-
-  if (
-    !isFinite(
-      speed
-    ) ||
-    speed <= 0
-  ) {
-    speed =
-      1;
-  }
-
-  movement.multiplyScalar(
-    speed *
-    deltaSeconds
-  );
-
-  view.position.add(
-    movement
   );
 }
 
-function navigationAnimationLoop(
-  timestamp
-) {
-  if (
-    !navigationLastTime
-  ) {
-    navigationLastTime =
-      timestamp;
-  }
-
-  var deltaSeconds =
-    (
-      timestamp -
-      navigationLastTime
-    ) / 1000;
-
-  navigationLastTime =
-    timestamp;
-
-  if (
-    !isFinite(
-      deltaSeconds
-    ) ||
-    deltaSeconds <= 0 ||
-    deltaSeconds > 0.1
-  ) {
-    deltaSeconds =
-      0.016;
-  }
-
-  moveViewerWithKeyboard(
-    deltaSeconds
-  );
-
-  window.requestAnimationFrame(
-    navigationAnimationLoop
-  );
-}
-
+/*
+  Bind keyboard navigation once.
+*/
 function bindNavigationKeyboard() {
-  if (
-    navigationKeyboardBound
-  ) {
+  if (navigationKeyboardBound) {
     return;
   }
 
@@ -2966,16 +2531,20 @@ function bindNavigationKeyboard() {
       }
 
       var key =
-        getNavigationKey(
-          event
-        );
+        String(
+          event.key || ""
+        ).toLowerCase();
 
       if (
-        !key
+        !isNavigationKey(key)
       ) {
         return;
       }
 
+      /*
+        Prevent the browser from scrolling
+        the page when arrow keys are used.
+      */
       event.preventDefault();
 
       setNavigationKey(
@@ -2983,19 +2552,21 @@ function bindNavigationKeyboard() {
         true
       );
     },
-    true
+    {
+      passive: false
+    }
   );
 
   document.addEventListener(
     "keyup",
     function (event) {
       var key =
-        getNavigationKey(
-          event
-        );
+        String(
+          event.key || ""
+        ).toLowerCase();
 
       if (
-        !key
+        !isNavigationKey(key)
       ) {
         return;
       }
@@ -3007,30 +2578,58 @@ function bindNavigationKeyboard() {
         false
       );
     },
-    true
+    {
+      passive: false
+    }
   );
 
+  /*
+    If the browser window loses focus while
+    a key is being held, clear the movement
+    state. This prevents "stuck" movement.
+  */
   window.addEventListener(
     "blur",
-    clearNavigationKeys
+    function () {
+      navigationKeys.forward =
+        false;
+
+      navigationKeys.backward =
+        false;
+
+      navigationKeys.left =
+        false;
+
+      navigationKeys.right =
+        false;
+    }
   );
 
+  /*
+    Clear movement when the document becomes
+    hidden, for example when changing tabs.
+  */
   document.addEventListener(
     "visibilitychange",
     function () {
       if (
         document.hidden
       ) {
-        clearNavigationKeys();
+        navigationKeys.forward =
+          false;
+
+        navigationKeys.backward =
+          false;
+
+        navigationKeys.left =
+          false;
+
+        navigationKeys.right =
+          false;
       }
     }
   );
-
-  window.requestAnimationFrame(
-    navigationAnimationLoop
-  );
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* VIEW CONTROLS                                                              */
@@ -3049,6 +2648,10 @@ function fitActiveScan() {
     return;
   }
 
+  /*
+    Temporarily hide other scans while fitting.
+    Their original visibility is restored immediately afterward.
+  */
   var pointclouds =
     viewer.scene &&
     viewer.scene.pointclouds;
@@ -3067,8 +2670,7 @@ function fitActiveScan() {
           {
             cloud: cloud,
             visible:
-              cloud.visible !==
-              false
+              cloud.visible !== false
           }
         );
 
@@ -3085,7 +2687,7 @@ function fitActiveScan() {
       "function"
     ) {
       viewer.fitToScreen(
-        0.9
+        0.5
       );
     }
   } finally {
@@ -3103,8 +2705,83 @@ function fitActiveScan() {
   );
 }
 
+function fitAllVisibleScans() {
+  if (
+    !viewer ||
+    !viewer.scene ||
+    !viewer.scene.pointclouds
+  ) {
+    setStatus(
+      "No scans available.",
+      "error"
+    );
+
+    return;
+  }
+
+  var visibleClouds =
+    viewer.scene.pointclouds.filter(
+      function (cloud) {
+        return cloud &&
+          cloud.visible !== false;
+      }
+    );
+
+  if (
+    visibleClouds.length ===
+    0
+  ) {
+    setStatus(
+      "No visible scans to fit.",
+      "error"
+    );
+
+    return;
+  }
+
+  var previousVisibility =
+    visibleClouds.map(
+      function (cloud) {
+        return {
+          cloud: cloud,
+          visible: cloud.visible !== false
+        };
+      }
+    );
+
+  try {
+    visibleClouds.forEach(
+      function (cloud) {
+        cloud.visible =
+          true;
+      }
+    );
+
+    if (
+      typeof viewer.fitToScreen ===
+      "function"
+    ) {
+      viewer.fitToScreen(
+        0.5
+      );
+    }
+  } finally {
+    previousVisibility.forEach(
+      function (item) {
+        item.cloud.visible =
+          item.visible;
+      }
+    );
+  }
+
+  setStatus(
+    "Focused on all visible scans",
+    "idle"
+  );
+}
+
 function resetView() {
-  fitActiveScan();
+  fitAllVisibleScans();
 }
 
 function activateOrbitMode() {
@@ -3124,9 +2801,7 @@ function activateOrbitMode() {
       "orbitMode"
     );
 
-  if (
-    button
-  ) {
+  if (button) {
     button.classList.add(
       "active"
     );
@@ -3179,16 +2854,25 @@ function downloadActiveScan() {
   link.remove();
 }
 
+/* -------------------------------------------------------------------------- */
+/* INITIALISE KEYBOARD NAVIGATION                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+  Call this once after your viewer/application
+  has been initialised.
+
+  If this file is loaded after the viewer is
+  created, this can simply run immediately.
+*/
+bindNavigationKeyboard();
 
 /* -------------------------------------------------------------------------- */
 /* SCREENSHOT EXPORT                                                          */
 /* -------------------------------------------------------------------------- */
 
 function getActiveViewerCamera() {
-  if (
-    !viewer ||
-    !viewer.scene
-  ) {
+  if (!viewer || !viewer.scene) {
     return null;
   }
 
@@ -3206,47 +2890,19 @@ function getActiveViewerCamera() {
   );
 }
 
-function getScreenshotFilename(
-  width,
-  height
-) {
-  var name =
-    state.activeScan &&
-    state.activeScan.name
-      ? state.activeScan.name
-      : "potree-viewer";
-
-  name =
-    String(
-      name
-    )
-      .replace(
-        /[^\w-]+/g,
-        "-"
-      )
-      .replace(
-        /^-+|-+$/g,
-        ""
-      );
-
-  if (
-    !name
-  ) {
-    name =
-      "potree-viewer";
-  }
-
-  return (
-    name +
-    "_" +
-    width +
-    "x" +
-    height +
-    ".png"
-  );
-}
-
 function exportScreenshot() {
+  var targetWidth =
+    Math.round(
+      CONFIG.screenshotWidth *
+      CONFIG.screenshotScale
+    );
+
+  var targetHeight =
+    Math.round(
+      CONFIG.screenshotHeight *
+      CONFIG.screenshotScale
+    );
+
   if (
     !viewer ||
     !viewer.renderer ||
@@ -3274,196 +2930,9 @@ function exportScreenshot() {
   var camera =
     getActiveViewerCamera();
 
-  var button =
-    getElement(
-      "exportScreenshot"
-    );
-
-  var screenshotScale =
-    Math.max(
-      1,
-      Number(
-        CONFIG.screenshotScale
-      ) ||
-      1
-    );
-
-  /*
-    Use the current physical drawing-buffer dimensions.
-
-    Example:
-      current viewer canvas: 3374 x 1400
-      scale: 2
-      export: 6748 x 2800
-  */
-  var baseWidth =
-    Number(
-      canvas.width
-    );
-
-  var baseHeight =
-    Number(
-      canvas.height
-    );
-
-  if (
-    !isFinite(
-      baseWidth
-    ) ||
-    baseWidth <= 0
-  ) {
-    var fallbackPixelRatio =
-      typeof renderer.getPixelRatio ===
-      "function"
-        ? renderer.getPixelRatio()
-        : 1;
-
-    baseWidth =
-      Math.round(
-        (
-          canvas.clientWidth ||
-          (
-            renderArea &&
-            renderArea.clientWidth
-          ) ||
-          1
-        ) *
-        fallbackPixelRatio
-      );
-  }
-
-  if (
-    !isFinite(
-      baseHeight
-    ) ||
-    baseHeight <= 0
-  ) {
-    var fallbackHeightPixelRatio =
-      typeof renderer.getPixelRatio ===
-      "function"
-        ? renderer.getPixelRatio()
-        : 1;
-
-    baseHeight =
-      Math.round(
-        (
-          canvas.clientHeight ||
-          (
-            renderArea &&
-            renderArea.clientHeight
-          ) ||
-          1
-        ) *
-        fallbackHeightPixelRatio
-      );
-  }
-
-  baseWidth =
-    Math.max(
-      1,
-      Math.round(
-        baseWidth
-      )
-    );
-
-  baseHeight =
-    Math.max(
-      1,
-      Math.round(
-        baseHeight
-      )
-    );
-
-  var targetWidth =
-    Math.max(
-      1,
-      Math.round(
-        baseWidth *
-        screenshotScale
-      )
-    );
-
-  var targetHeight =
-    Math.max(
-      1,
-      Math.round(
-        baseHeight *
-        screenshotScale
-      )
-    );
-
-  var originalPixelRatio =
-    typeof renderer.getPixelRatio ===
-    "function"
-      ? renderer.getPixelRatio()
-      : 1;
-
-  if (
-    !isFinite(
-      originalPixelRatio
-    ) ||
-    originalPixelRatio <= 0
-  ) {
-    originalPixelRatio =
-      1;
-  }
-
-  var originalRendererSize =
-    null;
-
-  if (
-    typeof renderer.getSize ===
-    "function" &&
-    window.THREE &&
-    window.THREE.Vector2
-  ) {
-    try {
-      originalRendererSize =
-        renderer.getSize(
-          new window.THREE.Vector2()
-        );
-    } catch (
-      error
-    ) {
-      originalRendererSize =
-        null;
-    }
-  }
-
-  var originalCanvasWidth =
-    canvas.width;
-
-  var originalCanvasHeight =
-    canvas.height;
-
-  var originalCanvasStyle =
-    canvas.style.cssText;
-
-  var originalRenderAreaStyle =
-    renderArea
-      ? renderArea.style.cssText
-      : "";
-
-  var originalCameraAspect =
-    camera &&
-    typeof camera.aspect ===
-    "number"
-      ? camera.aspect
-      : null;
-
-  var originalViewerBackground =
-    viewer.background;
-
-  var hasSceneBackground =
-    Boolean(
-      viewer.scene &&
-      "background" in viewer.scene
-    );
-
-  var originalSceneBackground =
-    hasSceneBackground
-      ? viewer.scene.background
-      : null;
+  var originalBackground =
+    viewer.background ||
+    "black";
 
   var originalClearAlpha =
     typeof renderer.getClearAlpha ===
@@ -3476,88 +2945,78 @@ function exportScreenshot() {
 
   if (
     typeof renderer.getClearColor ===
-    "function" &&
+      "function" &&
     window.THREE &&
     window.THREE.Color
   ) {
-    try {
-      originalClearColor =
-        renderer.getClearColor(
-          new window.THREE.Color()
-        ).clone();
-    } catch (
-      error
-    ) {
-      originalClearColor =
-        null;
-    }
+    originalClearColor =
+      renderer.getClearColor(
+        new window.THREE.Color()
+      ).clone();
   }
 
-  var originalAutoClear =
-    typeof renderer.autoClear ===
-    "boolean"
-      ? renderer.autoClear
-      : null;
-
-  var originalAutoClearColor =
-    typeof renderer.autoClearColor ===
-    "boolean"
-      ? renderer.autoClearColor
-      : null;
-
-  var originalAutoClearDepth =
-    typeof renderer.autoClearDepth ===
-    "boolean"
-      ? renderer.autoClearDepth
-      : null;
-
-  var originalAutoClearStencil =
-    typeof renderer.autoClearStencil ===
-    "boolean"
-      ? renderer.autoClearStencil
-      : null;
-
-  var originalSetSize =
-    renderer.setSize;
-
-  var originalSetPixelRatio =
-    typeof renderer.setPixelRatio ===
+  var oldPixelRatio =
+    typeof renderer.getPixelRatio ===
     "function"
-      ? renderer.setPixelRatio
-      : null;
+      ? renderer.getPixelRatio()
+      : 1;
 
-  var originalSetViewport =
-    typeof renderer.setViewport ===
-    "function"
-      ? renderer.setViewport
-      : null;
+  if (
+    !oldPixelRatio ||
+    !isFinite(oldPixelRatio)
+  ) {
+    oldPixelRatio =
+      1;
+  }
 
-  var originalSetScissor =
-    typeof renderer.setScissor ===
-    "function"
-      ? renderer.setScissor
-      : null;
+  var oldWidth =
+    renderArea &&
+    renderArea.clientWidth
+      ? renderArea.clientWidth
+      : Math.round(
+          canvas.width /
+          oldPixelRatio
+        );
 
-  var originalSetClearColor =
-    typeof renderer.setClearColor ===
-    "function"
-      ? renderer.setClearColor
-      : null;
+  var oldHeight =
+    renderArea &&
+    renderArea.clientHeight
+      ? renderArea.clientHeight
+      : Math.round(
+          canvas.height /
+          oldPixelRatio
+        );
 
-  var originalSetClearAlpha =
-    typeof renderer.setClearAlpha ===
-    "function"
-      ? renderer.setClearAlpha
-      : null;
+  oldWidth =
+    Math.max(
+      1,
+      oldWidth
+    );
 
-  var originalOnWindowResize =
-    viewer &&
-    typeof viewer.onWindowResize ===
-    "function"
-      ? viewer.onWindowResize
-      : null;
+  oldHeight =
+    Math.max(
+      1,
+      oldHeight
+    );
 
-  var originalButtonText =
+  var oldAspect =
+    null;
+
+  if (
+    camera &&
+    typeof camera.aspect ===
+    "number"
+  ) {
+    oldAspect =
+      camera.aspect;
+  }
+
+  var button =
+    getElement(
+      "exportScreenshot"
+    );
+
+  var oldButtonText =
     button
       ? button.textContent
       : "";
@@ -3565,500 +3024,21 @@ function exportScreenshot() {
   var restored =
     false;
 
-  function forceTransparentBackground() {
-    if (
-      renderArea
-    ) {
-      renderArea.style.setProperty(
-        "background",
-        "transparent",
-        "important"
-      );
-
-      renderArea.style.setProperty(
-        "background-image",
-        "none",
-        "important"
-      );
-
-      renderArea.style.setProperty(
-        "background-color",
-        "transparent",
-        "important"
-      );
-    }
-
-    canvas.style.setProperty(
-      "background",
-      "transparent",
-      "important"
-    );
-
-    canvas.style.setProperty(
-      "background-image",
-      "none",
-      "important"
-    );
-
-    canvas.style.setProperty(
-      "background-color",
-      "transparent",
-      "important"
-    );
-
-    if (
-      viewer &&
-      typeof viewer.setBackground ===
-      "function"
-    ) {
-      try {
-        viewer.setBackground(
-          "none"
-        );
-      } catch (
-        error
-      ) {
-        console.warn(
-          "Could not set Potree background to none:",
-          error
-        );
-      }
-    }
-
-    /*
-      Potree versions differ in how they store the background.
-      Set both representations.
-    */
-    viewer.background =
-      "none";
-
-    if (
-      hasSceneBackground
-    ) {
-      viewer.scene.background =
-        null;
-    }
-
-    if (
-      originalSetClearColor
-    ) {
-      originalSetClearColor.call(
-        renderer,
-        0x000000,
-        0
-      );
-    }
-
-    if (
-      originalSetClearAlpha
-    ) {
-      originalSetClearAlpha.call(
-        renderer,
-        0
-      );
-    }
-
-    /*
-      These are intentionally left commented out because
-      forcing autoClear true can clear buffers Potree needs.
-    */
-    /*
-    if (
-      originalAutoClear !==
-      null
-    ) {
-      renderer.autoClear =
-        true;
-    }
-
-    if (
-      originalAutoClearColor !==
-      null
-    ) {
-      renderer.autoClearColor =
-        true;
-    }
-
-    if (
-      originalAutoClearDepth !==
-      null
-    ) {
-      renderer.autoClearDepth =
-        true;
-    }
-
-    if (
-      originalAutoClearStencil !==
-      null
-    ) {
-      renderer.autoClearStencil =
-        true;
-    }
-    */
-  }
-
-  function setScreenshotSize() {
-    if (
-      originalSetPixelRatio
-    ) {
-      originalSetPixelRatio.call(
-        renderer,
-        1
-      );
-    }
-
-    originalSetSize.call(
-      renderer,
-      targetWidth,
-      targetHeight,
-      false
-    );
-
-    if (
-      canvas.width !==
-      targetWidth
-    ) {
-      canvas.width =
-        targetWidth;
-    }
-
-    if (
-      canvas.height !==
-      targetHeight
-    ) {
-      canvas.height =
-        targetHeight;
-    }
-
-    if (
-      originalSetViewport
-    ) {
-      originalSetViewport.call(
-        renderer,
-        0,
-        0,
-        targetWidth,
-        targetHeight
-      );
-    }
-
-    if (
-      originalSetScissor
-    ) {
-      originalSetScissor.call(
-        renderer,
-        0,
-        0,
-        targetWidth,
-        targetHeight
-      );
-    }
-
-    if (
-      camera &&
-      typeof camera.aspect ===
-      "number"
-    ) {
-      camera.aspect =
-        targetWidth /
-        targetHeight;
-
-      if (
-        typeof camera.updateProjectionMatrix ===
-        "function"
-      ) {
-        camera.updateProjectionMatrix();
-      }
-    }
-
-    forceTransparentBackground();
-  }
-
-  function installScreenshotOverrides() {
-    renderer.setSize =
-      function () {
-        return originalSetSize.call(
-          renderer,
-          targetWidth,
-          targetHeight,
-          false
-        );
-      };
-
-    if (
-      originalSetPixelRatio
-    ) {
-      renderer.setPixelRatio =
-        function () {
-          return originalSetPixelRatio.call(
-            renderer,
-            1
-          );
-        };
-    }
-
-    if (
-      originalSetViewport
-    ) {
-      renderer.setViewport =
-        function () {
-          return originalSetViewport.call(
-            renderer,
-            0,
-            0,
-            targetWidth,
-            targetHeight
-          );
-        };
-    }
-
-    if (
-      originalSetScissor
-    ) {
-      renderer.setScissor =
-        function () {
-          return originalSetScissor.call(
-            renderer,
-            0,
-            0,
-            targetWidth,
-            targetHeight
-          );
-        };
-    }
-
-    if (
-      originalSetClearColor
-    ) {
-      renderer.setClearColor =
-        function () {
-          return originalSetClearColor.call(
-            renderer,
-            0x000000,
-            0
-          );
-        };
-    }
-
-    if (
-      originalSetClearAlpha
-    ) {
-      renderer.setClearAlpha =
-        function () {
-          return originalSetClearAlpha.call(
-            renderer,
-            0
-          );
-        };
-    }
-
-    if (
-      originalOnWindowResize
-    ) {
-      viewer.onWindowResize =
-        function () {
-          setScreenshotSize();
-        };
-    }
-  }
-
   function restoreViewer() {
-    if (
-      restored
-    ) {
+    if (restored) {
       return;
     }
 
     restored =
       true;
 
-    renderer.setSize =
-      originalSetSize;
-
-    if (
-      originalSetPixelRatio
-    ) {
-      renderer.setPixelRatio =
-        originalSetPixelRatio;
-    }
-
-    if (
-      originalSetViewport
-    ) {
-      renderer.setViewport =
-        originalSetViewport;
-    }
-
-    if (
-      originalSetScissor
-    ) {
-      renderer.setScissor =
-        originalSetScissor;
-    }
-
-    if (
-      originalSetClearColor
-    ) {
-      renderer.setClearColor =
-        originalSetClearColor;
-    }
-
-    if (
-      originalSetClearAlpha
-    ) {
-      renderer.setClearAlpha =
-        originalSetClearAlpha;
-    }
-
-    if (
-      originalOnWindowResize
-    ) {
-      viewer.onWindowResize =
-        originalOnWindowResize;
-    }
-
-    if (
-      renderArea
-    ) {
-      renderArea.style.cssText =
-        originalRenderAreaStyle;
-    }
-
-    canvas.style.cssText =
-      originalCanvasStyle;
-
-    if (
-      originalSetPixelRatio
-    ) {
-      originalSetPixelRatio.call(
-        renderer,
-        originalPixelRatio
-      );
-    }
-
-    if (
-      originalRendererSize
-    ) {
-      originalSetSize.call(
-        renderer,
-        originalRendererSize.x,
-        originalRendererSize.y,
-        false
-      );
-    } else {
-      originalSetSize.call(
-        renderer,
-        canvas.clientWidth ||
-        1,
-        canvas.clientHeight ||
-        1,
-        false
-      );
-    }
-
-    if (
-      canvas.width !==
-      originalCanvasWidth
-    ) {
-      canvas.width =
-        originalCanvasWidth;
-    }
-
-    if (
-      canvas.height !==
-      originalCanvasHeight
-    ) {
-      canvas.height =
-        originalCanvasHeight;
-    }
-
-    if (
-      originalClearColor &&
-      originalSetClearColor
-    ) {
-      originalSetClearColor.call(
-        renderer,
-        originalClearColor,
-        originalClearAlpha
-      );
-    }
-
-    if (
-      originalSetClearAlpha
-    ) {
-      originalSetClearAlpha.call(
-        renderer,
-        originalClearAlpha
-      );
-    }
-
-    if (
-      originalAutoClear !==
-      null
-    ) {
-      renderer.autoClear =
-        originalAutoClear;
-    }
-
-    if (
-      originalAutoClearColor !==
-      null
-    ) {
-      renderer.autoClearColor =
-        originalAutoClearColor;
-    }
-
-    if (
-      originalAutoClearDepth !==
-      null
-    ) {
-      renderer.autoClearDepth =
-        originalAutoClearDepth;
-    }
-
-    if (
-      originalAutoClearStencil !==
-      null
-    ) {
-      renderer.autoClearStencil =
-        originalAutoClearStencil;
-    }
-
-    if (
-      viewer &&
-      typeof viewer.setBackground ===
-      "function" &&
-      originalViewerBackground !==
-      undefined
-    ) {
-      try {
-        viewer.setBackground(
-          originalViewerBackground
-        );
-      } catch (
-        error
-      ) {
-        console.warn(
-          "Could not restore Potree background:",
-          error
-        );
-      }
-    }
-
-    if (
-      hasSceneBackground
-    ) {
-      viewer.scene.background =
-        originalSceneBackground;
-    }
-
     if (
       camera &&
-      originalCameraAspect !==
+      oldAspect !==
       null
     ) {
       camera.aspect =
-        originalCameraAspect;
+        oldAspect;
 
       if (
         typeof camera.updateProjectionMatrix ===
@@ -4069,20 +3049,26 @@ function exportScreenshot() {
     }
 
     if (
-      originalOnWindowResize
+      typeof renderer.setPixelRatio ===
+      "function"
     ) {
-      try {
-        originalOnWindowResize.call(
-          viewer
-        );
-      } catch (
-        error
-      ) {
-        console.warn(
-          "Could not restore Potree window size:",
-          error
-        );
-      }
+      renderer.setPixelRatio(
+        oldPixelRatio
+      );
+    }
+
+    if (
+      viewer &&
+      typeof viewer.onWindowResize ===
+      "function"
+    ) {
+      viewer.onWindowResize();
+    } else {
+      renderer.setSize(
+        oldWidth,
+        oldHeight,
+        false
+      );
     }
 
     if (
@@ -4092,18 +3078,44 @@ function exportScreenshot() {
         false;
 
       button.textContent =
-        originalButtonText;
+        oldButtonText;
     }
   }
 
   function downloadImage(
     dataUrl
   ) {
+    var scanName =
+      state.activeScan &&
+      state.activeScan.name
+        ? state.activeScan.name
+        : "potree-viewer";
+
+    scanName =
+      String(
+        scanName
+      )
+        .replace(
+          /[^\w-]+/g,
+          "-"
+        )
+        .replace(
+          /^-+|-+$/g,
+          ""
+        );
+
+    if (!scanName) {
+      scanName =
+        "potree-viewer";
+    }
+
     var filename =
-      getScreenshotFilename(
-        targetWidth,
-        targetHeight
-      );
+      scanName +
+      "-" +
+      targetWidth +
+      "x" +
+      targetHeight +
+      ".png";
 
     var link =
       document.createElement(
@@ -4125,86 +3137,30 @@ function exportScreenshot() {
     link.remove();
 
     setStatus(
-      "Screenshot exported: " +
-      filename,
+      "Screenshot exported.",
       "idle"
     );
   }
 
-  function renderScreenshotFrame() {
-    setScreenshotSize();
-
-    if (
-      !viewer ||
-      typeof viewer.render !==
-      "function"
-    ) {
-      throw new Error(
-        "viewer.render() is unavailable."
-      );
-    }
-
-    viewer.render();
-
-    if (
-      canvas.width !==
-        targetWidth ||
-      canvas.height !==
-        targetHeight
-    ) {
-      setScreenshotSize();
-
-      viewer.render();
-    }
-  }
-
   function captureAfterFrames(
-    frame,
-    startedAt
+    frame
   ) {
-    try {
-      renderScreenshotFrame();
-    } catch (
-      error
-    ) {
-      console.error(
-        "Screenshot rendering failed:",
-        error
-      );
-
-      restoreViewer();
-
-      setStatus(
-        "Screenshot export failed.",
-        "error"
-      );
-
-      return;
-    }
-
-    var elapsed =
-      Date.now() -
-      startedAt;
-
-    var warmupMs =
-      Math.max(
-        0,
-        Number(
-          CONFIG.screenshotWarmupMs
-        ) ||
-        0
-      );
-
     if (
-      frame < 3 ||
-      elapsed < warmupMs
+      frame <
+      3
     ) {
+      if (
+        viewer &&
+        typeof viewer.render ===
+        "function"
+      ) {
+        viewer.render();
+      }
+
       window.requestAnimationFrame(
         function () {
           captureAfterFrames(
-            frame +
-            1,
-            startedAt
+            frame + 1
           );
         }
       );
@@ -4214,31 +3170,11 @@ function exportScreenshot() {
 
     try {
       if (
-        canvas.width !==
-          targetWidth ||
-        canvas.height !==
-          targetHeight
+        viewer &&
+        typeof viewer.render ===
+        "function"
       ) {
-        renderScreenshotFrame();
-      }
-
-      if (
-        canvas.width !==
-          targetWidth ||
-        canvas.height !==
-          targetHeight
-      ) {
-        throw new Error(
-          "The renderer produced " +
-          canvas.width +
-          " x " +
-          canvas.height +
-          " instead of " +
-          targetWidth +
-          " x " +
-          targetHeight +
-          "."
-        );
+        viewer.render();
       }
 
       var dataUrl =
@@ -4251,9 +3187,7 @@ function exportScreenshot() {
       downloadImage(
         dataUrl
       );
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         "Screenshot export failed:",
         error
@@ -4269,27 +3203,25 @@ function exportScreenshot() {
   }
 
   try {
-    var gl =
+    if (
       typeof renderer.getContext ===
       "function"
-        ? renderer.getContext()
-        : null;
-
-    if (
-      gl
     ) {
-      var maxRenderbufferSize =
+      var gl =
+        renderer.getContext();
+
+      var maxSize =
         gl.getParameter(
           gl.MAX_RENDERBUFFER_SIZE
         );
 
       if (
-        maxRenderbufferSize &&
+        maxSize &&
         (
           targetWidth >
-          maxRenderbufferSize ||
+          maxSize ||
           targetHeight >
-          maxRenderbufferSize
+          maxSize
         )
       ) {
         throw new Error(
@@ -4297,23 +3229,9 @@ function exportScreenshot() {
           targetWidth +
           " x " +
           targetHeight +
-          ". Maximum renderbuffer size: " +
-          maxRenderbufferSize
-        );
-      }
-
-      var contextAttributes =
-        gl.getContextAttributes &&
-        gl.getContextAttributes();
-
-      if (
-        contextAttributes &&
-        contextAttributes.alpha ===
-        false
-      ) {
-        console.warn(
-          "The WebGL renderer was created without alpha support. " +
-          "Transparent PNG output requires an alpha-enabled WebGL context."
+          ". Maximum: " +
+          maxSize +
+          " pixels."
         );
       }
     }
@@ -4334,20 +3252,48 @@ function exportScreenshot() {
     );
 
     /*
-      Keep this part commented out if you want to avoid
-      the renderer monkey-patching that breaks normal view state.
+      One device pixel equals one output pixel.
     */
-    // installScreenshotOverrides();
+    if (
+      typeof renderer.setPixelRatio ===
+      "function"
+    ) {
+      renderer.setPixelRatio(
+        1
+      );
+    }
 
-    setScreenshotSize();
+    /*
+      Change the WebGL drawing buffer size,
+      but do not change the visible CSS size.
+    */
+    renderer.setSize(
+      targetWidth,
+      targetHeight,
+      false
+    );
+
+    if (
+      camera &&
+      oldAspect !==
+      null
+    ) {
+      camera.aspect =
+        targetWidth /
+        targetHeight;
+
+      if (
+        typeof camera.updateProjectionMatrix ===
+        "function"
+      ) {
+        camera.updateProjectionMatrix();
+      }
+    }
 
     captureAfterFrames(
-      0,
-      Date.now()
+      0
     );
-  } catch (
-    error
-  ) {
+  } catch (error) {
     console.error(
       "Could not prepare screenshot:",
       error
@@ -4361,7 +3307,6 @@ function exportScreenshot() {
     );
   }
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* EVENTS                                                                     */
@@ -4425,6 +3370,12 @@ function bindEvents() {
   );
 
   addEvent(
+    "interfaceToggle",
+    "click",
+    toggleInterface
+  );
+
+  addEvent(
     "colorMode",
     "change",
     function () {
@@ -4446,7 +3397,9 @@ function bindEvents() {
   addEvent(
     "pointOpacity",
     "input",
-    applyOpacity
+    function () {
+      applyOpacity();
+    }
   );
 
   addEvent(
@@ -4554,7 +3507,6 @@ function bindEvents() {
   );
 }
 
-
 /* -------------------------------------------------------------------------- */
 /* STATUS                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -4588,9 +3540,7 @@ function setViewerStatus(
       "viewerStatusDot"
     );
 
-  if (
-    !dot
-  ) {
+  if (!dot) {
     return;
   }
 
@@ -4627,9 +3577,7 @@ function showLoading(
       "loadingOverlay"
     );
 
-  if (
-    overlay
-  ) {
+  if (overlay) {
     overlay.classList.remove(
       "hidden"
     );
@@ -4642,15 +3590,12 @@ function hideLoading() {
       "loadingOverlay"
     );
 
-  if (
-    overlay
-  ) {
+  if (overlay) {
     overlay.classList.add(
       "hidden"
     );
   }
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* UTILITIES                                                                  */
@@ -4665,9 +3610,7 @@ function getNumberValue(
       id
     );
 
-  if (
-    !element
-  ) {
+  if (!element) {
     return fallback;
   }
 
@@ -4676,9 +3619,7 @@ function getNumberValue(
       element.value
     );
 
-  return isFinite(
-    value
-  )
+  return isFinite(value)
     ? value
     : fallback;
 }
@@ -4717,15 +3658,10 @@ function formatBytes(
   var index =
     Math.min(
       Math.floor(
-        Math.log(
-          bytes
-        ) /
-        Math.log(
-          1024
-        )
+        Math.log(bytes) /
+        Math.log(1024)
       ),
-      units.length -
-      1
+      units.length - 1
     );
 
   var value =
@@ -4737,8 +3673,7 @@ function formatBytes(
 
   return (
     value.toFixed(
-      index ===
-      0
+      index === 0
         ? 0
         : 1
     ) +
@@ -4760,8 +3695,7 @@ function formatCompactNumber(
   value
 ) {
   if (
-    value >=
-    1000000
+    value >= 1000000
   ) {
     return (
       (
@@ -4775,8 +3709,7 @@ function formatCompactNumber(
   }
 
   if (
-    value >=
-    1000
+    value >= 1000
   ) {
     return (
       Math.round(
@@ -4796,9 +3729,7 @@ function formatCoordinate(
   value
 ) {
   if (
-    !isFinite(
-      value
-    )
+    !isFinite(value)
   ) {
     return "—";
   }
