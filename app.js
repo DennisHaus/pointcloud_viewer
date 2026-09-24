@@ -1146,6 +1146,43 @@ function renderLibrary() {
 /* -------------------------------------------------------------------------- */
 /* POINT-CLOUD LOADING                                                        */
 /* -------------------------------------------------------------------------- */
+function selectScan(scan) {
+  if (!scan) {
+    return;
+  }
+
+  var pointcloud =
+    state.loadedClouds.get(scan.id);
+
+  /*
+   * If the scan is not loaded yet,
+   * loading it will also make it active.
+   */
+  if (!pointcloud) {
+    loadScan(scan);
+    return;
+  }
+
+  /*
+   * IMPORTANT:
+   * Selecting a scan changes ONLY the
+   * active scan.
+   *
+   * It must NOT change visibility of
+   * any other scan.
+   */
+  setActiveScan(
+    scan,
+    pointcloud
+  );
+
+  renderLibrary();
+
+  setStatus(
+    scan.name + " selected",
+    "idle"
+  );
+}
 
 function loadScan(
   scan
@@ -3027,28 +3064,76 @@ function fitActiveScan() {
     return;
   }
 
-  var bounds =
-    getPointCloudBounds(
-      state.activeCloud
-    );
+  /*
+   * Remember current visibility.
+   */
+  var pointclouds =
+    viewer.scene &&
+    viewer.scene.pointclouds
+      ? viewer.scene.pointclouds
+      : [];
 
-  if (
-    !bounds ||
-    !bounds.min ||
-    !bounds.max
-  ) {
-    setStatus(
-      "Active scan has no valid bounds.",
-      "error"
-    );
+  var previousVisibility =
+    [];
 
-    return;
+  pointclouds.forEach(
+    function (cloud) {
+      previousVisibility.push({
+        cloud: cloud,
+        visible:
+          cloud.visible !== false
+      });
+
+      /*
+       * Temporarily show ONLY the
+       * active cloud.
+       */
+      cloud.visible =
+        cloud === state.activeCloud;
+    }
+  );
+
+  /*
+   * Let Potree calculate the correct
+   * camera position.
+   */
+  try {
+    if (
+      typeof viewer.fitToScreen ===
+      "function"
+    ) {
+      viewer.fitToScreen(
+        0.9
+      );
+    } else {
+      setStatus(
+        "Potree fitToScreen is unavailable.",
+        "error"
+      );
+
+      return;
+    }
+  } finally {
+    /*
+     * Restore the user's visibility
+     * settings.
+     */
+    previousVisibility.forEach(
+      function (item) {
+        item.cloud.visible =
+          item.visible;
+      }
+    );
   }
 
-  fitBounds(
-    bounds,
-    0.9,
-    "Focused on active scan"
+  setStatus(
+    "Focused on " +
+    (
+      state.activeScan
+        ? state.activeScan.name
+        : "active scan"
+    ),
+    "idle"
   );
 }
 
@@ -3360,8 +3445,11 @@ function fitAllScans() {
     return;
   }
 
+  var pointclouds =
+    viewer.scene.pointclouds;
+
   var visibleClouds =
-    viewer.scene.pointclouds.filter(
+    pointclouds.filter(
       function (cloud) {
         return (
           cloud &&
@@ -3374,7 +3462,7 @@ function fitAllScans() {
     visibleClouds.length === 0
   ) {
     setStatus(
-      "No visible scans to fit.",
+      "No visible scans.",
       "error"
     );
 
@@ -3382,91 +3470,61 @@ function fitAllScans() {
   }
 
   /*
-   * Start with the first visible cloud.
+   * Remember visibility.
    */
-  var combinedBounds = null;
+  var previousVisibility =
+    [];
 
-  visibleClouds.forEach(
+  pointclouds.forEach(
     function (cloud) {
-      var bounds =
-        getPointCloudBounds(
+      previousVisibility.push({
+        cloud: cloud,
+        visible:
+          cloud.visible !== false
+      });
+
+      /*
+       * Make sure ONLY the scans that
+       * were visible are used.
+       */
+      cloud.visible =
+        visibleClouds.indexOf(
           cloud
-        );
-
-      if (
-        !bounds ||
-        !bounds.min ||
-        !bounds.max
-      ) {
-        return;
-      }
-
-      if (
-        !combinedBounds
-      ) {
-        combinedBounds = {
-          min:
-            bounds.min.clone(),
-          max:
-            bounds.max.clone()
-        };
-
-        return;
-      }
-
-      combinedBounds.min.x =
-        Math.min(
-          combinedBounds.min.x,
-          bounds.min.x
-        );
-
-      combinedBounds.min.y =
-        Math.min(
-          combinedBounds.min.y,
-          bounds.min.y
-        );
-
-      combinedBounds.min.z =
-        Math.min(
-          combinedBounds.min.z,
-          bounds.min.z
-        );
-
-      combinedBounds.max.x =
-        Math.max(
-          combinedBounds.max.x,
-          bounds.max.x
-        );
-
-      combinedBounds.max.y =
-        Math.max(
-          combinedBounds.max.y,
-          bounds.max.y
-        );
-
-      combinedBounds.max.z =
-        Math.max(
-          combinedBounds.max.z,
-          bounds.max.z
-        );
+        ) !== -1;
     }
   );
 
-  if (
-    !combinedBounds
-  ) {
-    setStatus(
-      "Visible scans have no valid bounds.",
-      "error"
-    );
+  try {
+    if (
+      typeof viewer.fitToScreen ===
+      "function"
+    ) {
+      viewer.fitToScreen(
+        0.9
+      );
+    } else {
+      setStatus(
+        "Potree fitToScreen is unavailable.",
+        "error"
+      );
 
-    return;
+      return;
+    }
+  } finally {
+    /*
+     * Restore exact visibility state.
+     */
+    previousVisibility.forEach(
+      function (item) {
+        item.cloud.visible =
+          item.visible;
+      }
+    );
   }
 
-  fitBounds(
-    combinedBounds,
-    0.9,
-    "Focused on all visible scans"
+  setStatus(
+    "Focused on all visible scans",
+    "idle"
   );
 }
 
