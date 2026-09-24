@@ -1585,8 +1585,15 @@ function toggleScanVisibility(
 /* -------------------------------------------------------------------------- */
 
 function setActiveScan(
-  scan
+  scan,
+  pointcloud
 ) {
+  if (
+    !scan
+  ) {
+    return;
+  }
+
   removeSectionVolume();
 
   var sectionMode =
@@ -1604,10 +1611,16 @@ function setActiveScan(
   state.activeScan =
     scan;
 
+  /*
+    If a pointcloud was explicitly supplied, use it.
+    Otherwise look it up in loadedClouds.
+  */
   state.activeCloud =
+    pointcloud ||
     state.loadedClouds.get(
       scan.id
-    );
+    ) ||
+    null;
 
   state.activeBounds =
     getPointCloudBounds(
@@ -3046,7 +3059,7 @@ function fitActiveScan() {
       "function"
     ) {
       viewer.fitToScreen(
-        0.5
+        0.9
       );
     }
   } finally {
