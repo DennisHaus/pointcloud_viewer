@@ -3054,6 +3054,7 @@ function bindNavigationKeyboard() {
 function fitActiveScan() {
   if (
     !viewer ||
+    !viewer.scene ||
     !state.activeCloud
   ) {
     setStatus(
@@ -3063,92 +3064,32 @@ function fitActiveScan() {
 
     return;
   }
-  console.log(
-    "ACTIVE SCAN:",
-    state.activeScan &&
-      state.activeScan.name
-  );
 
-  console.log(
-    "ACTIVE CLOUD:",
-    state.activeCloud
-  );
+  var activeCloud =
+    state.activeCloud;
 
-  console.log(
-    "BOUNDING BOX:",
-    state.activeCloud &&
-      state.activeCloud.boundingBox
-  );
-
-  console.log(
-    "PCO GEOMETRY:",
-    state.activeCloud &&
-      state.activeCloud.pcoGeometry
-  );
-
-  console.log(
-    "VIEW BEFORE FIT:",
-    viewer.scene.view.position
-  );
-
-  console.log(
-    "VIEW DIRECTION BEFORE FIT:",
-    viewer.scene.view.direction
-  );
-  /*
-   * Remember current visibility.
-   */
   var pointclouds =
-    viewer.scene &&
-    viewer.scene.pointclouds
-      ? viewer.scene.pointclouds
-      : [];
+    viewer.scene.pointclouds || [];
 
-  var previousVisibility =
-    [];
+  var previousVisibility = [];
 
   pointclouds.forEach(
     function (cloud) {
       previousVisibility.push({
         cloud: cloud,
-        visible:
-          cloud.visible !== false
+        visible: cloud.visible !== false
       });
 
-      /*
-       * Temporarily show ONLY the
-       * active cloud.
-       */
       cloud.visible =
-        cloud === state.activeCloud;
+        cloud === activeCloud;
     }
   );
 
-  /*
-   * Let Potree calculate the correct
-   * camera position.
-   */
   try {
-    if (
-      typeof viewer.fitToScreen ===
-      "function"
-    ) {
-      viewer.fitToScreen(
-        0.9
-      );
-    } else {
-      setStatus(
-        "Potree fitToScreen is unavailable.",
-        "error"
-      );
-
-      return;
-    }
+    viewer.fitToScreen(
+      0.9
+    );
   } finally {
-    /*
-     * Restore the user's visibility
-     * settings.
-     */
     previousVisibility.forEach(
       function (item) {
         item.cloud.visible =
@@ -3465,29 +3406,28 @@ function fitBounds(
 function fitAllScans() {
   if (
     !viewer ||
-    !viewer.scene ||
-    !viewer.scene.pointclouds
+    !viewer.scene
   ) {
-    setStatus(
-      "Viewer is not ready.",
-      "error"
-    );
-
     return;
   }
 
   var pointclouds =
-    viewer.scene.pointclouds;
+    viewer.scene.pointclouds || [];
 
   var visibleClouds =
-    pointclouds.filter(
-      function (cloud) {
-        return (
-          cloud &&
-          cloud.visible !== false
+    [];
+
+  pointclouds.forEach(
+    function (cloud) {
+      if (
+        cloud.visible !== false
+      ) {
+        visibleClouds.push(
+          cloud
         );
       }
-    );
+    }
+  );
 
   if (
     visibleClouds.length === 0
@@ -3500,9 +3440,6 @@ function fitAllScans() {
     return;
   }
 
-  /*
-   * Remember visibility.
-   */
   var previousVisibility =
     [];
 
@@ -3514,10 +3451,6 @@ function fitAllScans() {
           cloud.visible !== false
       });
 
-      /*
-       * Make sure ONLY the scans that
-       * were visible are used.
-       */
       cloud.visible =
         visibleClouds.indexOf(
           cloud
@@ -3526,25 +3459,10 @@ function fitAllScans() {
   );
 
   try {
-    if (
-      typeof viewer.fitToScreen ===
-      "function"
-    ) {
-      viewer.fitToScreen(
-        0.9
-      );
-    } else {
-      setStatus(
-        "Potree fitToScreen is unavailable.",
-        "error"
-      );
-
-      return;
-    }
+    viewer.fitToScreen(
+      0.9
+    );
   } finally {
-    /*
-     * Restore exact visibility state.
-     */
     previousVisibility.forEach(
       function (item) {
         item.cloud.visible =
@@ -3554,9 +3472,13 @@ function fitAllScans() {
   }
 
   setStatus(
-    "Focused on all visible scans",
+    "Focused on all visible scans.",
     "idle"
   );
+}
+
+function resetView() {
+  fitAllScans();
 }
 
 function activateOrbitMode() {
