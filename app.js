@@ -1129,7 +1129,7 @@ function renderLibrary() {
       card.addEventListener(
         "click",
         function () {
-          loadScan(
+          selectScan(
             scan
           );
         }
@@ -1172,22 +1172,28 @@ function loadScan(
   }
 
   if (
-    state.loadedClouds.has(
+  state.loadedClouds.has(
+    scan.id
+  )
+) {
+  var existingCloud =
+    state.loadedClouds.get(
       scan.id
-    )
-  ) {
-    setActiveScan(
-      scan
     );
 
-    fitActiveScan();
+  setActiveScan(
+    scan,
+    existingCloud
+  );
 
-    return Promise.resolve(
-      state.loadedClouds.get(
-        scan.id
-      )
-    );
-  }
+  showOnlyActiveCloud();
+
+  fitActiveScan();
+
+  return Promise.resolve(
+    existingCloud
+  );
+}
 
   if (
     scan.loading
