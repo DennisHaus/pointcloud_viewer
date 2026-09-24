@@ -3063,7 +3063,38 @@ function fitActiveScan() {
 
     return;
   }
+  console.log(
+    "ACTIVE SCAN:",
+    state.activeScan &&
+      state.activeScan.name
+  );
 
+  console.log(
+    "ACTIVE CLOUD:",
+    state.activeCloud
+  );
+
+  console.log(
+    "BOUNDING BOX:",
+    state.activeCloud &&
+      state.activeCloud.boundingBox
+  );
+
+  console.log(
+    "PCO GEOMETRY:",
+    state.activeCloud &&
+      state.activeCloud.pcoGeometry
+  );
+
+  console.log(
+    "VIEW BEFORE FIT:",
+    viewer.scene.view.position
+  );
+
+  console.log(
+    "VIEW DIRECTION BEFORE FIT:",
+    viewer.scene.view.direction
+  );
   /*
    * Remember current visibility.
    */
