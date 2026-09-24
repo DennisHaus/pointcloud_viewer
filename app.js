@@ -3086,17 +3086,24 @@ function fitActiveScan() {
   );
 
   try {
-    viewer.fitToScreen(
-      0.9
-    );
-  } finally {
-    previousVisibility.forEach(
-      function (item) {
-        item.cloud.visible =
-          item.visible;
-      }
-    );
-  }
+  fitBounds(
+    getPointCloudBounds(activeCloud),
+    0.9,
+    "Focused on " +
+      (
+        state.activeScan
+          ? state.activeScan.name
+          : "active scan"
+      )
+  );
+} finally {
+  previousVisibility.forEach(
+    function (item) {
+      item.cloud.visible =
+        item.visible;
+    }
+  );
+}
 
   setStatus(
     "Focused on " +
@@ -3461,13 +3468,6 @@ function fitAllScans() {
   try {
     viewer.fitToScreen(
       0.9
-    );
-  } finally {
-    previousVisibility.forEach(
-      function (item) {
-        item.cloud.visible =
-          item.visible;
-      }
     );
   }
 
