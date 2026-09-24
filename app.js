@@ -3465,11 +3465,48 @@ function fitAllScans() {
     }
   );
 
-  try {
-    viewer.fitToScreen(
-      0.9
+  var combinedBounds = null;
+
+visibleClouds.forEach(
+  function (cloud) {
+    var bounds =
+      getPointCloudBounds(cloud);
+
+    if (!bounds) {
+      return;
+    }
+
+    if (!combinedBounds) {
+      combinedBounds = bounds.clone();
+      return;
+    }
+
+    combinedBounds.min.min(
+      bounds.min
+    );
+
+    combinedBounds.max.max(
+      bounds.max
     );
   }
+);
+
+try {
+  if (combinedBounds) {
+    fitBounds(
+      combinedBounds,
+      0.9,
+      "Focused on all visible scans."
+    );
+  }
+} finally {
+  previousVisibility.forEach(
+    function (item) {
+      item.cloud.visible =
+        item.visible;
+    }
+  );
+}
 
   setStatus(
     "Focused on all visible scans.",
