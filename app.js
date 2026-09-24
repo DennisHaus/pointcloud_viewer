@@ -1186,8 +1186,6 @@ function loadScan(
     existingCloud
   );
 
-  showOnlyActiveCloud();
-
   fitActiveScan();
 
   return Promise.resolve(
@@ -3047,25 +3045,40 @@ function fitActiveScan() {
     return;
   }
 
+  fitBounds(
+    bounds,
+    0.9,
+    "Focused on active scan"
+  );
+}
+
+function fitBounds(
+  bounds,
+  fitFactor,
+  statusMessage
+) {
+  if (
+    !viewer ||
+    !viewer.scene ||
+    !bounds ||
+    !bounds.min ||
+    !bounds.max
+  ) {
+    return;
+  }
+
   var view =
-    viewer.scene &&
     viewer.scene.view;
 
   if (
     !view ||
-    !view.position ||
-    typeof view.lookAt !== "function"
+    !view.position
   ) {
-    setStatus(
-      "Potree camera is not ready.",
-      "error"
-    );
-
     return;
   }
 
   /*
-   * Calculate center of active scan.
+   * Center of bounding box
    */
   var center =
     bounds.min.clone()
@@ -3073,7 +3086,7 @@ function fitActiveScan() {
       .multiplyScalar(0.5);
 
   /*
-   * Calculate dimensions.
+   * Size of bounding box
    */
   var size =
     bounds.max.clone()
@@ -3088,35 +3101,32 @@ function fitActiveScan() {
   var depth =
     Math.abs(size.z);
 
-  var maxSize =
-    Math.max(
-      width,
-      height,
-      depth
-    );
-
   /*
-   * Prevent zero-sized clouds from
-   * producing an invalid camera distance.
+   * Protect against zero-sized bounds.
    */
   if (
-    !isFinite(maxSize) ||
-    maxSize <= 0
+    !isFinite(width) ||
+    width <= 0
   ) {
-    maxSize = 1;
+    width = 1;
+  }
+
+  if (
+    !isFinite(height) ||
+    height <= 0
+  ) {
+    height = 1;
+  }
+
+  if (
+    !isFinite(depth) ||
+    depth <= 0
+  ) {
+    depth = 1;
   }
 
   /*
-   * 0.9 = 90% of the normal fitting
-   * distance / small margin.
-   *
-   * Increase this number if the scan
-   * should appear smaller.
-   */
-  var fitFactor = 0.9;
-
-  /*
-   * Preserve the current viewing direction.
+   * Keep current camera direction.
    */
   var direction = null;
 
@@ -3127,7 +3137,10 @@ function fitActiveScan() {
   ) {
     direction =
       view.direction.clone();
-  } else if (
+  }
+
+  if (
+    !direction &&
     typeof view.getDirection ===
       "function"
   ) {
@@ -3135,10 +3148,6 @@ function fitActiveScan() {
       view.getDirection();
   }
 
-  /*
-   * If there is no valid direction,
-   * use a sensible default.
-   */
   if (
     !direction ||
     typeof direction.normalize !==
@@ -3155,15 +3164,19 @@ function fitActiveScan() {
   direction.normalize();
 
   /*
-   * Estimate camera distance from the
-   * bounding-box size and FOV.
+   * Camera FOV.
    */
-  var fov =
-    viewer.getFOV
-      ? Number(
-          viewer.getFOV()
-        )
-      : 60;
+  var fov = 60;
+
+  if (
+    typeof viewer.getFOV ===
+      "function"
+  ) {
+    fov =
+      Number(
+        viewer.getFOV()
+      );
+  }
 
   if (
     !isFinite(fov) ||
@@ -3172,15 +3185,30 @@ function fitActiveScan() {
     fov = 60;
   }
 
-  var aspect =
+  var verticalFov =
+    fov *
+    Math.PI /
+    180;
+
+  /*
+   * Renderer aspect ratio.
+   */
+  var aspect = 1;
+
+  if (
     viewer.renderer &&
     viewer.renderer.domElement
-      ? viewer.renderer.domElement.clientWidth /
-        Math.max(
-          viewer.renderer.domElement.clientHeight,
-          1
-        )
-      : 1;
+  ) {
+    var canvas =
+      viewer.renderer.domElement;
+
+    aspect =
+      canvas.clientWidth /
+      Math.max(
+        canvas.clientHeight,
+        1
+      );
+  }
 
   if (
     !isFinite(aspect) ||
@@ -3188,14 +3216,6 @@ function fitActiveScan() {
   ) {
     aspect = 1;
   }
-
-  /*
-   * Vertical and horizontal FOV.
-   */
-  var verticalFov =
-    fov *
-    Math.PI /
-    180;
 
   var horizontalFov =
     2 *
@@ -3207,21 +3227,19 @@ function fitActiveScan() {
     );
 
   /*
-   * Use the limiting dimension.
+   * Required camera distance.
    */
-  var distanceVertical =
+  var verticalDistance =
     (
-      height /
-      2
+      height / 2
     ) /
     Math.tan(
       verticalFov / 2
     );
 
-  var distanceHorizontal =
+  var horizontalDistance =
     (
-      width /
-      2
+      width / 2
     ) /
     Math.tan(
       horizontalFov / 2
@@ -3229,31 +3247,51 @@ function fitActiveScan() {
 
   var distance =
     Math.max(
-      distanceVertical,
-      distanceHorizontal,
+      verticalDistance,
+      horizontalDistance,
       depth / 2
     );
 
   /*
-   * Apply the requested 0.9 factor.
-   *
-   * Smaller distance = closer zoom.
-   * We add a small safety margin so the
-   * complete scan remains visible.
+   * 0.9 means the object should occupy
+   * roughly 90% of the available view.
    */
+  if (
+    !isFinite(fitFactor) ||
+    fitFactor <= 0
+  ) {
+    fitFactor = 0.9;
+  }
+
+  distance =
+    distance /
+    fitFactor;
+
+  /*
+   * Prevent the camera from becoming
+   * unrealistically close to tiny clouds.
+   */
+  var maxSize =
+    Math.max(
+      width,
+      height,
+      depth
+    );
+
   distance =
     Math.max(
-      distance / fitFactor,
+      distance,
       maxSize * 0.05
     );
 
   /*
-   * Move camera to the calculated position.
+   * Position camera behind the center.
    */
   var cameraPosition =
     center.clone()
       .sub(
-        direction.clone()
+        direction
+          .clone()
           .multiplyScalar(
             distance
           )
@@ -3264,12 +3302,16 @@ function fitActiveScan() {
   );
 
   /*
-   * Tell Potree exactly what the camera
-   * should look at.
+   * Look directly at the center.
    */
-  view.lookAt(
-    center
-  );
+  if (
+    typeof view.lookAt ===
+      "function"
+  ) {
+    view.lookAt(
+      center
+    );
+  }
 
   /*
    * Keep Potree's radius synchronized.
@@ -3277,9 +3319,6 @@ function fitActiveScan() {
   view.radius =
     distance;
 
-  /*
-   * Update active camera if available.
-   */
   if (
     viewer.scene &&
     typeof viewer.scene.getActiveCamera ===
@@ -3297,21 +3336,24 @@ function fitActiveScan() {
     }
   }
 
-  setStatus(
-    "Focused on active scan",
-    "idle"
-  );
+  if (
+    statusMessage
+  ) {
+    setStatus(
+      statusMessage,
+      "idle"
+    );
+  }
 }
 
 function fitAllScans() {
   if (
     !viewer ||
     !viewer.scene ||
-    !viewer.scene.pointclouds ||
-    viewer.scene.pointclouds.length === 0
+    !viewer.scene.pointclouds
   ) {
     setStatus(
-      "No visible scans to fit.",
+      "Viewer is not ready.",
       "error"
     );
 
@@ -3319,11 +3361,18 @@ function fitAllScans() {
   }
 
   var visibleClouds =
-    viewer.scene.pointclouds.filter(function (cloud) {
-      return cloud.visible !== false;
-    });
+    viewer.scene.pointclouds.filter(
+      function (cloud) {
+        return (
+          cloud &&
+          cloud.visible !== false
+        );
+      }
+    );
 
-  if (visibleClouds.length === 0) {
+  if (
+    visibleClouds.length === 0
+  ) {
     setStatus(
       "No visible scans to fit.",
       "error"
@@ -3332,15 +3381,92 @@ function fitAllScans() {
     return;
   }
 
+  /*
+   * Start with the first visible cloud.
+   */
+  var combinedBounds = null;
+
+  visibleClouds.forEach(
+    function (cloud) {
+      var bounds =
+        getPointCloudBounds(
+          cloud
+        );
+
+      if (
+        !bounds ||
+        !bounds.min ||
+        !bounds.max
+      ) {
+        return;
+      }
+
+      if (
+        !combinedBounds
+      ) {
+        combinedBounds = {
+          min:
+            bounds.min.clone(),
+          max:
+            bounds.max.clone()
+        };
+
+        return;
+      }
+
+      combinedBounds.min.x =
+        Math.min(
+          combinedBounds.min.x,
+          bounds.min.x
+        );
+
+      combinedBounds.min.y =
+        Math.min(
+          combinedBounds.min.y,
+          bounds.min.y
+        );
+
+      combinedBounds.min.z =
+        Math.min(
+          combinedBounds.min.z,
+          bounds.min.z
+        );
+
+      combinedBounds.max.x =
+        Math.max(
+          combinedBounds.max.x,
+          bounds.max.x
+        );
+
+      combinedBounds.max.y =
+        Math.max(
+          combinedBounds.max.y,
+          bounds.max.y
+        );
+
+      combinedBounds.max.z =
+        Math.max(
+          combinedBounds.max.z,
+          bounds.max.z
+        );
+    }
+  );
+
   if (
-    typeof viewer.fitToScreen === "function"
+    !combinedBounds
   ) {
-    viewer.fitToScreen(0.9);
+    setStatus(
+      "Visible scans have no valid bounds.",
+      "error"
+    );
+
+    return;
   }
 
-  setStatus(
-    "Fitted all visible scans",
-    "idle"
+  fitBounds(
+    combinedBounds,
+    0.9,
+    "Focused on all visible scans"
   );
 }
 
