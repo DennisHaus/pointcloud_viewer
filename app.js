@@ -3029,42 +3029,272 @@ function fitActiveScan() {
     return;
   }
 
-  var cloud = state.activeCloud;
-
-  // Temporarily hide all other clouds so Potree
-  // calculates the view only from the active scan.
-  var pointclouds =
-    viewer.scene &&
-    viewer.scene.pointclouds;
-
-  var previousVisibility = [];
+  var bounds =
+    getPointCloudBounds(
+      state.activeCloud
+    );
 
   if (
-    pointclouds &&
-    typeof pointclouds.forEach === "function"
+    !bounds ||
+    !bounds.min ||
+    !bounds.max
   ) {
-    pointclouds.forEach(function (otherCloud) {
-      previousVisibility.push({
-        cloud: otherCloud,
-        visible: otherCloud.visible !== false
-      });
+    setStatus(
+      "Active scan has no valid bounds.",
+      "error"
+    );
 
-      otherCloud.visible =
-        otherCloud === cloud;
-    });
+    return;
   }
 
-  try {
+  var view =
+    viewer.scene &&
+    viewer.scene.view;
+
+  if (
+    !view ||
+    !view.position ||
+    typeof view.lookAt !== "function"
+  ) {
+    setStatus(
+      "Potree camera is not ready.",
+      "error"
+    );
+
+    return;
+  }
+
+  /*
+   * Calculate center of active scan.
+   */
+  var center =
+    bounds.min.clone()
+      .add(bounds.max)
+      .multiplyScalar(0.5);
+
+  /*
+   * Calculate dimensions.
+   */
+  var size =
+    bounds.max.clone()
+      .sub(bounds.min);
+
+  var width =
+    Math.abs(size.x);
+
+  var height =
+    Math.abs(size.y);
+
+  var depth =
+    Math.abs(size.z);
+
+  var maxSize =
+    Math.max(
+      width,
+      height,
+      depth
+    );
+
+  /*
+   * Prevent zero-sized clouds from
+   * producing an invalid camera distance.
+   */
+  if (
+    !isFinite(maxSize) ||
+    maxSize <= 0
+  ) {
+    maxSize = 1;
+  }
+
+  /*
+   * 0.9 = 90% of the normal fitting
+   * distance / small margin.
+   *
+   * Increase this number if the scan
+   * should appear smaller.
+   */
+  var fitFactor = 0.9;
+
+  /*
+   * Preserve the current viewing direction.
+   */
+  var direction = null;
+
+  if (
+    view.direction &&
+    typeof view.direction.clone ===
+      "function"
+  ) {
+    direction =
+      view.direction.clone();
+  } else if (
+    typeof view.getDirection ===
+      "function"
+  ) {
+    direction =
+      view.getDirection();
+  }
+
+  /*
+   * If there is no valid direction,
+   * use a sensible default.
+   */
+  if (
+    !direction ||
+    typeof direction.normalize !==
+      "function"
+  ) {
+    direction =
+      new THREE.Vector3(
+        0,
+        -1,
+        -0.5
+      );
+  }
+
+  direction.normalize();
+
+  /*
+   * Estimate camera distance from the
+   * bounding-box size and FOV.
+   */
+  var fov =
+    viewer.getFOV
+      ? Number(
+          viewer.getFOV()
+        )
+      : 60;
+
+  if (
+    !isFinite(fov) ||
+    fov <= 0
+  ) {
+    fov = 60;
+  }
+
+  var aspect =
+    viewer.renderer &&
+    viewer.renderer.domElement
+      ? viewer.renderer.domElement.clientWidth /
+        Math.max(
+          viewer.renderer.domElement.clientHeight,
+          1
+        )
+      : 1;
+
+  if (
+    !isFinite(aspect) ||
+    aspect <= 0
+  ) {
+    aspect = 1;
+  }
+
+  /*
+   * Vertical and horizontal FOV.
+   */
+  var verticalFov =
+    fov *
+    Math.PI /
+    180;
+
+  var horizontalFov =
+    2 *
+    Math.atan(
+      Math.tan(
+        verticalFov / 2
+      ) *
+      aspect
+    );
+
+  /*
+   * Use the limiting dimension.
+   */
+  var distanceVertical =
+    (
+      height /
+      2
+    ) /
+    Math.tan(
+      verticalFov / 2
+    );
+
+  var distanceHorizontal =
+    (
+      width /
+      2
+    ) /
+    Math.tan(
+      horizontalFov / 2
+    );
+
+  var distance =
+    Math.max(
+      distanceVertical,
+      distanceHorizontal,
+      depth / 2
+    );
+
+  /*
+   * Apply the requested 0.9 factor.
+   *
+   * Smaller distance = closer zoom.
+   * We add a small safety margin so the
+   * complete scan remains visible.
+   */
+  distance =
+    Math.max(
+      distance / fitFactor,
+      maxSize * 0.05
+    );
+
+  /*
+   * Move camera to the calculated position.
+   */
+  var cameraPosition =
+    center.clone()
+      .sub(
+        direction.clone()
+          .multiplyScalar(
+            distance
+          )
+      );
+
+  view.position.copy(
+    cameraPosition
+  );
+
+  /*
+   * Tell Potree exactly what the camera
+   * should look at.
+   */
+  view.lookAt(
+    center
+  );
+
+  /*
+   * Keep Potree's radius synchronized.
+   */
+  view.radius =
+    distance;
+
+  /*
+   * Update active camera if available.
+   */
+  if (
+    viewer.scene &&
+    typeof viewer.scene.getActiveCamera ===
+      "function"
+  ) {
+    var camera =
+      viewer.scene.getActiveCamera();
+
     if (
-      typeof viewer.fitToScreen === "function"
+      camera &&
+      typeof camera.updateProjectionMatrix ===
+        "function"
     ) {
-      viewer.fitToScreen(0.9);
+      camera.updateProjectionMatrix();
     }
-  } finally {
-    // Restore visibility after the camera has been fitted.
-    previousVisibility.forEach(function (item) {
-      item.cloud.visible = item.visible;
-    });
   }
 
   setStatus(
