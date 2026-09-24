@@ -3029,52 +3029,42 @@ function fitActiveScan() {
     return;
   }
 
+  var cloud = state.activeCloud;
+
+  // Temporarily hide all other clouds so Potree
+  // calculates the view only from the active scan.
   var pointclouds =
     viewer.scene &&
     viewer.scene.pointclouds;
 
-  var previousVisibility =
-    [];
+  var previousVisibility = [];
 
   if (
     pointclouds &&
-    typeof pointclouds.forEach ===
-    "function"
+    typeof pointclouds.forEach === "function"
   ) {
-    pointclouds.forEach(
-      function (cloud) {
-        previousVisibility.push(
-          {
-            cloud: cloud,
-            visible:
-              cloud.visible !==
-              false
-          }
-        );
+    pointclouds.forEach(function (otherCloud) {
+      previousVisibility.push({
+        cloud: otherCloud,
+        visible: otherCloud.visible !== false
+      });
 
-        cloud.visible =
-          cloud ===
-          state.activeCloud;
-      }
-    );
+      otherCloud.visible =
+        otherCloud === cloud;
+    });
   }
 
   try {
     if (
-      typeof viewer.fitToScreen ===
-      "function"
+      typeof viewer.fitToScreen === "function"
     ) {
-      viewer.fitToScreen(
-        0.9
-      );
+      viewer.fitToScreen(0.9);
     }
   } finally {
-    previousVisibility.forEach(
-      function (item) {
-        item.cloud.visible =
-          item.visible;
-      }
-    );
+    // Restore visibility after the camera has been fitted.
+    previousVisibility.forEach(function (item) {
+      item.cloud.visible = item.visible;
+    });
   }
 
   setStatus(
@@ -3083,8 +3073,45 @@ function fitActiveScan() {
   );
 }
 
-function resetView() {
-  fitActiveScan();
+function fitAllScans() {
+  if (
+    !viewer ||
+    !viewer.scene ||
+    !viewer.scene.pointclouds ||
+    viewer.scene.pointclouds.length === 0
+  ) {
+    setStatus(
+      "No visible scans to fit.",
+      "error"
+    );
+
+    return;
+  }
+
+  var visibleClouds =
+    viewer.scene.pointclouds.filter(function (cloud) {
+      return cloud.visible !== false;
+    });
+
+  if (visibleClouds.length === 0) {
+    setStatus(
+      "No visible scans to fit.",
+      "error"
+    );
+
+    return;
+  }
+
+  if (
+    typeof viewer.fitToScreen === "function"
+  ) {
+    viewer.fitToScreen(0.9);
+  }
+
+  setStatus(
+    "Fitted all visible scans",
+    "idle"
+  );
 }
 
 function activateOrbitMode() {
@@ -4398,7 +4425,7 @@ function bindEvents() {
   addEvent(
     "resetView",
     "click",
-    resetView
+    fitAllScans
   );
 
   addEvent(
