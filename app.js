@@ -39,6 +39,10 @@ var CONFIG = {
 
   fitFactor: 0.998,
 
+  fitDistanceMultiplier: 0.8,
+
+  fitVerticalOffset: 0,
+
   rawBaseUrl:
     "https://raw.githubusercontent.com/DennisHaus/pointcloud_viewer/main"
 };
@@ -5405,6 +5409,27 @@ function fitBounds(
         0.5
       );
 
+      var targetCenter =
+      center.clone();
+
+    var verticalOffset =
+      Number(
+        CONFIG.fitVerticalOffset
+      );
+
+    if (
+      !isFinite(
+        verticalOffset
+      )
+    ) {
+      verticalOffset =
+        0;
+    }
+
+    targetCenter.z +=
+      height *
+      verticalOffset;
+
   var size =
     max.clone()
       .sub(
@@ -5567,54 +5592,63 @@ function fitBounds(
       1;
   }
 
-  var safeFitFactor =
-    Number(
-      fitFactor
-    );
+  var baseDistance =
+  radius /
+  Math.sin(
+    limitingFov /
+    2
+  );
 
-  if (
-    !isFinite(
-      safeFitFactor
-    ) ||
-    safeFitFactor <= 0 ||
-    safeFitFactor > 1
-  ) {
-    safeFitFactor =
-      0.9;
-  }
+if (
+  !isFinite(
+    baseDistance
+  ) ||
+  baseDistance <= 0
+) {
+  baseDistance =
+    1;
+}
 
-  var distance =
-    radius /
-    Math.sin(
-      limitingFov /
-      2
-    ) /
-    safeFitFactor;
+var largestSize =
+  Math.max(
+    width,
+    height,
+    depth
+  );
 
-  if (
-    !isFinite(
-      distance
-    ) ||
-    distance <= 0
-  ) {
-    distance =
-      1;
-  }
+var minimumDistance =
+  Math.max(
+    largestSize *
+    0.05,
+    0.001
+  );
 
-  distance =
-    Math.max(
-      distance,
-      Math.max(
-        width,
-        height,
-        depth
-      ) *
-      0.05,
-      0.001
-    );
+var distance =
+  Math.max(
+    baseDistance,
+    minimumDistance
+  );
+
+var distanceMultiplier =
+  Number(
+    CONFIG.fitDistanceMultiplier
+  );
+
+if (
+  !isFinite(
+    distanceMultiplier
+  ) ||
+  distanceMultiplier <= 0
+) {
+  distanceMultiplier =
+    1;
+}
+
+distance *=
+  distanceMultiplier;
 
   var cameraPosition =
-    center.clone()
+    targetCenter.clone()
       .sub(
         direction.clone()
           .multiplyScalar(
@@ -5631,7 +5665,7 @@ function fitBounds(
     "function"
   ) {
     view.lookAt(
-      center
+      targetcenter
     );
   }
 
