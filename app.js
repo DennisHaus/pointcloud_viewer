@@ -37,6 +37,8 @@ var CONFIG = {
 
   useRawBaseForPaths: false,
 
+  fitFaactor: 0.7;
+
   rawBaseUrl:
     "https://raw.githubusercontent.com/DennisHaus/pointcloud_viewer/main"
 };
@@ -5796,7 +5798,7 @@ function fitActiveScan() {
     bounds &&
     fitBounds(
       bounds,
-      0.9,
+      CONFIG.fitFactor,
       "Focused on " +
       (
         state.activeScan
@@ -5888,7 +5890,7 @@ function fitAllScans() {
     bounds &&
     fitBounds(
       bounds,
-      0.9,
+      CONFIG.fitFactor,
       "Focused on all visible scans."
     )
   ) {
