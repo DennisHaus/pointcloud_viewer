@@ -22,11 +22,7 @@ var CONFIG = {
 
   defaultPointBudget: 3000000,
 
-  navigationSpeed:
-  Number(
-    CONFIG.navigationSpeed
-  ) ||
-  0.35,
+  navigationSpeed:  0.35,
 
   /*
     The screenshot uses the current renderer size.
@@ -56,7 +52,12 @@ var state = {
   activeScan: null,
   activeCloud: null,
   activeBounds: null,
-  sectionVolume: null
+  sectionVolume: null,
+  navigationSpeed:
+    Number(
+      CONFIG.navigationSpeed
+    ) ||
+    0.35
 };
 
 var viewer = null;
