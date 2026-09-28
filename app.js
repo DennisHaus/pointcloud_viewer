@@ -210,10 +210,55 @@ function setDropdownState(
     )
   );
 
-  button.textContent =
-    expanded
-      ? "⌃"
-      : "⌄";
+  var panel =
+    null;
+
+  if (
+    typeof button.closest ===
+    "function"
+  ) {
+    panel =
+      button.closest(
+        ".library-panel, .inspector-panel"
+      );
+  }
+
+  if (
+    panel
+  ) {
+    panel.classList.toggle(
+      "is-expanded",
+      expanded
+    );
+
+    panel.classList.toggle(
+      "is-collapsed",
+      !expanded
+    );
+  }
+
+  var arrow =
+    button.querySelector(
+      ".dropdown-arrow"
+    );
+
+  if (
+    arrow
+  ) {
+    arrow.textContent =
+      expanded
+        ? "⌄"
+        : "⌃";
+  } else {
+    /*
+      Used by the library button, which may only
+      contain the arrow character directly.
+    */
+    button.textContent =
+      expanded
+        ? "⌄"
+        : "⌃";
+  }
 }
 
 function bindDropdown(

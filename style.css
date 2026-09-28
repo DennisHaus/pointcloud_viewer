@@ -20,8 +20,8 @@
   --warning: #d7b66d;
 
   --interface-width: 370px;
-  --header-height: 400px;
-  --library-height: 215px;
+  --header-height: 360px;
+  --library-height: 605px;
   --status-height: 30px;
 
   font-family:
@@ -1405,8 +1405,8 @@ button:active {
   /*
     Space for the custom arrow.
   */
-  padding-top: 0;
-  padding-bottom: 0;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
   padding-right: 2rem;
   padding-left: 0.75rem;
 
@@ -1454,6 +1454,181 @@ button:active {
 .screenshot-export-controls #screenshotScale {
   height: 2.4rem;
   box-sizing: border-box;
-} 
+}
 
+}
+
+/* -------------------------------------------------------------------------- */
+/* DYNAMIC LIBRARY / INSPECTOR HEIGHT                                         */
+/* -------------------------------------------------------------------------- */
+
+:root {
+  --inspector-toggle-height: 3.5rem;
+}
+
+/*
+  The library and inspector are stacked in the right column.
+*/
+.ui-panels {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+
+  overflow: hidden;
+}
+
+/*
+  Remove the previous fixed 50/50 layout and divider.
+*/
+.ui-panels > .library-panel,
+.ui-panels > .inspector-panel {
+  min-width: 0;
+  min-height: 0;
+
+  border: 0 !important;
+  border-bottom: 0 !important;
+
+  box-sizing: border-box;
+}
+
+/*
+  Collapsed library: only its header remains visible.
+*/
+.ui-panels > .library-panel.is-collapsed {
+  flex: 0 0 auto;
+  height: auto;
+}
+
+/*
+  Expanded library: use all remaining available height.
+*/
+.ui-panels > .library-panel.is-expanded {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/*
+  Collapsed inspector: only the bottom inspector button remains.
+*/
+.ui-panels > .inspector-panel.is-collapsed {
+  flex: 0 0 var(--inspector-toggle-height);
+  height: var(--inspector-toggle-height);
+}
+
+/*
+  Expanded inspector: use all remaining available height.
+*/
+.ui-panels > .inspector-panel.is-expanded {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* LIBRARY                                                                    */
+/* -------------------------------------------------------------------------- */
+
+.library-panel {
+  display: flex;
+  flex-direction: column;
+
+  min-height: 0;
+  overflow: hidden;
+}
+
+.library-panel > .panel-header {
+  flex: 0 0 auto;
+}
+
+#libraryDropdownContent {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+
+  min-height: 0;
+  height: auto;
+  max-height: none !important;
+
+  overflow: hidden;
+}
+
+#libraryDropdownContent.hidden {
+  display: none;
+}
+
+#libraryList {
+  flex: 1 1 auto;
+
+  min-height: 0;
+  max-height: none !important;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* -------------------------------------------------------------------------- */
+/* INSPECTOR                                                                  */
+/* -------------------------------------------------------------------------- */
+
+.inspector-panel {
+  position: relative;
+
+  min-height: 0;
+  overflow: visible !important;
+}
+
+.inspector-dropdown {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/*
+  Inspector toggle stays at the bottom of the inspector panel.
+*/
+.inspector-toggle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  z-index: 20;
+
+  width: 100%;
+  height: var(--inspector-toggle-height);
+  min-height: var(--inspector-toggle-height);
+
+  box-sizing: border-box;
+}
+
+/*
+  Inspector content unfolds upward and uses all available
+  height above the toggle button.
+*/
+#inspectorDropdownContent {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--inspector-toggle-height);
+
+  z-index: 19;
+
+  width: 100%;
+  height: calc(100% - var(--inspector-toggle-height));
+  max-height: none !important;
+  min-height: 0;
+
+  box-sizing: border-box;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#inspectorDropdownContent.hidden {
+  display: none;
 }
