@@ -1929,7 +1929,7 @@ function loadScan(
       pointcloud
     ) {
       fitActiveScan();
-    }
+    } 
   },
   500
 );
