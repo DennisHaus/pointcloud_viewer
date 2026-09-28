@@ -171,11 +171,13 @@ select:focus-visible {
 }
 
 .topbar-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 7px;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
 
-  margin-top: 17px;
+.screenshot-export-controls {
+  flex-shrink: 0;
 }
 
 .search-box {
@@ -1361,14 +1363,22 @@ button:active {
   padding-top: 0.3rem;
 }
 .screenshot-export-controls {
-  display: flex;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.4rem;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
-.screenshot-scale-select {
+.screenshot-export-controls .screenshot-scale-select {
+  display: inline-block;
   width: auto;
   min-width: 4.5rem;
+  max-width: 5.5rem;
+  flex: 0 0 auto;
+  margin: 0;
 }
 
 }

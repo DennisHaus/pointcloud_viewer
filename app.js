@@ -1118,9 +1118,20 @@ function reconcileLoadedClouds() {
         );
 
         state.activeBounds =
-    getPointCloudBounds(
+  window.windowgetPointCloudBounds(
+    state.activeCloud
+  );
+
+if (
+  !state.activeBounds &&
+  typeof window.getPointCloudWorldBounds ===
+  "function"
+) {
+  state.activeBounds =
+    window.getPointCloudWorldBounds(
       state.activeCloud
     );
+}
 
   if (
     !state.activeBounds &&
@@ -2281,7 +2292,7 @@ function setActiveScan(
     null;
 
   state.activeBounds =
-    getPointCloudBounds(
+    window.windowgetPointCloudBounds(
       state.activeCloud
     );
 
@@ -2451,6 +2462,274 @@ function getVectorValue(
 
   return 0;
 }
+
+window.getPointCloudBounds =
+  function (
+    pointcloud
+  ) {
+    if (
+      !pointcloud
+    ) {
+      return null;
+    }
+
+    function readCoordinate(
+      vector,
+      property,
+      index
+    ) {
+      if (
+        vector &&
+        typeof vector[property] ===
+        "number" &&
+        isFinite(
+          vector[property]
+        )
+      ) {
+        return vector[property];
+      }
+
+      if (
+        vector &&
+        typeof vector[index] ===
+        "number" &&
+        isFinite(
+          vector[index]
+        )
+      ) {
+        return vector[index];
+      }
+
+      return null;
+    }
+
+    function readBox(
+      box
+    ) {
+      if (
+        !box
+      ) {
+        return null;
+      }
+
+      var minX =
+        null;
+
+      var minY =
+        null;
+
+      var minZ =
+        null;
+
+      var maxX =
+        null;
+
+      var maxY =
+        null;
+
+      var maxZ =
+        null;
+
+      /*
+        Standard THREE.Box3 format.
+      */
+      if (
+        box.min &&
+        box.max
+      ) {
+        minX =
+          readCoordinate(
+            box.min,
+            "x",
+            0
+          );
+
+        minY =
+          readCoordinate(
+            box.min,
+            "y",
+            1
+          );
+
+        minZ =
+          readCoordinate(
+            box.min,
+            "z",
+            2
+          );
+
+        maxX =
+          readCoordinate(
+            box.max,
+            "x",
+            0
+          );
+
+        maxY =
+          readCoordinate(
+            box.max,
+            "y",
+            1
+          );
+
+        maxZ =
+          readCoordinate(
+            box.max,
+            "z",
+            2
+          );
+      }
+
+      /*
+        Potree metadata-style format.
+      */
+      if (
+        minX === null &&
+        typeof box.lx ===
+          "number" &&
+        typeof box.ly ===
+          "number" &&
+        typeof box.lz ===
+          "number" &&
+        typeof box.ux ===
+          "number" &&
+        typeof box.uy ===
+          "number" &&
+        typeof box.uz ===
+          "number"
+      ) {
+        minX =
+          box.lx;
+
+        minY =
+          box.ly;
+
+        minZ =
+          box.lz;
+
+        maxX =
+          box.ux;
+
+        maxY =
+          box.uy;
+
+        maxZ =
+          box.uz;
+      }
+
+      if (
+        minX === null ||
+        minY === null ||
+        minZ === null ||
+        maxX === null ||
+        maxY === null ||
+        maxZ === null
+      ) {
+        return null;
+      }
+
+      return {
+        min: {
+          x:
+            Math.min(
+              minX,
+              maxX
+            ),
+
+          y:
+            Math.min(
+              minY,
+              maxY
+            ),
+
+          z:
+            Math.min(
+              minZ,
+              maxZ
+            )
+        },
+
+        max: {
+          x:
+            Math.max(
+              minX,
+              maxX
+            ),
+
+          y:
+            Math.max(
+              minY,
+              maxY
+            ),
+
+          z:
+            Math.max(
+              minZ,
+              maxZ
+            )
+        }
+      };
+    }
+
+    var boxes =
+      [];
+
+    if (
+      pointcloud.boundingBox
+    ) {
+      boxes.push(
+        pointcloud.boundingBox
+      );
+    }
+
+    if (
+      pointcloud.pcoGeometry
+    ) {
+      if (
+        pointcloud.pcoGeometry.tightBoundingBox
+      ) {
+        boxes.push(
+          pointcloud.pcoGeometry.tightBoundingBox
+        );
+      }
+
+      if (
+        pointcloud.pcoGeometry.boundingBox
+      ) {
+        boxes.push(
+          pointcloud.pcoGeometry.boundingBox
+        );
+      }
+    }
+
+    if (
+      pointcloud.geometry &&
+      pointcloud.geometry.boundingBox
+    ) {
+      boxes.push(
+        pointcloud.geometry.boundingBox
+      );
+    }
+
+    for (
+      var index = 0;
+      index < boxes.length;
+      index += 1
+    ) {
+      var bounds =
+        readBox(
+          boxes[index]
+        );
+
+      if (
+        bounds
+      ) {
+        return bounds;
+      }
+    }
+
+    return null;
+  };
 
 
 /* -------------------------------------------------------------------------- */
@@ -4115,7 +4394,7 @@ function readPointCloudBox(
   };
 }
 
-function getPointCloudBounds(
+function windowgetPointCloudBounds(
   pointcloud
 ) {
   if (
@@ -4403,7 +4682,7 @@ function getPointCloudWorldBounds(
     "function"
   ) {
     var applicationBounds =
-      getPointCloudBounds(
+      windowgetPointCloudBounds(
         pointcloud
       );
 
@@ -5425,7 +5704,8 @@ function getActiveViewerCamera() {
 
 function getScreenshotFilename(
   width,
-  height
+  height,
+  scale
 ) {
   var name =
     state.activeScan &&
@@ -5453,9 +5733,26 @@ function getScreenshotFilename(
       "potree-viewer";
   }
 
+  var safeScale =
+    Number(
+      scale
+    );
+
+  if (
+    !isFinite(
+      safeScale
+    ) ||
+    safeScale <= 0
+  ) {
+    safeScale =
+      1;
+  }
+
   return (
     name +
     "_" +
+    safeScale +
+    "x_" +
     width +
     "x" +
     height +
@@ -6364,10 +6661,11 @@ function exportScreenshot() {
     dataUrl
   ) {
     var filename =
-      getScreenshotFilename(
-        targetWidth,
-        targetHeight
-      );
+  getScreenshotFilename(
+    targetWidth,
+    targetHeight,
+    screenshotScale
+  );
 
     var link =
       document.createElement(
