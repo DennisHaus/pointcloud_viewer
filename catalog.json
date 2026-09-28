@@ -2,6 +2,30 @@
   "version": 1,
   "scans": [
     {
+      "id": "scans-stallikontest-stallikon-15mio",
+      "name": "Stallikon 15mio",
+      "filename": "stallikon_15mio.copc.laz",
+      "path": "./scans/StallikonTest/stallikon_15mio.copc.laz",
+      "url": "./scans/StallikonTest/stallikon_15mio.copc.laz",
+      "format": "copc",
+      "sizeBytes": 78004810,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-09-28"
+    },
+    {
+      "id": "scans-stallikontest-stallikon-5mio-edit",
+      "name": "Stallikon 5mio Edit",
+      "filename": "stallikon_5mio_edit.copc.laz",
+      "path": "./scans/StallikonTest/stallikon_5mio_edit.copc.laz",
+      "url": "./scans/StallikonTest/stallikon_5mio_edit.copc.laz",
+      "format": "copc",
+      "sizeBytes": 31418483,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-09-28"
+    },
+    {
       "id": "scans-stallikon-15mio",
       "name": "Stallikon 15mio",
       "filename": "stallikon_15mio.copc.laz",
