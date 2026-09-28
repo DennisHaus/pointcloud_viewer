@@ -21,8 +21,10 @@
 
   --interface-width: 370px;
   --header-height: 360px;
-  --library-height: 605px;
   --status-height: 30px;
+
+  --library-header-height: 49px;
+  --inspector-toggle-height: 48px;
 
   font-family:
     Inter,
@@ -34,6 +36,11 @@
     sans-serif;
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* GLOBAL                                                                     */
+/* -------------------------------------------------------------------------- */
+
 * {
   box-sizing: border-box;
 }
@@ -43,7 +50,9 @@ body {
   width: 100%;
   height: 100%;
   margin: 0;
-  overflow: auto;
+
+  overflow: hidden;
+
   background: var(--black);
   color: var(--text);
 }
@@ -74,33 +83,33 @@ select:focus-visible {
   display: none !important;
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* MAIN APPLICATION LAYOUT                                                    */
 /* -------------------------------------------------------------------------- */
 
 .app-shell {
   position: relative;
+
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  min-height: 0;
+
   overflow: hidden;
+
   background: var(--black);
 }
-
-/*
-  The existing DOM contains:
-  - .topbar
-  - .workspace
-  - .statusbar
-
-  This stylesheet places the topbar, library, and inspector on the right.
-*/
 
 .workspace {
   position: absolute;
   inset: 0;
-  display: block;
+
+  width: 100%;
+  height: 100%;
+
   overflow: hidden;
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* RIGHT-SIDE HEADER                                                          */
@@ -109,6 +118,7 @@ select:focus-visible {
 .topbar {
   position: absolute;
   z-index: 30;
+
   top: 0;
   right: 0;
 
@@ -174,55 +184,8 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-}
 
-.screenshot-export-controls {
-  flex-shrink: 0;
-}
-
-.search-box {
-  grid-column: 1 / -1;
-
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  width: 100%;
-  height: 30px;
-
-  padding: 0 8px;
-
-  border: 1px solid var(--border-light);
-  border-radius: 0;
-
-  background: var(--surface-3);
-}
-
-.search-box > span {
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1;
-}
-
-.search-box input {
-  width: 100%;
-  height: 100%;
-
-  padding: 0;
-
-  border: 0;
-  outline: 0;
-
-  color: var(--text);
-  background: transparent;
-
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.search-box input::placeholder {
-  color: var(--muted-dark);
+  flex-wrap: nowrap;
 }
 
 .admin-badge {
@@ -244,6 +207,7 @@ select:focus-visible {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* BUTTONS                                                                    */
@@ -276,6 +240,7 @@ button {
   justify-content: center;
 
   padding: 0 10px;
+
   text-decoration: none;
   white-space: nowrap;
 }
@@ -313,6 +278,85 @@ button:active {
   color: var(--muted);
   background: transparent;
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* SCREENSHOT EXPORT CONTROLS                                                 */
+/* -------------------------------------------------------------------------- */
+
+.screenshot-export-controls {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0.4rem;
+
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+
+  white-space: nowrap;
+}
+
+.screenshot-export-controls #exportScreenshot,
+.screenshot-export-controls #screenshotScale {
+  height: 31px;
+  min-height: 31px;
+
+  box-sizing: border-box;
+}
+
+.screenshot-scale-select {
+  width: auto;
+  min-width: 4.5rem;
+  max-width: 5.5rem;
+
+  margin: 0;
+  padding: 0 24px 0 9px;
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  border-radius: 0 !important;
+
+  color: #cccccc;
+  background-color: #0b0b0b;
+
+  cursor: pointer;
+
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent 50%,
+      currentColor 50%
+    ),
+    linear-gradient(
+      135deg,
+      currentColor 50%,
+      transparent 50%
+    );
+
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 9px) 50%;
+
+  background-size:
+    5px 5px,
+    5px 5px;
+
+  background-repeat: no-repeat;
+
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.screenshot-scale-select:hover,
+.screenshot-scale-select:focus {
+  border-color: #aaaaaa;
+  color: #ffffff;
+  background-color: #1b1b1b;
+}
+
 
 /* -------------------------------------------------------------------------- */
 /* VIEWER                                                                     */
@@ -384,6 +428,7 @@ button:active {
   display: none !important;
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* VIEWER OVERLAY                                                             */
 /* -------------------------------------------------------------------------- */
@@ -391,6 +436,7 @@ button:active {
 .viewer-overlay {
   position: absolute;
   z-index: 10;
+
   top: 15px;
   left: 16px;
   right: 16px;
@@ -427,6 +473,7 @@ button:active {
   text-align: right;
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* STATUS LIGHTS                                                              */
 /* -------------------------------------------------------------------------- */
@@ -457,6 +504,7 @@ button:active {
   background: var(--danger);
   box-shadow: 0 0 9px rgba(211, 123, 123, 0.7);
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* LOADING OVERLAY                                                            */
@@ -498,6 +546,7 @@ button:active {
   }
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* VIEWER TOOLBAR                                                             */
 /* -------------------------------------------------------------------------- */
@@ -505,6 +554,7 @@ button:active {
 .viewer-toolbar {
   position: absolute;
   z-index: 15;
+
   bottom: 17px;
   left: 50%;
 
@@ -544,6 +594,7 @@ button:active {
   background: #1b1b1b;
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* LIBRARY PANEL                                                              */
 /* -------------------------------------------------------------------------- */
@@ -551,21 +602,48 @@ button:active {
 .library-panel {
   position: absolute;
   z-index: 20;
+
   top: var(--header-height);
   right: 0;
+  bottom: calc(
+    var(--status-height) +
+    var(--inspector-toggle-height)
+  );
 
   display: flex;
   flex-direction: column;
 
   width: var(--interface-width);
-  height: var(--library-height);
+  min-height: 0;
 
   overflow: hidden;
 
   border-left: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
 
   background: var(--black);
+}
+
+/*
+  When the library is collapsed, only its header remains.
+*/
+.library-panel.is-collapsed {
+  top: var(--header-height);
+  bottom: auto;
+
+  height: var(--library-header-height);
+}
+
+/*
+  When expanded, the library uses the available space.
+*/
+.library-panel.is-expanded {
+  top: var(--header-height);
+  bottom: calc(
+    var(--status-height) +
+    var(--inspector-toggle-height)
+  );
+
+  height: auto;
 }
 
 .panel-header {
@@ -573,7 +651,9 @@ button:active {
   align-items: center;
   justify-content: space-between;
 
-  min-height: 48px;
+  min-height: var(--library-header-height);
+  height: var(--library-header-height);
+
   padding: 10px 13px;
 
   border-bottom: 1px solid var(--border);
@@ -598,10 +678,16 @@ button:active {
   text-transform: uppercase;
 }
 
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .icon-button {
   width: 28px;
-  min-height: 28px;
   height: 28px;
+  min-height: 28px;
 
   padding: 0;
 
@@ -616,44 +702,35 @@ button:active {
   color: #ffffff;
 }
 
-.library-info {
+.dropdown-toggle {
+  min-width: 28px;
+  line-height: 1;
+}
+
+#libraryDropdownContent {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  flex: 1 1 auto;
+  flex-direction: column;
 
-  margin: 10px 13px 8px;
-  padding: 8px;
-
-  border: 1px dashed var(--border-light);
-  background: var(--surface);
-}
-
-.library-info strong,
-.library-info span {
-  display: block;
-}
-
-.library-info strong {
-  color: #d8d8d8;
-
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.library-info span {
-  margin-top: 3px;
-
-  color: var(--muted);
-
-  font-size: 9px;
-  line-height: 1.35;
-}
-
-.library-list {
+  min-width: 0;
   min-height: 0;
-  height: 100%;
+
+  overflow: hidden;
+}
+
+#libraryDropdownContent.hidden {
+  display: none;
+}
+
+.library-list,
+#libraryList {
+  flex: 1 1 auto;
+
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+
+  overflow-x: hidden;
   overflow-y: auto;
 
   padding: 0 10px 12px;
@@ -692,6 +769,7 @@ button:active {
   gap: 8px;
 }
 
+.scan-card-icon,
 .scan-icon {
   width: 23px;
   height: 23px;
@@ -743,6 +821,19 @@ button:active {
   box-shadow: 0 0 7px rgba(215, 182, 109, 0.7);
 }
 
+.scan-visibility-toggle {
+  flex: 0 0 auto;
+
+  margin-left: 4px;
+
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.scan-visibility-toggle:hover {
+  color: #ffffff;
+}
+
 .scan-meta {
   display: flex;
   gap: 9px;
@@ -757,6 +848,57 @@ button:active {
   text-transform: uppercase;
 }
 
+.scan-folder {
+  margin-bottom: 0.35rem;
+}
+
+.scan-folder > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+
+  padding: 0.55rem 0.65rem;
+
+  border-radius: 0;
+
+  background: rgba(255, 255, 255, 0.06);
+
+  font-weight: 600;
+}
+
+.scan-folder > summary::-webkit-details-marker {
+  display: none;
+}
+
+.scan-folder > summary::before {
+  content: "▸";
+
+  display: inline-block;
+
+  margin-right: 0.45rem;
+
+  transition: transform 0.15s ease;
+}
+
+.scan-folder[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.scan-folder-count {
+  float: right;
+
+  opacity: 0.55;
+
+  font-size: 0.8em;
+}
+
+.scan-folder-contents {
+  min-height: 0;
+  padding-top: 0.3rem;
+  padding-left: 0.45rem;
+}
+
+
 /* -------------------------------------------------------------------------- */
 /* INSPECTOR PANEL                                                            */
 /* -------------------------------------------------------------------------- */
@@ -764,21 +906,131 @@ button:active {
 .inspector-panel {
   position: absolute;
   z-index: 20;
-  top: calc(var(--header-height) + var(--library-height));
+
+  top: calc(
+    100% -
+    var(--status-height) -
+    var(--inspector-toggle-height)
+  );
   right: 0;
   bottom: var(--status-height);
 
   width: var(--interface-width);
+  min-height: 0;
 
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: visible;
 
   border-left: 1px solid var(--border);
 
   background: var(--black);
 }
 
+/*
+  Collapsed inspector: only the bottom toggle is visible.
+*/
+.inspector-panel.is-collapsed {
+  top: calc(
+    100% -
+    var(--status-height) -
+    var(--inspector-toggle-height)
+  );
+  bottom: var(--status-height);
+
+  height: var(--inspector-toggle-height);
+}
+
+/*
+  Expanded inspector.
+*/
+.inspector-panel.is-expanded {
+  bottom: var(--status-height);
+  height: auto;
+}
+
+.inspector-dropdown {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.inspector-toggle {
+  position: absolute;
+  z-index: 20;
+
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  width: 100%;
+  height: var(--inspector-toggle-height);
+  min-height: var(--inspector-toggle-height);
+
+  padding: 9px 13px;
+
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+
+  color: var(--text);
+  background: var(--black);
+
+  text-align: left;
+}
+
+.inspector-toggle:hover {
+  background: #111111;
+}
+
+.inspector-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dropdown-arrow {
+  flex: 0 0 auto;
+
+  color: var(--muted);
+
+  font-size: 16px;
+  line-height: 1;
+}
+
+#inspectorDropdownContent {
+  position: absolute;
+  z-index: 19;
+
+  top: 0;
+  right: 0;
+  bottom: var(--inspector-toggle-height);
+  left: 0;
+
+  display: block;
+
+  min-width: 0;
+  min-height: 0;
+
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  border: 0;
+
+  background: var(--black);
+}
+
+#inspectorDropdownContent.hidden {
+  display: none;
+}
+
 .inspector-content {
+  min-height: 0;
   padding-bottom: 20px;
 }
 
@@ -840,6 +1092,36 @@ button:active {
   white-space: nowrap;
 }
 
+.control-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  margin-bottom: 0.75rem;
+}
+
+.control-toggle {
+  min-height: 28px;
+
+  padding: 0.4rem 0.65rem;
+
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+
+  color: inherit;
+  background: var(--surface-3);
+
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.control-toggle[aria-pressed="true"] {
+  border-color: #aaaaaa;
+  background: #1b1b1b;
+}
+
+
 /* -------------------------------------------------------------------------- */
 /* CONTROLS                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -863,6 +1145,7 @@ button:active {
 
 .control-label output {
   color: var(--muted);
+
   font-size: 9px;
   font-weight: 500;
   letter-spacing: 0.03em;
@@ -961,6 +1244,7 @@ button:active {
   line-height: 1.45;
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* EMPTY STATES                                                               */
 /* -------------------------------------------------------------------------- */
@@ -1006,6 +1290,7 @@ button:active {
   font-size: 25px;
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* BOUNDS                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -1040,6 +1325,7 @@ button:active {
   text-align: right;
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* FOOTER STATUS BAR                                                          */
 /* -------------------------------------------------------------------------- */
@@ -1047,6 +1333,7 @@ button:active {
 .statusbar {
   position: absolute;
   z-index: 35;
+
   right: 0;
   bottom: 0;
 
@@ -1064,7 +1351,6 @@ button:active {
   border-left: 1px solid var(--border);
 
   color: var(--muted);
-
   background: var(--black);
 
   font-size: 8px;
@@ -1089,6 +1375,74 @@ button:active {
   white-space: nowrap;
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* DYNAMIC PANEL LAYOUT                                                       */
+/* -------------------------------------------------------------------------- */
+
+/*
+  Both panels expanded:
+  They share the available area.
+*/
+.workspace:has(
+  .library-panel.is-expanded
+):has(
+  .inspector-panel.is-expanded
+) {
+  --shared-panel-height:
+    calc(
+      (
+        100% -
+        var(--header-height) -
+        var(--status-height)
+      ) / 2
+    );
+}
+
+.workspace:has(
+  .library-panel.is-expanded
+):has(
+  .inspector-panel.is-expanded
+) .library-panel {
+  top: var(--header-height);
+  bottom: auto;
+
+  height: var(--shared-panel-height);
+}
+
+.workspace:has(
+  .library-panel.is-expanded
+):has(
+  .inspector-panel.is-expanded
+) .inspector-panel {
+  top: calc(
+    var(--header-height) +
+    var(--shared-panel-height)
+  );
+  bottom: var(--status-height);
+
+  height: auto;
+}
+
+/*
+  Library collapsed, inspector expanded:
+  Inspector receives all remaining height.
+*/
+.workspace:has(
+  .library-panel.is-collapsed
+):has(
+  .inspector-panel.is-expanded
+) .inspector-panel {
+  top: calc(
+    var(--header-height) +
+    var(--library-header-height)
+  );
+  bottom: var(--status-height);
+
+  height: auto;
+}
+
+
 /* -------------------------------------------------------------------------- */
 /* SCROLLBARS                                                                 */
 /* -------------------------------------------------------------------------- */
@@ -1111,6 +1465,7 @@ button:active {
   background: #3b3b3b;
 }
 
+
 /* -------------------------------------------------------------------------- */
 /* MOBILE                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -1124,6 +1479,7 @@ button:active {
   .app-shell {
     height: auto;
     min-height: 100vh;
+
     overflow: visible;
   }
 
@@ -1148,6 +1504,7 @@ button:active {
 
     height: auto;
     min-height: 0;
+
     overflow: visible;
   }
 
@@ -1166,11 +1523,12 @@ button:active {
     position: relative;
     top: auto;
     right: auto;
+    bottom: auto;
 
     order: 2;
 
     width: 100%;
-    height: 240px;
+    height: 300px;
 
     border-top: 1px solid var(--border);
     border-left: 0;
@@ -1185,10 +1543,28 @@ button:active {
     order: 3;
 
     width: 100%;
-    max-height: none;
+    height: auto;
+    min-height: var(--inspector-toggle-height);
 
     border-top: 1px solid var(--border);
     border-left: 0;
+  }
+
+  .library-panel.is-collapsed {
+    height: var(--library-header-height);
+  }
+
+  .library-panel.is-expanded {
+    height: 300px;
+  }
+
+  .inspector-panel.is-collapsed {
+    height: var(--inspector-toggle-height);
+  }
+
+  .inspector-panel.is-expanded {
+    height: 60vh;
+    max-height: 650px;
   }
 
   .statusbar {
@@ -1244,391 +1620,7 @@ button:active {
     display: none;
   }
 
-  /* -------------------------------------------------------------------------- */
-/* SCROLLABLE SIDE PANELS                                                     */
-/* -------------------------------------------------------------------------- */
-
-.library-panel,
-.inspector-panel {
-  min-height: 0;
-}
-
-/* Keep panel headers visible */
-.library-panel > .panel-header,
-.inspector-panel > .panel-header {
-  flex: 0 0 auto;
-}
-
-/* Library panel */
-.library-list {
-  flex: 1 1 auto;
-  min-height: 0;
-  height: auto;
-  overflow-x: hidden;
-  overflow-y: auto;
-
-  padding: 0 10px 12px;
-}
-
-/* Inspector panel */
-.inspector-panel {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.inspector-content {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding-bottom: 20px;
-}
-
-.panel-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.dropdown-toggle {
-  min-width: 2rem;
-  line-height: 1;
-}
-
-.panel-dropdown-content.hidden {
-  display: none;
-}
-
-.control-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.control-toggle {
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.06);
-  color: inherit;
-  border-radius: 0.35rem;
-  padding: 0.4rem 0.65rem;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.control-toggle[aria-pressed="true"] {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.45);
-}
-
-.scan-folder {
-  margin-bottom: 0.35rem;
-}
-
-.scan-folder > summary {
-  cursor: pointer;
-  list-style: none;
-  padding: 0.55rem 0.65rem;
-  border-radius: 0.35rem;
-  background: rgba(255, 255, 255, 0.06);
-  font-weight: 600;
-  user-select: none;
-}
-
-.scan-folder > summary::-webkit-details-marker {
-  display: none;
-}
-
-.scan-folder > summary::before {
-  content: "▸";
-  display: inline-block;
-  margin-right: 0.45rem;
-  transition: transform 0.15s ease;
-}
-
-.scan-folder[open] > summary::before {
-  transform: rotate(90deg);
-}
-
-.scan-folder-count {
-  float: right;
-  opacity: 0.55;
-  font-size: 0.8em;
-}
-
-.scan-folder-contents {
-  padding-left: 0.45rem;
-  padding-top: 0.3rem;
-}
-
-.screenshot-scale-select {
-  width: auto;
-  min-width: 4.5rem;
-  max-width: 5.5rem;
-  margin: 0;
-  flex: 0 0 auto;
-
-  font: inherit;
-  color: inherit;
-  line-height: inherit;
-  cursor: pointer;
-}
-
-.screenshot-export-controls {
-  display: inline-flex;
-  align-items: stretch;
-  gap: 0.4rem;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
-
-/*
-  The select uses the same height as the Export PNG button.
-*/
-.screenshot-export-controls #screenshotScale {
-  appearance: none;
-  -webkit-appearance: none;
-
-  align-self: stretch;
-  height: auto !important;
-  min-height: 0;
-
-  box-sizing: border-box;
-
-  /*
-    Sharp corners.
-  */
-  border-radius: 0 !important;
-
-  /*
-    Space for the custom arrow.
-  */
-  padding-top: 0.3rem;
-  padding-bottom: 0.3rem;
-  padding-right: 2rem;
-  padding-left: 0.75rem;
-
-  line-height: 1;
-  cursor: pointer;
-
-  /*
-    Custom CSS arrow.
-  */
-  background-image:
-    linear-gradient(
-      45deg,
-      transparent 50%,
-      currentColor 50%
-    ),
-    linear-gradient(
-      135deg,
-      currentColor 50%,
-      transparent 50%
-    );
-
-  background-position:
-    calc(100% - 0.85rem) 50%,
-    calc(100% - 0.55rem) 50%;
-
-  background-size:
-    0.3rem 0.3rem,
-    0.3rem 0.3rem;
-
-  background-repeat: no-repeat;
-}
-
-/*
-  Keep the same sharp outline while focused.
-*/
-.screenshot-export-controls #screenshotScale:focus {
-  border-radius: 0 !important;
-}
-
-/*
-  Optional: make both controls have exactly the same
-  fixed height. Use this only if stretch is not enough.
-*/
-.screenshot-export-controls #exportScreenshot,
-.screenshot-export-controls #screenshotScale {
-  height: 2.4rem;
-  box-sizing: border-box;
-}
-
-}
-
-/* -------------------------------------------------------------------------- */
-/* DYNAMIC LIBRARY / INSPECTOR HEIGHT                                         */
-/* -------------------------------------------------------------------------- */
-
-:root {
-  --inspector-toggle-height: 3.5rem;
-}
-
-/*
-  The library and inspector are stacked in the right column.
-*/
-.ui-panels {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-
-  min-width: 0;
-  min-height: 0;
-  height: auto;
-
-  overflow: hidden;
-}
-
-/*
-  Remove the previous fixed 50/50 layout and divider.
-*/
-.ui-panels > .library-panel,
-.ui-panels > .inspector-panel {
-  min-width: 0;
-  min-height: 0;
-
-  border: 0 !important;
-  border-bottom: 0 !important;
-
-  box-sizing: border-box;
-}
-
-/*
-  Collapsed library: only its header remains visible.
-*/
-.ui-panels > .library-panel.is-collapsed {
-  flex: 0 0 auto;
-  height: auto;
-}
-
-/*
-  Expanded library: use all remaining available height.
-*/
-.ui-panels > .library-panel.is-expanded {
-  flex: 1 1 0;
-  min-height: 0;
-}
-
-/*
-  Collapsed inspector: only the bottom inspector button remains.
-*/
-.ui-panels > .inspector-panel.is-collapsed {
-  flex: 0 0 var(--inspector-toggle-height);
-  height: var(--inspector-toggle-height);
-}
-
-/*
-  Expanded inspector: use all remaining available height.
-*/
-.ui-panels > .inspector-panel.is-expanded {
-  flex: 1 1 0;
-  min-height: 0;
-}
-
-/* -------------------------------------------------------------------------- */
-/* LIBRARY                                                                    */
-/* -------------------------------------------------------------------------- */
-
-.library-panel {
-  display: flex;
-  flex-direction: column;
-
-  min-height: 0;
-  overflow: hidden;
-}
-
-.library-panel > .panel-header {
-  flex: 0 0 auto;
-}
-
-#libraryDropdownContent {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-
-  min-height: 0;
-  height: auto;
-  max-height: none !important;
-
-  overflow: hidden;
-}
-
-#libraryDropdownContent.hidden {
-  display: none;
-}
-
-#libraryList {
-  flex: 1 1 auto;
-
-  min-height: 0;
-  max-height: none !important;
-
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-/* -------------------------------------------------------------------------- */
-/* INSPECTOR                                                                  */
-/* -------------------------------------------------------------------------- */
-
-.inspector-panel {
-  position: relative;
-
-  min-height: 0;
-  overflow: visible !important;
-}
-
-.inspector-dropdown {
-  position: relative;
-
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-}
-
-/*
-  Inspector toggle stays at the bottom of the inspector panel.
-*/
-.inspector-toggle {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-
-  z-index: 20;
-
-  width: 100%;
-  height: var(--inspector-toggle-height);
-  min-height: var(--inspector-toggle-height);
-
-  box-sizing: border-box;
-}
-
-/*
-  Inspector content unfolds upward and uses all available
-  height above the toggle button.
-*/
-#inspectorDropdownContent {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: var(--inspector-toggle-height);
-
-  z-index: 19;
-
-  width: 100%;
-  height: calc(100% - var(--inspector-toggle-height));
-  max-height: none !important;
-  min-height: 0;
-
-  box-sizing: border-box;
-
-  overflow-x: hidden;
-  overflow-y: auto;
-}
-
-#inspectorDropdownContent.hidden {
-  display: none;
+  .topbar-actions {
+    flex-wrap: wrap;
+  }
 }
