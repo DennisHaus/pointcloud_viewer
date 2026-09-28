@@ -42,7 +42,7 @@ var CONFIG = {
 
   fitDistanceMultiplier: 0.8,
 
-  fitVerticalOffset: 0,
+  fitVerticalOffset: -1,
 
   rawBaseUrl:
     "https://raw.githubusercontent.com/DennisHaus/pointcloud_viewer/main"
