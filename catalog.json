@@ -14,13 +14,25 @@
       "uploadedAt": "2026-09-28"
     },
     {
-      "id": "scans-brinzauls-years-bri5-lv95-ln02-bri5-lv95-ln02-200-brienzauls-2021-shift-2765k-1171k",
-      "name": "Bri5 Lv95 Ln02 Bri5 Lv95 Ln02 200 Brienzauls 2021 Shift 2765k 1171k",
-      "filename": "BRI5_LV95_LN02_BRI5_LV95_LN02_200_Brienzauls_2021_shift_-2765k_-1171k.copc.laz",
-      "path": "./scans/Brinzauls_Years/BRI5_LV95_LN02_BRI5_LV95_LN02_200_Brienzauls_2021_shift_-2765k_-1171k.copc.laz",
-      "url": "./scans/Brinzauls_Years/BRI5_LV95_LN02_BRI5_LV95_LN02_200_Brienzauls_2021_shift_-2765k_-1171k.copc.laz",
+      "id": "scans-brinzauls-years-bri5-lv95-ln02-bri5-lv95-ln02-2001-brienzauls-2021-shift-2765k-1171k",
+      "name": "Bri5 Lv95 Ln02 Bri5 Lv95 Ln02 2001 Brienzauls 2021 Shift 2765k 1171k",
+      "filename": "BRI5_LV95_LN02_BRI5_LV95_LN02_2001_Brienzauls_2021_shift_-2765k_-1171k.copc.laz",
+      "path": "./scans/Brinzauls_Years/BRI5_LV95_LN02_BRI5_LV95_LN02_2001_Brienzauls_2021_shift_-2765k_-1171k.copc.laz",
+      "url": "./scans/Brinzauls_Years/BRI5_LV95_LN02_BRI5_LV95_LN02_2001_Brienzauls_2021_shift_-2765k_-1171k.copc.laz",
       "format": "copc",
       "sizeBytes": 83380105,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-09-28"
+    },
+    {
+      "id": "scans-brinzauls-years-bri8-lv95-ln02-15-brienz-2023-2765k-1171k",
+      "name": "Bri8 Lv95 Ln02 15 Brienz 2023 2765k 1171k",
+      "filename": "BRI8_LV95_LN02_15_Brienz_2023_-2765k_-1171k.copc.laz",
+      "path": "./scans/Brinzauls_Years/BRI8_LV95_LN02_15_Brienz_2023_-2765k_-1171k.copc.laz",
+      "url": "./scans/Brinzauls_Years/BRI8_LV95_LN02_15_Brienz_2023_-2765k_-1171k.copc.laz",
+      "format": "copc",
+      "sizeBytes": 93851315,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-28"
