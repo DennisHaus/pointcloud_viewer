@@ -22,7 +22,11 @@ var CONFIG = {
 
   defaultPointBudget: 3000000,
 
-  navigationSpeed: 0.35,
+  navigationSpeed:
+  Number(
+    CONFIG.navigationSpeed
+  ) ||
+  0.35,
 
   /*
     The screenshot uses the current renderer size.
@@ -177,7 +181,89 @@ function initializeControls() {
   applyPointSize();
   applyOpacity();
   applyPointBudget();
+  applyPointDisplayMode();
   updateSectionControls();
+}
+
+function setDropdownState(
+  button,
+  content,
+  expanded
+) {
+  if (
+    !button ||
+    !content
+  ) {
+    return;
+  }
+
+  content.classList.toggle(
+    "hidden",
+    !expanded
+  );
+
+  button.setAttribute(
+    "aria-expanded",
+    String(
+      expanded
+    )
+  );
+
+  button.textContent =
+    expanded
+      ? "⌃"
+      : "⌄";
+}
+
+function bindDropdown(
+  buttonId,
+  contentId
+) {
+  var button =
+    getElement(
+      buttonId
+    );
+
+  var content =
+    getElement(
+      contentId
+    );
+
+  if (
+    !button ||
+    !content
+  ) {
+    return;
+  }
+
+  var expanded =
+    button.getAttribute(
+      "aria-expanded"
+    ) !==
+    "false";
+
+  setDropdownState(
+    button,
+    content,
+    expanded
+  );
+
+  button.addEventListener(
+    "click",
+    function () {
+      var isExpanded =
+        button.getAttribute(
+          "aria-expanded"
+        ) ===
+        "true";
+
+      setDropdownState(
+        button,
+        content,
+        !isExpanded
+      );
+    }
+  );
 }
 
 
@@ -437,25 +523,39 @@ function loadCatalog() {
     )
     .then(
       function (data) {
-        var scans =
-          [];
+        var entries =
+  [];
 
-        if (
-          Array.isArray(
-            data
-          )
-        ) {
-          scans =
-            data;
-        } else if (
-          data &&
-          Array.isArray(
-            data.scans
-          )
-        ) {
-          scans =
-            data.scans;
-        }
+if (
+  Array.isArray(
+    data
+  )
+) {
+  entries =
+    data;
+} else if (
+  data &&
+  Array.isArray(
+    data.scans
+  )
+) {
+  entries =
+    data.scans;
+} else if (
+  data &&
+  Array.isArray(
+    data.folders
+  )
+) {
+  entries =
+    data.folders;
+}
+
+var scans =
+  flattenCatalogEntries(
+    entries,
+    ""
+  );
 
         var previousScans =
           new Map();
@@ -523,6 +623,170 @@ function loadCatalog() {
     );
 }
 
+function normalizeFolderPath(
+  value
+) {
+  var path =
+    String(
+      value ||
+      ""
+    )
+      .replace(
+        /\\/g,
+        "/"
+      )
+      .replace(
+        /^\.\/+/,
+        ""
+      )
+      .replace(
+        /^\/+/,
+        ""
+      )
+      .replace(
+        /\/+$/,
+        ""
+      );
+
+  var parts =
+    path
+      .split("/")
+      .filter(
+        function (part) {
+          return Boolean(
+            part
+          );
+        }
+      );
+
+  if (
+    parts.length &&
+    parts[0].toLowerCase() ===
+    "scans"
+  ) {
+    parts.shift();
+  }
+
+  return parts.join("/");
+}
+
+function joinFolderPath(
+  parent,
+  child
+) {
+  var combined =
+    [
+      parent,
+      child
+    ]
+      .filter(
+        function (value) {
+          return String(
+            value ||
+            ""
+          ).trim();
+        }
+      )
+      .join("/");
+
+  return normalizeFolderPath(
+    combined
+  );
+}
+
+function flattenCatalogEntries(
+  entries,
+  parentFolder
+) {
+  var result =
+    [];
+
+  if (
+    !Array.isArray(
+      entries
+    )
+  ) {
+    return result;
+  }
+
+  entries.forEach(
+    function (entry) {
+      if (
+        !entry ||
+        typeof entry !==
+        "object"
+      ) {
+        return;
+      }
+
+      var children =
+        Array.isArray(
+          entry.children
+        )
+          ? entry.children
+          : Array.isArray(
+              entry.scans
+            )
+            ? entry.scans
+            : null;
+
+      if (
+        children
+      ) {
+        var folderName =
+          entry.folderName ||
+          entry.folder ||
+          entry.directory ||
+          entry.name ||
+          entry.title ||
+          "";
+
+        var folderPath =
+          joinFolderPath(
+            parentFolder,
+            folderName
+          );
+
+        result =
+          result.concat(
+            flattenCatalogEntries(
+              children,
+              folderPath
+            )
+          );
+
+        return;
+      }
+
+      var scan =
+        Object.assign(
+          {},
+          entry
+        );
+
+      var ownFolder =
+        scan.folderPath ||
+        scan.folder ||
+        scan.directory ||
+        scan.category ||
+        "";
+
+      scan.folderPath =
+        joinFolderPath(
+          parentFolder,
+          ownFolder
+        );
+
+      result.push(
+        scan
+      );
+    }
+  );
+
+  return result;
+}
+
+
 function normalizeScan(
   scan,
   index
@@ -569,6 +833,66 @@ function normalizeScan(
       )
     );
 
+  /*
+    Folder can be supplied explicitly in the catalog.
+    Supported properties:
+      folderPath
+      folder
+      directory
+      category
+  */
+  var folderPath =
+    String(
+      scan.folderPath ||
+      scan.folder ||
+      scan.directory ||
+      scan.category ||
+      ""
+    ).trim();
+
+  /*
+    If no folder was explicitly supplied, derive it
+    from the scan path.
+
+    Example:
+      scans/2026/day-01/scan.copc.laz
+      becomes:
+      2026/day-01
+  */
+  if (
+    !folderPath &&
+    path &&
+    !/^https?:\/\//i.test(
+      path
+    )
+  ) {
+    var pathWithoutQuery =
+      path.split(
+        "?"
+      )[0];
+
+    var lastSlash =
+      pathWithoutQuery.lastIndexOf(
+        "/"
+      );
+
+    if (
+      lastSlash >
+      -1
+    ) {
+      folderPath =
+        pathWithoutQuery.substring(
+          0,
+          lastSlash
+        );
+    }
+  }
+
+  folderPath =
+    normalizeFolderPath(
+      folderPath
+    );
+
   var suppliedUrl =
     String(
       scan.url ||
@@ -604,29 +928,41 @@ function normalizeScan(
 
   return {
     id: id,
+
     name: name,
+
     filename: filename,
+
     path: path,
+
+    folderPath: folderPath,
+
     url: url,
+
     format:
       scan.format ||
       "copc",
+
     sizeBytes:
       Number(
         scan.sizeBytes ||
         0
       ),
+
     pointCount:
       Number(
         scan.pointCount ||
         0
       ),
+
     crs:
       scan.crs ||
       "Unknown",
+
     uploadedAt:
       scan.uploadedAt ||
       "",
+
     loading: false
   };
 }
@@ -816,6 +1152,508 @@ function updateScanCount() {
   );
 }
 
+function buildLibraryTree(
+  scans
+) {
+  var root = {
+    folders: new Map(),
+    scans: []
+  };
+
+  scans.forEach(
+    function (scan) {
+      var folderPath =
+        normalizeFolderPath(
+          scan.folderPath
+        );
+
+      if (
+        !folderPath
+      ) {
+        root.scans.push(
+          scan
+        );
+
+        return;
+      }
+
+      var parts =
+        folderPath
+          .split("/")
+          .filter(
+            function (part) {
+              return Boolean(
+                part
+              );
+            }
+          );
+
+      var node =
+        root;
+
+      parts.forEach(
+        function (part) {
+          if (
+            !node.folders.has(
+              part
+            )
+          ) {
+            node.folders.set(
+              part,
+              {
+                folders: new Map(),
+                scans: []
+              }
+            );
+          }
+
+          node =
+            node.folders.get(
+              part
+            );
+        }
+      );
+
+      node.scans.push(
+        scan
+      );
+    }
+  );
+
+  return root;
+}
+
+function scanMatchesQuery(
+  scan,
+  query
+) {
+  if (
+    !query
+  ) {
+    return true;
+  }
+
+  var searchable =
+    (
+      scan.name +
+      " " +
+      scan.filename +
+      " " +
+      scan.path
+    ).toLowerCase();
+
+  return (
+    searchable.indexOf(
+      query
+    ) !==
+    -1
+  );
+}
+
+function treeContainsQuery(
+  node,
+  query
+) {
+  if (
+    !query
+  ) {
+    return true;
+  }
+
+  if (
+    node.scans.some(
+      function (scan) {
+        return scanMatchesQuery(
+          scan,
+          query
+        );
+      }
+    )
+  ) {
+    return true;
+  }
+
+  var found =
+    false;
+
+  node.folders.forEach(
+    function (child) {
+      if (
+        treeContainsQuery(
+          child,
+          query
+        )
+      ) {
+        found =
+          true;
+      }
+    }
+  );
+
+  return found;
+}
+
+function countTreeScans(
+  node
+) {
+  var count =
+    node.scans.length;
+
+  node.folders.forEach(
+    function (child) {
+      count +=
+        countTreeScans(
+          child
+        );
+    }
+  );
+
+  return count;
+}
+
+function createScanCard(
+  scan
+) {
+  var card =
+    document.createElement(
+      "button"
+    );
+
+  card.type =
+    "button";
+
+  card.className =
+    "scan-card";
+
+  if (
+    state.activeScan &&
+    state.activeScan.id ===
+    scan.id
+  ) {
+    card.classList.add(
+      "active"
+    );
+  }
+
+  var header =
+    document.createElement(
+      "div"
+    );
+
+  header.className =
+    "scan-card-header";
+
+  var icon =
+    document.createElement(
+      "div"
+    );
+
+  icon.className =
+    "scan-card-icon";
+
+  var name =
+    document.createElement(
+      "div"
+    );
+
+  name.className =
+    "scan-name";
+
+  name.textContent =
+    scan.name;
+
+  name.title =
+    scan.name;
+
+  var scanState =
+    document.createElement(
+      "div"
+    );
+
+  scanState.className =
+    "scan-state";
+
+  if (
+    scan.loading
+  ) {
+    scanState.classList.add(
+      "loading"
+    );
+  } else if (
+    state.loadedClouds.has(
+      scan.id
+    )
+  ) {
+    scanState.classList.add(
+      "loaded"
+    );
+  }
+
+  var pointcloud =
+    state.loadedClouds.get(
+      scan.id
+    );
+
+  var isLoaded =
+    Boolean(
+      pointcloud
+    );
+
+  var isVisible =
+    isLoaded &&
+    pointcloud.visible !==
+    false;
+
+  var visibilityToggle =
+    document.createElement(
+      "span"
+    );
+
+  visibilityToggle.className =
+    "scan-visibility-toggle";
+
+  visibilityToggle.textContent =
+    isLoaded
+      ? (
+          isVisible
+            ? "●"
+            : "○"
+        )
+      : "·";
+
+  visibilityToggle.title =
+    isLoaded
+      ? (
+          isVisible
+            ? "Hide scan"
+            : "Show scan"
+        )
+      : "Load scan";
+
+  visibilityToggle.setAttribute(
+    "role",
+    "button"
+  );
+
+  visibilityToggle.setAttribute(
+    "aria-label",
+    visibilityToggle.title
+  );
+
+  visibilityToggle.setAttribute(
+    "aria-pressed",
+    String(
+      isVisible
+    )
+  );
+
+  visibilityToggle.tabIndex =
+    0;
+
+  visibilityToggle.addEventListener(
+    "click",
+    function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      toggleScanVisibility(
+        scan
+      );
+    }
+  );
+
+  visibilityToggle.addEventListener(
+    "keydown",
+    function (event) {
+      if (
+        event.key ===
+          "Enter" ||
+        event.key ===
+          " "
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        toggleScanVisibility(
+          scan
+        );
+      }
+    }
+  );
+
+  header.appendChild(
+    icon
+  );
+
+  header.appendChild(
+    name
+  );
+
+  header.appendChild(
+    scanState
+  );
+
+  header.appendChild(
+    visibilityToggle
+  );
+
+  var metadata =
+    document.createElement(
+      "div"
+    );
+
+  metadata.className =
+    "scan-meta";
+
+  var format =
+    document.createElement(
+      "span"
+    );
+
+  format.textContent =
+    "COPC";
+
+  var size =
+    document.createElement(
+      "span"
+    );
+
+  size.textContent =
+    scan.sizeBytes
+      ? formatBytes(
+          scan.sizeBytes
+        )
+      : "Size unknown";
+
+  metadata.appendChild(
+    format
+  );
+
+  metadata.appendChild(
+    size
+  );
+
+  card.appendChild(
+    header
+  );
+
+  card.appendChild(
+    metadata
+  );
+
+  card.addEventListener(
+    "click",
+    function () {
+      selectScan(
+        scan
+      );
+    }
+  );
+
+  return card;
+}
+
+function renderLibraryTree(
+  node,
+  container,
+  query
+) {
+  node.folders.forEach(
+    function (
+      child,
+      folderName
+    ) {
+      if (
+        !treeContainsQuery(
+          child,
+          query
+        )
+      ) {
+        return;
+      }
+
+      var folder =
+        document.createElement(
+          "details"
+        );
+
+      folder.className =
+        "scan-folder";
+
+      folder.open =
+        true;
+
+      var summary =
+        document.createElement(
+          "summary"
+        );
+
+      summary.textContent =
+        folderName;
+
+      var count =
+        document.createElement(
+          "span"
+        );
+
+      count.className =
+        "scan-folder-count";
+
+      count.textContent =
+        countTreeScans(
+          child
+        );
+
+      summary.appendChild(
+        count
+      );
+
+      var contents =
+        document.createElement(
+          "div"
+        );
+
+      contents.className =
+        "scan-folder-contents";
+
+      folder.appendChild(
+        summary
+      );
+
+      folder.appendChild(
+        contents
+      );
+
+      renderLibraryTree(
+        child,
+        contents,
+        query
+      );
+
+      container.appendChild(
+        folder
+      );
+    }
+  );
+
+  node.scans.forEach(
+    function (scan) {
+      if (
+        scanMatchesQuery(
+          scan,
+          query
+        )
+      ) {
+        container.appendChild(
+          createScanCard(
+            scan
+          )
+        );
+      }
+    }
+  );
+}
+
 function renderLibrary() {
   var list =
     getElement(
@@ -859,17 +1697,9 @@ function renderLibrary() {
   var visibleScans =
     state.catalog.filter(
       function (scan) {
-        var searchable =
-          (
-            scan.name +
-            " " +
-            scan.filename
-          ).toLowerCase();
-
-        return (
-          searchable.indexOf(
-            query
-          ) !== -1
+        return scanMatchesQuery(
+          scan,
+          query
         );
       }
     );
@@ -897,251 +1727,17 @@ function renderLibrary() {
     );
   }
 
-  visibleScans.forEach(
-    function (scan) {
-      var card =
-        document.createElement(
-          "button"
-        );
+  var tree =
+    buildLibraryTree(
+      state.catalog
+    );
 
-      card.type =
-        "button";
-
-      card.className =
-        "scan-card";
-
-      if (
-        state.activeScan &&
-        state.activeScan.id ===
-        scan.id
-      ) {
-        card.classList.add(
-          "active"
-        );
-      }
-
-      var header =
-        document.createElement(
-          "div"
-        );
-
-      header.className =
-        "scan-card-header";
-
-      var icon =
-        document.createElement(
-          "div"
-        );
-
-      icon.className =
-        "scan-card-icon";
-
-      var name =
-        document.createElement(
-          "div"
-        );
-
-      name.className =
-        "scan-name";
-
-      name.textContent =
-        scan.name;
-
-      name.title =
-        scan.name;
-
-      var scanState =
-        document.createElement(
-          "div"
-        );
-
-      scanState.className =
-        "scan-state";
-
-      if (
-        scan.loading
-      ) {
-        scanState.classList.add(
-          "loading"
-        );
-      } else if (
-        state.loadedClouds.has(
-          scan.id
-        )
-      ) {
-        scanState.classList.add(
-          "loaded"
-        );
-      }
-
-      var pointcloud =
-        state.loadedClouds.get(
-          scan.id
-        );
-
-      var isLoaded =
-        Boolean(
-          pointcloud
-        );
-
-      var isVisible =
-        isLoaded &&
-        pointcloud.visible !==
-        false;
-
-      var visibilityToggle =
-        document.createElement(
-          "span"
-        );
-
-      visibilityToggle.className =
-        "scan-visibility-toggle";
-
-      visibilityToggle.textContent =
-        isLoaded
-          ? (
-              isVisible
-                ? "●"
-                : "○"
-            )
-          : "·";
-
-      visibilityToggle.title =
-        isLoaded
-          ? (
-              isVisible
-                ? "Hide scan"
-                : "Show scan"
-            )
-          : "Load scan";
-
-      visibilityToggle.setAttribute(
-        "role",
-        "button"
-      );
-
-      visibilityToggle.setAttribute(
-        "aria-label",
-        visibilityToggle.title
-      );
-
-      visibilityToggle.setAttribute(
-        "aria-pressed",
-        String(
-          isVisible
-        )
-      );
-
-      visibilityToggle.tabIndex =
-        0;
-
-      visibilityToggle.addEventListener(
-        "click",
-        function (event) {
-          event.preventDefault();
-          event.stopPropagation();
-
-          toggleScanVisibility(
-            scan
-          );
-        }
-      );
-
-      visibilityToggle.addEventListener(
-        "keydown",
-        function (event) {
-          if (
-            event.key ===
-              "Enter" ||
-            event.key ===
-            " "
-          ) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            toggleScanVisibility(
-              scan
-            );
-          }
-        }
-      );
-
-      header.appendChild(
-        icon
-      );
-
-      header.appendChild(
-        name
-      );
-
-      header.appendChild(
-        scanState
-      );
-
-      header.appendChild(
-        visibilityToggle
-      );
-
-      var metadata =
-        document.createElement(
-          "div"
-        );
-
-      metadata.className =
-        "scan-meta";
-
-      var format =
-        document.createElement(
-          "span"
-        );
-
-      format.textContent =
-        "COPC";
-
-      var size =
-        document.createElement(
-          "span"
-        );
-
-      size.textContent =
-        scan.sizeBytes
-          ? formatBytes(
-              scan.sizeBytes
-            )
-          : "Size unknown";
-
-      metadata.appendChild(
-        format
-      );
-
-      metadata.appendChild(
-        size
-      );
-
-      card.appendChild(
-        header
-      );
-
-      card.appendChild(
-        metadata
-      );
-
-      card.addEventListener(
-        "click",
-        function () {
-          selectScan(
-            scan
-          );
-        }
-      );
-
-      list.appendChild(
-        card
-      );
-    }
+  renderLibraryTree(
+    tree,
+    list,
+    query
   );
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* POINT-CLOUD LOADING                                                        */
@@ -1567,6 +2163,10 @@ function configurePointCloud(
       potree.PointShape.CIRCLE;
   }
 
+  applyPointDisplayMode(
+  pointcloud
+);
+
   applyColorMode(
     pointcloud
   );
@@ -1671,6 +2271,9 @@ function setActiveScan(
   updateInspector();
   updateSectionControls();
   renderLibrary();
+  applyPointDisplayMode(
+  state.activeCloud
+);
 }
 
 function updateInspector() {
@@ -1903,6 +2506,147 @@ function getVectorValue(
 /* APPEARANCE                                                                 */
 /* -------------------------------------------------------------------------- */
 
+function isSinglePixelMode() {
+  var button =
+    getElement(
+      "pointDisplayMode"
+    );
+
+  return (
+    button &&
+    button.getAttribute(
+      "aria-pressed"
+    ) ===
+    "true"
+  );
+}
+
+function updatePointDisplayButton() {
+  var button =
+    getElement(
+      "pointDisplayMode"
+    );
+
+  if (
+    !button
+  ) {
+    return;
+  }
+
+  var singlePixel =
+    isSinglePixelMode();
+
+  button.textContent =
+    singlePixel
+      ? "Single pixels"
+      : "Depth-sized";
+
+  button.setAttribute(
+    "aria-pressed",
+    String(
+      singlePixel
+    )
+  );
+}
+
+function applyPointDisplayMode(
+  pointcloud
+) {
+  var cloud =
+    pointcloud ||
+    state.activeCloud;
+
+  updatePointDisplayButton();
+
+  if (
+    !cloud ||
+    !cloud.material
+  ) {
+    return;
+  }
+
+  var material =
+    cloud.material;
+
+  var potree =
+    window.Potree;
+
+  var pointSizeType =
+    potree &&
+    potree.PointSizeType
+      ? potree.PointSizeType
+      : null;
+
+  if (
+    isSinglePixelMode()
+  ) {
+    if (
+      pointSizeType &&
+      pointSizeType.FIXED !==
+      undefined
+    ) {
+      material.pointSizeType =
+        pointSizeType.FIXED;
+    }
+
+    material.size =
+      1;
+  } else {
+    if (
+      pointSizeType &&
+      pointSizeType.ADAPTIVE !==
+      undefined
+    ) {
+      material.pointSizeType =
+        pointSizeType.ADAPTIVE;
+    }
+
+    material.size =
+      getNumberValue(
+        "pointSize",
+        1.5
+      );
+  }
+
+  material.needsUpdate =
+    true;
+}
+
+function togglePointDisplayMode() {
+  var button =
+    getElement(
+      "pointDisplayMode"
+    );
+
+  if (
+    !button
+  ) {
+    return;
+  }
+
+  var enabled =
+    button.getAttribute(
+      "aria-pressed"
+    ) ===
+    "true";
+
+  button.setAttribute(
+    "aria-pressed",
+    String(
+      !enabled
+    )
+  );
+
+  applyPointDisplayMode();
+
+  setStatus(
+    !enabled
+      ? "Single-pixel display enabled"
+      : "Depth-sized display enabled",
+    "idle"
+  );
+}
+
 function applyColorMode(
   pointcloud
 ) {
@@ -1969,10 +2713,16 @@ function applyPointSize() {
     state.activeCloud.material
   ) {
     state.activeCloud.material.size =
-      value;
+      isSinglePixelMode()
+        ? 1
+        : value;
 
     state.activeCloud.material.needsUpdate =
       true;
+
+    applyPointDisplayMode(
+      state.activeCloud
+    );
   }
 }
 
@@ -2615,7 +3365,9 @@ function getNavigationKey(
     key === "arrowup" ||
     key === "arrowdown" ||
     key === "arrowleft" ||
-    key === "arrowright"
+    key === "arrowright" ||
+    key === "," ||
+    key === "."
   ) {
     return key;
   }
@@ -2682,6 +3434,20 @@ function getNavigationKey(
     return "arrowright";
   }
 
+  if (
+  code ===
+  "comma"
+) {
+  return ",";
+}
+
+if (
+  code ===
+  "period"
+) {
+  return ".";
+}
+
   return "";
 }
 
@@ -2734,6 +3500,40 @@ function clearNavigationKeys() {
 
   navigationKeys.right =
     false;
+}
+
+function adjustNavigationSpeed(
+  direction
+) {
+  var currentSpeed =
+    Number(
+      state.navigationSpeed
+    ) ||
+    Number(
+      CONFIG.navigationSpeed
+    ) ||
+    0.35;
+
+  var multiplier =
+    direction > 0
+      ? 1.25
+      : 0.8;
+
+  state.navigationSpeed =
+    clamp(
+      currentSpeed *
+      multiplier,
+      0.02,
+      8
+    );
+
+  setStatus(
+    "Navigation speed: " +
+    state.navigationSpeed.toFixed(
+      2
+    ),
+    "idle"
+  );
 }
 
 function moveViewerWithKeyboard(
@@ -2895,10 +3695,10 @@ function moveViewerWithKeyboard(
   }
 
   var speed =
-    radius *
-    Number(
-      CONFIG.navigationSpeed
-    );
+  radius *
+  Number(
+    state.navigationSpeed
+  );
 
   if (
     !isFinite(
@@ -2985,11 +3785,24 @@ function bindNavigationKeyboard() {
           event
         );
 
-      if (
-        !key
-      ) {
-        return;
-      }
+        if (
+  key === "," ||
+  key === "."
+) {
+  if (
+    !event.repeat
+  ) {
+    adjustNavigationSpeed(
+      key === "."
+        ? 1
+        : -1
+    );
+  }
+
+  event.preventDefault();
+
+  return;
+}
 
       event.preventDefault();
 
@@ -3009,11 +3822,12 @@ function bindNavigationKeyboard() {
           event
         );
 
-      if (
-        !key
-      ) {
-        return;
-      }
+        if (
+    key === "," ||
+    key === "."
+  ) {
+    return;
+  }
 
       event.preventDefault();
 
@@ -3051,6 +3865,223 @@ function bindNavigationKeyboard() {
 /* VIEW CONTROLS                                                              */
 /* -------------------------------------------------------------------------- */
 
+function getThreeNamespace() {
+  return (
+    window.THREE ||
+    (
+      window.Potree &&
+      window.Potree.THREE
+    ) ||
+    null
+  );
+}
+
+function makeThreeVector(
+  value
+) {
+  var THREE_NAMESPACE =
+    getThreeNamespace();
+
+  if (
+    !THREE_NAMESPACE ||
+    typeof THREE_NAMESPACE.Vector3 !==
+    "function"
+  ) {
+    return null;
+  }
+
+  return new THREE_NAMESPACE.Vector3(
+    getVectorValue(
+      value,
+      "x",
+      0
+    ),
+    getVectorValue(
+      value,
+      "y",
+      1
+    ),
+    getVectorValue(
+      value,
+      "z",
+      2
+    )
+  );
+}
+
+function getPointCloudWorldBounds(
+  pointcloud
+) {
+  if (
+    !pointcloud
+  ) {
+    return null;
+  }
+
+  var box =
+    pointcloud.boundingBox;
+
+  if (
+    !box &&
+    pointcloud.pcoGeometry
+  ) {
+    box =
+      pointcloud.pcoGeometry.tightBoundingBox ||
+      pointcloud.pcoGeometry.boundingBox;
+  }
+
+  if (
+    !box ||
+    !box.min ||
+    !box.max
+  ) {
+    return null;
+  }
+
+  var min =
+    makeThreeVector(
+      box.min
+    );
+
+  var max =
+    makeThreeVector(
+      box.max
+    );
+
+  if (
+    !min ||
+    !max
+  ) {
+    return null;
+  }
+
+  var THREE_NAMESPACE =
+    getThreeNamespace();
+
+  if (
+    THREE_NAMESPACE &&
+    typeof THREE_NAMESPACE.Box3 ===
+    "function" &&
+    pointcloud.matrixWorld
+  ) {
+    var worldBox =
+      new THREE_NAMESPACE.Box3(
+        min,
+        max
+      );
+
+    if (
+      typeof worldBox.applyMatrix4 ===
+      "function"
+    ) {
+      worldBox.applyMatrix4(
+        pointcloud.matrixWorld
+      );
+
+      min =
+        worldBox.min;
+
+      max =
+        worldBox.max;
+    }
+  }
+
+  return {
+    min: min,
+    max: max
+  };
+}
+
+function setOrbitCenter(
+  center
+) {
+  if (
+    !viewer ||
+    !viewer.scene ||
+    !center
+  ) {
+    return;
+  }
+
+  var view =
+    viewer.scene.view;
+
+  var controls =
+    viewer.orbitControls ||
+    viewer.controls ||
+    null;
+
+  if (
+    view
+  ) {
+    if (
+      typeof view.setPivot ===
+      "function"
+    ) {
+      view.setPivot(
+        center.clone
+          ? center.clone()
+          : center
+      );
+    }
+
+    if (
+      view.pivot &&
+      typeof view.pivot.copy ===
+      "function"
+    ) {
+      view.pivot.copy(
+        center
+      );
+    }
+
+    if (
+      view.target &&
+      typeof view.target.copy ===
+      "function"
+    ) {
+      view.target.copy(
+        center
+      );
+    }
+  }
+
+  if (
+    controls
+  ) {
+    if (
+      typeof controls.setPivot ===
+      "function"
+    ) {
+      controls.setPivot(
+        center.clone
+          ? center.clone()
+          : center
+      );
+    }
+
+    if (
+      controls.pivot &&
+      typeof controls.pivot.copy ===
+      "function"
+    ) {
+      controls.pivot.copy(
+        center
+      );
+    }
+
+    if (
+      controls.target &&
+      typeof controls.target.copy ===
+      "function"
+    ) {
+      controls.target.copy(
+        center
+      );
+    }
+  }
+}
+
 function fitActiveScan() {
   if (
     !viewer ||
@@ -3068,20 +4099,65 @@ function fitActiveScan() {
   var activeCloud =
     state.activeCloud;
 
-  var pointclouds =
-    viewer.scene.pointclouds || [];
+  var worldBounds =
+    getPointCloudWorldBounds(
+      activeCloud
+    );
 
-  var previousVisibility = [];
+  if (
+    worldBounds
+  ) {
+    var center =
+      worldBounds.min
+        .clone()
+        .add(
+          worldBounds.max
+        )
+        .multiplyScalar(
+          0.5
+        );
+
+    fitBounds(
+      worldBounds,
+      0.9,
+      "Focused on " +
+      (
+        state.activeScan
+          ? state.activeScan.name
+          : "active scan"
+      )
+    );
+
+    setOrbitCenter(
+      center
+    );
+
+    return;
+  }
+
+  /*
+    Fallback for Potree versions that do not expose
+    a usable point-cloud bounding box.
+  */
+  var pointclouds =
+    viewer.scene.pointclouds ||
+    [];
+
+  var previousVisibility =
+    [];
 
   pointclouds.forEach(
     function (cloud) {
       previousVisibility.push({
         cloud: cloud,
-        visible: cloud.visible !== false
+        visible:
+          cloud.visible !==
+          false
       });
 
       cloud.visible =
-        cloud === activeCloud;
+        cloud ===
+        activeCloud;
     }
   );
 
@@ -3096,6 +4172,40 @@ function fitActiveScan() {
           item.visible;
       }
     );
+  }
+
+  if (
+    state.activeBounds
+  ) {
+    var fallbackCenter =
+      makeThreeVector({
+        x:
+          (
+            state.activeBounds.min.x +
+            state.activeBounds.max.x
+          ) /
+          2,
+        y:
+          (
+            state.activeBounds.min.y +
+            state.activeBounds.max.y
+          ) /
+          2,
+        z:
+          (
+            state.activeBounds.min.z +
+            state.activeBounds.max.z
+          ) /
+          2
+      });
+
+    if (
+      fallbackCenter
+    ) {
+      setOrbitCenter(
+        fallbackCenter
+      );
+    }
   }
 
   setStatus(
@@ -3210,12 +4320,21 @@ function fitBounds(
     typeof direction.normalize !==
       "function"
   ) {
-    direction =
-      new THREE.Vector3(
-        0,
-        -1,
-        -0.5
-      );
+    var THREE_NAMESPACE =
+  getThreeNamespace();
+
+if (
+  THREE_NAMESPACE &&
+  typeof THREE_NAMESPACE.Vector3 ===
+  "function"
+) {
+  direction =
+    new THREE_NAMESPACE.Vector3(
+      0,
+      -1,
+      -0.5
+    );
+}
   }
 
   direction.normalize();
@@ -3369,6 +4488,9 @@ function fitBounds(
       center
     );
   }
+  setOrbitCenter(
+  center
+);
 
   /*
    * Keep Potree's radius synchronized.
@@ -4755,6 +5877,15 @@ function exportScreenshot() {
 /* -------------------------------------------------------------------------- */
 /* EVENTS                                                                     */
 /* -------------------------------------------------------------------------- */
+bindDropdown(
+  "toggleLibrary",
+  "libraryDropdownContent"
+);
+
+bindDropdown(
+  "toggleInspector",
+  "inspectorDropdownContent"
+);
 
 function bindEvents() {
   addEvent(
@@ -4788,6 +5919,12 @@ function bindEvents() {
     "click",
     fitActiveScan
   );
+
+  addEvent(
+  "pointDisplayMode",
+  "click",
+  togglePointDisplayMode
+);
 
   addEvent(
     "resetView",
