@@ -2457,7 +2457,7 @@ function configurePointCloud(
   material.size =
     getNumberValue(
       "pointSize",
-      1.5
+      1.0
     );
 
   var potree =
@@ -3149,7 +3149,7 @@ function applyPointDisplayMode(
     material.size =
       getNumberValue(
         "pointSize",
-        1.5
+        1.0
       );
   }
 
@@ -3243,7 +3243,7 @@ function applyPointSize() {
   var value =
     getNumberValue(
       "pointSize",
-      1.5
+      1.0
     );
 
   setText(
