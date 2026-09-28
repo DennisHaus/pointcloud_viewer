@@ -211,17 +211,9 @@ function setDropdownState(
   );
 
   var panel =
-    null;
-
-  if (
-    typeof button.closest ===
-    "function"
-  ) {
-    panel =
-      button.closest(
-        ".library-panel, .inspector-panel"
-      );
-  }
+    button.closest(
+      ".library-panel, .inspector-panel"
+    );
 
   if (
     panel
@@ -249,17 +241,11 @@ function setDropdownState(
       expanded
         ? "⌄"
         : "⌃";
-  } else {
-    /*
-      Used by the library button, which may only
-      contain the arrow character directly.
-    */
-    button.textContent =
-      expanded
-        ? "⌄"
-        : "⌃";
   }
+
+  updatePanelLayout();
 }
+
 
 function bindDropdown(
   buttonId,
@@ -279,14 +265,20 @@ function bindDropdown(
     !button ||
     !content
   ) {
+    console.warn(
+      "Dropdown elements not found:",
+      buttonId,
+      contentId
+    );
+
     return;
   }
 
   var expanded =
     button.getAttribute(
       "aria-expanded"
-    ) !==
-    "false";
+    ) ===
+    "true";
 
   setDropdownState(
     button,
@@ -296,8 +288,11 @@ function bindDropdown(
 
   button.addEventListener(
     "click",
-    function () {
-      var isExpanded =
+    function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      var currentlyExpanded =
         button.getAttribute(
           "aria-expanded"
         ) ===
@@ -306,7 +301,7 @@ function bindDropdown(
       setDropdownState(
         button,
         content,
-        !isExpanded
+        !currentlyExpanded
       );
     }
   );
@@ -4472,24 +4467,19 @@ function getPointCloudBounds(
   }
 
   var box =
-    pointcloud.boundingBox;
-
-  if (
-    !box &&
-    pointcloud.pcoGeometry
-  ) {
-    box =
-      pointcloud.pcoGeometry.tightBoundingBox ||
-      pointcloud.pcoGeometry.boundingBox;
-  }
-
-  if (
-    !box &&
-    pointcloud.geometry
-  ) {
-    box =
-      pointcloud.geometry.boundingBox;
-  }
+    pointcloud.boundingBox ||
+    (
+      pointcloud.pcoGeometry &&
+      (
+        pointcloud.pcoGeometry.tightBoundingBox ||
+        pointcloud.pcoGeometry.boundingBox
+      )
+    ) ||
+    (
+      pointcloud.geometry &&
+      pointcloud.geometry.boundingBox
+    ) ||
+    null;
 
   if (
     !box
@@ -4497,127 +4487,100 @@ function getPointCloudBounds(
     return null;
   }
 
-  /*
-    Standard THREE.Box3 format:
-      box.min.x
-      box.min.y
-      box.min.z
-      box.max.x
-      box.max.y
-      box.max.z
-  */
+  function coordinate(
+    vector,
+    property,
+    index
+  ) {
+    if (
+      vector &&
+      typeof vector[property] ===
+      "number" &&
+      isFinite(
+        vector[property]
+      )
+    ) {
+      return vector[property];
+    }
+
+    if (
+      vector &&
+      typeof vector[index] ===
+      "number" &&
+      isFinite(
+        vector[index]
+      )
+    ) {
+      return vector[index];
+    }
+
+    return null;
+  }
+
+  var minX =
+    null;
+
+  var minY =
+    null;
+
+  var minZ =
+    null;
+
+  var maxX =
+    null;
+
+  var maxY =
+    null;
+
+  var maxZ =
+    null;
+
   if (
     box.min &&
     box.max
   ) {
-    var minX =
-      readBoxCoordinate(
+    minX =
+      coordinate(
         box.min,
         "x",
         0
       );
 
-    var minY =
-      readBoxCoordinate(
+    minY =
+      coordinate(
         box.min,
         "y",
         1
       );
 
-    var minZ =
-      readBoxCoordinate(
+    minZ =
+      coordinate(
         box.min,
         "z",
         2
       );
 
-    var maxX =
-      readBoxCoordinate(
+    maxX =
+      coordinate(
         box.max,
         "x",
         0
       );
 
-    var maxY =
-      readBoxCoordinate(
+    maxY =
+      coordinate(
         box.max,
         "y",
         1
       );
 
-    var maxZ =
-      readBoxCoordinate(
+    maxZ =
+      coordinate(
         box.max,
         "z",
         2
       );
-
-    if (
-      minX ===
-        null ||
-      minY ===
-        null ||
-      minZ ===
-        null ||
-      maxX ===
-        null ||
-      maxY ===
-        null ||
-      maxZ ===
-        null
-    ) {
-      return null;
-    }
-
-    return {
-      min: {
-        x:
-          Math.min(
-            minX,
-            maxX
-          ),
-
-        y:
-          Math.min(
-            minY,
-            maxY
-          ),
-
-        z:
-          Math.min(
-            minZ,
-            maxZ
-          )
-      },
-
-      max: {
-        x:
-          Math.max(
-            minX,
-            maxX
-          ),
-
-        y:
-          Math.max(
-            minY,
-            maxY
-          ),
-
-        z:
-          Math.max(
-            minZ,
-            maxZ
-          )
-      }
-    };
-  }
-
-  /*
-    Alternative Potree metadata format:
-      lx, ly, lz
-      ux, uy, uz
-  */
-  if (
+  } else if (
     typeof box.lx ===
       "number" &&
     typeof box.ly ===
@@ -4631,51 +4594,81 @@ function getPointCloudBounds(
     typeof box.uz ===
       "number"
   ) {
-    return {
-      min: {
-        x:
-          Math.min(
-            box.lx,
-            box.ux
-          ),
+    minX =
+      box.lx;
 
-        y:
-          Math.min(
-            box.ly,
-            box.uy
-          ),
+    minY =
+      box.ly;
 
-        z:
-          Math.min(
-            box.lz,
-            box.uz
-          )
-      },
+    minZ =
+      box.lz;
 
-      max: {
-        x:
-          Math.max(
-            box.lx,
-            box.ux
-          ),
+    maxX =
+      box.ux;
 
-        y:
-          Math.max(
-            box.ly,
-            box.uy
-          ),
+    maxY =
+      box.uy;
 
-        z:
-          Math.max(
-            box.lz,
-            box.uz
-          )
-      }
-    };
+    maxZ =
+      box.uz;
   }
 
-  return null;
+  if (
+    minX === null ||
+    minY === null ||
+    minZ === null ||
+    maxX === null ||
+    maxY === null ||
+    maxZ === null
+  ) {
+    return null;
+  }
+
+  return {
+    min: {
+      x:
+        Math.min(
+          minX,
+          maxX
+        ),
+
+      y:
+        Math.min(
+          minY,
+          maxY
+        ),
+
+      z:
+        Math.min(
+          minZ,
+          maxZ
+        )
+    },
+
+    max: {
+      x:
+        Math.max(
+          minX,
+          maxX
+        ),
+
+      y:
+        Math.max(
+          minY,
+          maxY
+        ),
+
+      z:
+        Math.max(
+          minZ,
+          maxZ
+        )
+    }
+  };
 }
+
+window.getPointCloudBounds =
+  getPointCloudBounds;
 
 function getPointCloudWorldBounds(
   pointcloud
