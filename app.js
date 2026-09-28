@@ -1923,11 +1923,16 @@ function loadScan(
         );
 
         window.setTimeout(
-          function () {
-            fitActiveScan();
-          },
-          250
-        );
+  function () {
+    if (
+      state.activeCloud ===
+      pointcloud
+    ) {
+      fitActiveScan();
+    }
+  },
+  500
+);
 
         return pointcloud;
       }
@@ -2411,72 +2416,6 @@ function updateInspector() {
   );
 }
 
-function getPointCloudBounds(
-  pointcloud
-) {
-  if (
-    !pointcloud
-  ) {
-    return null;
-  }
-
-  var box =
-    pointcloud.boundingBox;
-
-  if (
-    !box &&
-    pointcloud.pcoGeometry
-  ) {
-    box =
-      pointcloud.pcoGeometry.tightBoundingBox ||
-      pointcloud.pcoGeometry.boundingBox;
-  }
-
-  if (
-    !box ||
-    !box.min ||
-    !box.max
-  ) {
-    return null;
-  }
-
-  return {
-    min: {
-      x: getVectorValue(
-        box.min,
-        "x",
-        0
-      ),
-      y: getVectorValue(
-        box.min,
-        "y",
-        1
-      ),
-      z: getVectorValue(
-        box.min,
-        "z",
-        2
-      )
-    },
-    max: {
-      x: getVectorValue(
-        box.max,
-        "x",
-        0
-      ),
-      y: getVectorValue(
-        box.max,
-        "y",
-        1
-      ),
-      z: getVectorValue(
-        box.max,
-        "z",
-        2
-      )
-    }
-  };
-}
 
 function getVectorValue(
   vector,
@@ -4059,64 +3998,7 @@ function makeThreeVector(
 }
 
 
-function getPointCloudWorldBounds(
-  pointcloud
-) {
-  if (
-    !pointcloud
-  ) {
-    return null;
-  }
 
-  var THREE_NAMESPACE =
-    getThreeNamespace();
-
-  if (
-    !THREE_NAMESPACE ||
-    typeof THREE_NAMESPACE.Vector3 !==
-    "function"
-  ) {
-    return null;
-  }
-
-  /*
-    Prefer Potree's own world-bounds method
-    when it is available.
-  */
-  if (
-    typeof pointcloud.getBoundingBoxWorld ===
-    "function"
-  ) {
-    try {
-      var directBounds =
-        pointcloud.getBoundingBoxWorld();
-
-      if (
-        directBounds &&
-        directBounds.min &&
-        directBounds.max
-      ) {
-        return {
-          min:
-            makeThreeVector(
-              directBounds.min
-            ),
-
-          max:
-            makeThreeVector(
-              directBounds.max
-            )
-        };
-      }
-    } catch (
-      error
-    ) {
-      console.warn(
-        "Could not read Potree world bounds:",
-        error
-      );
-    }
-  }
 
   /*
     Fallback to the point-cloud bounding box.
@@ -4286,91 +4168,7 @@ function getPointCloudWorldBounds(
 }
 
 
-function getCombinedPointCloudBounds(
-  pointclouds
-) {
-  if (
-    !Array.isArray(
-      pointclouds
-    ) ||
-    pointclouds.length ===
-    0
-  ) {
-    return null;
-  }
 
-  var combined =
-    null;
-
-  pointclouds.forEach(
-    function (pointcloud) {
-      var bounds =
-        getPointCloudWorldBounds(
-          pointcloud
-        );
-
-      if (
-        !bounds ||
-        !bounds.min ||
-        !bounds.max
-      ) {
-        return;
-      }
-
-      if (
-        !combined
-      ) {
-        combined = {
-          min:
-            bounds.min.clone(),
-
-          max:
-            bounds.max.clone()
-        };
-
-        return;
-      }
-
-      combined.min.x =
-        Math.min(
-          combined.min.x,
-          bounds.min.x
-        );
-
-      combined.min.y =
-        Math.min(
-          combined.min.y,
-          bounds.min.y
-        );
-
-      combined.min.z =
-        Math.min(
-          combined.min.z,
-          bounds.min.z
-        );
-
-      combined.max.x =
-        Math.max(
-          combined.max.x,
-          bounds.max.x
-        );
-
-      combined.max.y =
-        Math.max(
-          combined.max.y,
-          bounds.max.y
-        );
-
-      combined.max.z =
-        Math.max(
-          combined.max.z,
-          bounds.max.z
-        );
-    }
-  );
-
-  return combined;
-}
 
 
 function setOrbitCenter(
@@ -4509,6 +4307,565 @@ function getCurrentViewDirection(
   return direction;
 }
 
+function getPointCloudBox(
+  pointcloud
+) {
+  if (
+    !pointcloud
+  ) {
+    return null;
+  }
+
+  if (
+    pointcloud.boundingBox
+  ) {
+    return pointcloud.boundingBox;
+  }
+
+  if (
+    pointcloud.pcoGeometry
+  ) {
+    return (
+      pointcloud.pcoGeometry.tightBoundingBox ||
+      pointcloud.pcoGeometry.boundingBox ||
+      null
+    );
+  }
+
+  if (
+    pointcloud.geometry &&
+    pointcloud.geometry.boundingBox
+  ) {
+    return pointcloud.geometry.boundingBox;
+  }
+
+  return null;
+}
+
+
+function readBoxBounds(
+  box
+) {
+  if (
+    !box
+  ) {
+    return null;
+  }
+
+  var minX;
+  var minY;
+  var minZ;
+  var maxX;
+  var maxY;
+  var maxZ;
+
+  /*
+    Standard THREE.Box3 format:
+      box.min.x
+      box.min.y
+      box.min.z
+      box.max.x
+      box.max.y
+      box.max.z
+  */
+  if (
+    box.min &&
+    box.max
+  ) {
+    minX =
+      getVectorValue(
+        box.min,
+        "x",
+        0
+      );
+
+    minY =
+      getVectorValue(
+        box.min,
+        "y",
+        1
+      );
+
+    minZ =
+      getVectorValue(
+        box.min,
+        "z",
+        2
+      );
+
+    maxX =
+      getVectorValue(
+        box.max,
+        "x",
+        0
+      );
+
+    maxY =
+      getVectorValue(
+        box.max,
+        "y",
+        1
+      );
+
+    maxZ =
+      getVectorValue(
+        box.max,
+        "z",
+        2
+      );
+  } else if (
+    /*
+      Potree metadata-style format:
+        lx, ly, lz
+        ux, uy, uz
+    */
+    typeof box.lx ===
+      "number" &&
+    typeof box.ly ===
+      "number" &&
+    typeof box.lz ===
+      "number" &&
+    typeof box.ux ===
+      "number" &&
+    typeof box.uy ===
+      "number" &&
+    typeof box.uz ===
+      "number"
+  ) {
+    minX =
+      box.lx;
+
+    minY =
+      box.ly;
+
+    minZ =
+      box.lz;
+
+    maxX =
+      box.ux;
+
+    maxY =
+      box.uy;
+
+    maxZ =
+      box.uz;
+  }
+
+  if (
+    !isFinite(
+      minX
+    ) ||
+    !isFinite(
+      minY
+    ) ||
+    !isFinite(
+      minZ
+    ) ||
+    !isFinite(
+      maxX
+    ) ||
+    !isFinite(
+      maxY
+    ) ||
+    !isFinite(
+      maxZ
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    min: {
+      x:
+        Math.min(
+          minX,
+          maxX
+        ),
+
+      y:
+        Math.min(
+          minY,
+          maxY
+        ),
+
+      z:
+        Math.min(
+          minZ,
+          maxZ
+        )
+    },
+
+    max: {
+      x:
+        Math.max(
+          minX,
+          maxX
+        ),
+
+      y:
+        Math.max(
+          minY,
+          maxY
+        ),
+
+      z:
+        Math.max(
+          minZ,
+          maxZ
+        )
+    }
+  };
+}
+
+
+function getPointCloudBounds(
+  pointcloud
+) {
+  var box =
+    getPointCloudBox(
+      pointcloud
+    );
+
+  return readBoxBounds(
+    box
+  );
+}
+
+
+function getPointCloudWorldBounds(
+  pointcloud
+) {
+  if (
+    !pointcloud
+  ) {
+    return null;
+  }
+
+  /*
+    Prefer Potree's own world-bounds method
+    when available.
+  */
+  if (
+    typeof pointcloud.getBoundingBoxWorld ===
+    "function"
+  ) {
+    try {
+      var worldBox =
+        pointcloud.getBoundingBoxWorld();
+
+      var worldBounds =
+        readBoxBounds(
+          worldBox
+        );
+
+      if (
+        worldBounds
+      ) {
+        return worldBounds;
+      }
+    } catch (
+      error
+    ) {
+      console.warn(
+        "Could not read world bounds:",
+        error
+      );
+    }
+  }
+
+  var box =
+    getPointCloudBox(
+      pointcloud
+    );
+
+  if (
+    !box
+  ) {
+    return null;
+  }
+
+  /*
+    If this is a THREE.Box3 and the point cloud
+    has a transformation matrix, apply it.
+  */
+  if (
+    typeof box.clone ===
+      "function" &&
+    typeof box.applyMatrix4 ===
+      "function" &&
+    pointcloud.matrixWorld
+  ) {
+    try {
+      if (
+        typeof pointcloud.updateMatrixWorld ===
+        "function"
+      ) {
+        pointcloud.updateMatrixWorld(
+          true
+        );
+      }
+
+      var transformedBox =
+        box.clone();
+
+      transformedBox.applyMatrix4(
+        pointcloud.matrixWorld
+      );
+
+      var transformedBounds =
+        readBoxBounds(
+          transformedBox
+        );
+
+      if (
+        transformedBounds
+      ) {
+        return transformedBounds;
+      }
+    } catch (
+      error
+    ) {
+      console.warn(
+        "Could not transform point-cloud bounds:",
+        error
+      );
+    }
+  }
+
+  /*
+    Most COPC clouds already provide bounds
+    in the correct coordinate system.
+  */
+  return readBoxBounds(
+    box
+  );
+}
+
+
+function getCombinedPointCloudBounds(
+  pointclouds
+) {
+  if (
+    !Array.isArray(
+      pointclouds
+    ) ||
+    pointclouds.length ===
+    0
+  ) {
+    return null;
+  }
+
+  var combined =
+    null;
+
+  pointclouds.forEach(
+    function (pointcloud) {
+      var bounds =
+        getPointCloudWorldBounds(
+          pointcloud
+        );
+
+      if (
+        !bounds
+      ) {
+        return;
+      }
+
+      if (
+        !combined
+      ) {
+        combined = {
+          min: {
+            x:
+              bounds.min.x,
+
+            y:
+              bounds.min.y,
+
+            z:
+              bounds.min.z
+          },
+
+          max: {
+            x:
+              bounds.max.x,
+
+            y:
+              bounds.max.y,
+
+            z:
+              bounds.max.z
+          }
+        };
+
+        return;
+      }
+
+      combined.min.x =
+        Math.min(
+          combined.min.x,
+          bounds.min.x
+        );
+
+      combined.min.y =
+        Math.min(
+          combined.min.y,
+          bounds.min.y
+        );
+
+      combined.min.z =
+        Math.min(
+          combined.min.z,
+          bounds.min.z
+        );
+
+      combined.max.x =
+        Math.max(
+          combined.max.x,
+          bounds.max.x
+        );
+
+      combined.max.y =
+        Math.max(
+          combined.max.y,
+          bounds.max.y
+        );
+
+      combined.max.z =
+        Math.max(
+          combined.max.z,
+          bounds.max.z
+        );
+    }
+  );
+
+  return combined;
+}
+
+
+function setOrbitCenter(
+  center
+) {
+  if (
+    !viewer ||
+    !viewer.scene ||
+    !center
+  ) {
+    return;
+  }
+
+  var view =
+    viewer.scene.view;
+
+  var controls =
+    viewer.orbitControls ||
+    viewer.controls ||
+    null;
+
+  if (
+    view
+  ) {
+    if (
+      typeof view.setPivot ===
+      "function"
+    ) {
+      view.setPivot(
+        center
+      );
+    }
+
+    if (
+      view.pivot &&
+      typeof view.pivot.copy ===
+      "function"
+    ) {
+      view.pivot.copy(
+        center
+      );
+    }
+
+    if (
+      view.target &&
+      typeof view.target.copy ===
+      "function"
+    ) {
+      view.target.copy(
+        center
+      );
+    }
+  }
+
+  if (
+    controls
+  ) {
+    if (
+      typeof controls.setPivot ===
+      "function"
+    ) {
+      controls.setPivot(
+        center
+      );
+    }
+
+    if (
+      controls.pivot &&
+      typeof controls.pivot.copy ===
+      "function"
+    ) {
+      controls.pivot.copy(
+        center
+      );
+    }
+
+    if (
+      controls.target &&
+      typeof controls.target.copy ===
+      "function"
+    ) {
+      controls.target.copy(
+        center
+      );
+    }
+  }
+}
+
+
+function getCurrentViewDirection(
+  view
+) {
+  if (
+    !view
+  ) {
+    return null;
+  }
+
+  if (
+    view.direction &&
+    typeof view.direction.clone ===
+    "function"
+  ) {
+    return view.direction.clone();
+  }
+
+  if (
+    typeof view.getDirection ===
+    "function"
+  ) {
+    var direction =
+      view.getDirection();
+
+    if (
+      direction &&
+      typeof direction.clone ===
+      "function"
+    ) {
+      return direction.clone();
+    }
+  }
+
+  return null;
+}
+
 
 function fitBounds(
   bounds,
@@ -4525,53 +4882,40 @@ function fitBounds(
     return false;
   }
 
-  var THREE_NAMESPACE =
-    getThreeNamespace();
-
-  if (
-    !THREE_NAMESPACE ||
-    typeof THREE_NAMESPACE.Vector3 !==
-    "function"
-  ) {
-    setStatus(
-      "Three.js vectors are unavailable.",
-      "error"
-    );
-
-    return false;
-  }
-
   var view =
     viewer.scene.view;
 
   if (
     !view ||
-    !view.position
-  ) {
-    return false;
-  }
-
-  var min =
-    makeThreeVector(
-      bounds.min
-    );
-
-  var max =
-    makeThreeVector(
-      bounds.max
-    );
-
-  if (
-    !min ||
-    !max
+    !view.position ||
+    typeof view.position.clone !==
+    "function"
   ) {
     return false;
   }
 
   /*
-    Calculate the center of the selected
-    or combined point-cloud bounds.
+    Use the same Vector3 class as Potree's view.
+    This avoids depending on window.THREE.
   */
+  var min =
+    view.position.clone();
+
+  min.set(
+    bounds.min.x,
+    bounds.min.y,
+    bounds.min.z
+  );
+
+  var max =
+    view.position.clone();
+
+  max.set(
+    bounds.max.x,
+    bounds.max.y,
+    bounds.max.z
+  );
+
   var center =
     min.clone()
       .add(
@@ -4581,52 +4925,57 @@ function fitBounds(
         0.5
       );
 
-  /*
-    Calculate the diagonal and radius.
-    A bounding sphere is used so the whole
-    bounding box remains inside the view
-    regardless of camera direction.
-  */
   var size =
     max.clone()
       .sub(
         min
       );
 
-  var radius =
-    size.length() *
-    0.5;
+  var width =
+    Math.abs(
+      size.x
+    );
 
-  var maximumSize =
-    Math.max(
-      Math.abs(
-        size.x
-      ),
-      Math.abs(
-        size.y
-      ),
-      Math.abs(
-        size.z
-      )
+  var height =
+    Math.abs(
+      size.y
+    );
+
+  var depth =
+    Math.abs(
+      size.z
     );
 
   if (
     !isFinite(
-      radius
+      width
     ) ||
-    radius <= 0
+    width <= 0
   ) {
-    radius =
-      Math.max(
-        maximumSize *
-        0.5,
-        1
-      );
+    width =
+      1;
   }
 
-  /*
-    Keep the current camera direction.
-  */
+  if (
+    !isFinite(
+      height
+    ) ||
+    height <= 0
+  ) {
+    height =
+      1;
+  }
+
+  if (
+    !isFinite(
+      depth
+    ) ||
+    depth <= 0
+  ) {
+    depth =
+      1;
+  }
+
   var direction =
     getCurrentViewDirection(
       view
@@ -4638,18 +4987,30 @@ function fitBounds(
     "function"
   ) {
     direction =
-      new THREE_NAMESPACE.Vector3(
+      center.clone()
+        .sub(
+          view.position
+        );
+
+    if (
+      typeof direction.normalize !==
+      "function" ||
+      direction.lengthSq() <
+      0.000001
+    ) {
+      direction =
+        view.position.clone();
+
+      direction.set(
         0,
         -1,
         -0.5
       );
+    }
   }
 
   direction.normalize();
 
-  /*
-    Read the current field of view.
-  */
   var fov =
     60;
 
@@ -4678,9 +5039,6 @@ function fitBounds(
     Math.PI /
     180;
 
-  /*
-    Determine the renderer aspect ratio.
-  */
   var aspect =
     1;
 
@@ -4691,20 +5049,16 @@ function fitBounds(
     var canvas =
       viewer.renderer.domElement;
 
-    var canvasWidth =
-      canvas.clientWidth ||
-      canvas.width ||
-      1;
-
-    var canvasHeight =
-      canvas.clientHeight ||
-      canvas.height ||
-      1;
-
     aspect =
-      canvasWidth /
+      (
+        canvas.clientWidth ||
+        canvas.width ||
+        1
+      ) /
       Math.max(
-        canvasHeight,
+        canvas.clientHeight ||
+        canvas.height ||
+        1,
         1
       );
   }
@@ -4729,16 +5083,32 @@ function fitBounds(
       aspect
     );
 
-  /*
-    Use the narrower field of view so the
-    complete bounds fit both horizontally
-    and vertically.
-  */
   var limitingFov =
     Math.min(
       verticalFov,
       horizontalFov
     );
+
+  var radius =
+    Math.sqrt(
+      width *
+      width +
+      height *
+      height +
+      depth *
+      depth
+    ) /
+    2;
+
+  if (
+    !isFinite(
+      radius
+    ) ||
+    radius <= 0
+  ) {
+    radius =
+      1;
+  }
 
   var safeFitFactor =
     Number(
@@ -4764,32 +5134,21 @@ function fitBounds(
     ) /
     safeFitFactor;
 
-  if (
-    !isFinite(
-      distance
-    ) ||
-    distance <= 0
-  ) {
-    distance =
-      1;
-  }
+  var largestSize =
+    Math.max(
+      width,
+      height,
+      depth
+    );
 
-  /*
-    Prevent the camera from ending up
-    unrealistically close to tiny scans.
-  */
   distance =
     Math.max(
       distance,
-      maximumSize *
+      largestSize *
       0.05,
       0.001
     );
 
-  /*
-    Position the camera behind the center
-    while preserving its current direction.
-  */
   var cameraPosition =
     center.clone()
       .sub(
@@ -4803,9 +5162,6 @@ function fitBounds(
     cameraPosition
   );
 
-  /*
-    Make the camera look at the center.
-  */
   if (
     typeof view.lookAt ===
     "function"
@@ -4815,17 +5171,9 @@ function fitBounds(
     );
   }
 
-  /*
-    Keep Potree's orbit/navigation radius
-    synchronized with the new camera position.
-  */
   view.radius =
     distance;
 
-  /*
-    Make the selected or combined center
-    the orbit rotation center.
-  */
   setOrbitCenter(
     center
   );
@@ -4860,6 +5208,112 @@ function fitBounds(
 }
 
 
+function fitUsingPotree(
+  cloudsToFit,
+  centerBounds,
+  statusMessage
+) {
+  if (
+    !viewer ||
+    !viewer.scene ||
+    typeof viewer.fitToScreen !==
+    "function"
+  ) {
+    return false;
+  }
+
+  var allClouds =
+    viewer.scene.pointclouds ||
+    [];
+
+  if (
+    allClouds.length ===
+    0
+  ) {
+    return false;
+  }
+
+  var previousVisibility =
+    [];
+
+  allClouds.forEach(
+    function (cloud) {
+      previousVisibility.push({
+        cloud:
+          cloud,
+
+        visible:
+          cloud.visible !==
+          false
+      });
+
+      cloud.visible =
+        cloudsToFit.indexOf(
+          cloud
+        ) !==
+        -1;
+    }
+  );
+
+  try {
+    viewer.fitToScreen(
+      0.9
+    );
+  } finally {
+    previousVisibility.forEach(
+      function (item) {
+        item.cloud.visible =
+          item.visible;
+      }
+    );
+  }
+
+  if (
+    centerBounds &&
+    viewer.scene.view &&
+    viewer.scene.view.position
+  ) {
+    var center =
+      viewer.scene.view.position.clone();
+
+    center.set(
+      (
+        centerBounds.min.x +
+        centerBounds.max.x
+      ) /
+      2,
+
+      (
+        centerBounds.min.y +
+        centerBounds.max.y
+      ) /
+      2,
+
+      (
+        centerBounds.min.z +
+        centerBounds.max.z
+      ) /
+      2
+    );
+
+    setOrbitCenter(
+      center
+    );
+  }
+
+  if (
+    statusMessage
+  ) {
+    setStatus(
+      statusMessage,
+      "idle"
+    );
+  }
+
+  return true;
+}
+
+
 function fitActiveScan() {
   if (
     !viewer ||
@@ -4875,35 +5329,54 @@ function fitActiveScan() {
   }
 
   /*
-    Do not check activeCloud.visible here.
-    The Fit button must work for the selected
-    scan even if that scan is hidden.
+    The active scan is fitted even if it is hidden.
   */
   var bounds =
     getPointCloudWorldBounds(
       state.activeCloud
-    );
+    ) ||
+    state.activeBounds;
 
   if (
-    !bounds
+    bounds &&
+    fitBounds(
+      bounds,
+      0.9,
+      "Focused on " +
+      (
+        state.activeScan
+          ? state.activeScan.name
+          : "active scan"
+      )
+    )
   ) {
-    setStatus(
-      "The selected scan has no usable bounds.",
-      "error"
-    );
-
     return;
   }
 
-  fitBounds(
-    bounds,
-    0.9,
-    "Focused on " +
-    (
-      state.activeScan
-        ? state.activeScan.name
-        : "active scan"
+  /*
+    Fallback: temporarily show only the active
+    cloud while Potree calculates the camera.
+  */
+  if (
+    fitUsingPotree(
+      [
+        state.activeCloud
+      ],
+      bounds,
+      "Focused on " +
+      (
+        state.activeScan
+          ? state.activeScan.name
+          : "active scan"
+      )
     )
+  ) {
+    return;
+  }
+
+  setStatus(
+    "The selected scan could not be fitted.",
+    "error"
   );
 }
 
@@ -4925,16 +5398,12 @@ function fitAllScans() {
     viewer.scene.pointclouds ||
     [];
 
-  /*
-    Only visible point clouds are included.
-    Hidden point clouds are deliberately excluded.
-  */
   var visibleClouds =
     pointclouds.filter(
-      function (pointcloud) {
+      function (cloud) {
         return (
-          pointcloud &&
-          pointcloud.visible !==
+          cloud &&
+          cloud.visible !==
           false
         );
       }
@@ -4952,28 +5421,58 @@ function fitAllScans() {
     return;
   }
 
-  var bounds =
+  var combinedBounds =
     getCombinedPointCloudBounds(
       visibleClouds
     );
 
-  if (
-    !bounds
-  ) {
-    setStatus(
-      "Visible scans have no usable bounds.",
-      "error"
+  var everyCloudHasBounds =
+    visibleClouds.every(
+      function (cloud) {
+        return Boolean(
+          getPointCloudWorldBounds(
+            cloud
+          )
+        );
+      }
     );
 
+  /*
+    Use manual bounds when all visible clouds
+    have usable bounds.
+  */
+  if (
+    everyCloudHasBounds &&
+    combinedBounds &&
+    fitBounds(
+      combinedBounds,
+      0.9,
+      "Focused on all visible scans."
+    )
+  ) {
     return;
   }
 
-  fitBounds(
-    bounds,
-    0.9,
-    "Focused on all visible scans."
+  /*
+    Fallback for clouds whose bounds are not
+    exposed in the expected format.
+  */
+  if (
+    fitUsingPotree(
+      visibleClouds,
+      combinedBounds,
+      "Focused on all visible scans."
+    )
+  ) {
+    return;
+  }
+
+  setStatus(
+    "The visible scans could not be fitted.",
+    "error"
   );
 }
+
 
 function resetView() {
   fitAllScans();
