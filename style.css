@@ -261,6 +261,51 @@ button:active {
   background: transparent;
 }
 
+.button-noB,
+button {
+  min-height: 31px;
+
+  border: 0px solid var(--border-light);
+  border-radius: 0;
+
+  color: #dddddd;
+  background: #0c0c0c;
+
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.button-noB {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 10px;
+
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.button-noB:hover,
+button:hover {
+  border-color: #aaaaaa;
+  color: #ffffff;
+  background: #1b1b1b;
+}
+
+.button-noB:active,
+button:active {
+  background: #2a2a2a;
+}
+
+
 
 /* -------------------------------------------------------------------------- */
 /* SCREENSHOT CONTROLS                                                        */
@@ -732,7 +777,7 @@ button:active {
   display: grid;
   place-items: center;
 
-  border: 1px solid var(--border-light);
+  border: 0px solid var(--border-light);
 
   color: #dddddd;
   background: #0e0e0e;
@@ -809,6 +854,12 @@ button:active {
   background: rgba(255, 255, 255, 0.06);
 
   font-weight: 600;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .scan-folder > summary::-webkit-details-marker {
@@ -820,7 +871,7 @@ button:active {
 
   display: inline-block;
 
-  margin-right: 0.45rem;
+  margin-right: 1.45rem;
 
   transition: transform 0.15s ease;
 }
