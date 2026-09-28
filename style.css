@@ -1366,19 +1366,22 @@ button:active {
   display: inline-flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-start;
   gap: 0.4rem;
+  flex-wrap: nowrap;
   white-space: nowrap;
-  flex: 0 0 auto;
 }
 
-.screenshot-export-controls .screenshot-scale-select {
-  display: inline-block;
+.screenshot-scale-select {
   width: auto;
   min-width: 4.5rem;
   max-width: 5.5rem;
-  flex: 0 0 auto;
   margin: 0;
+  flex: 0 0 auto;
+
+  font: inherit;
+  color: inherit;
+  line-height: inherit;
+  cursor: pointer;
 }
 
 }

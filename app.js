@@ -32,7 +32,7 @@ var CONFIG = {
       screenshotScale: 2
       exported PNG:    6748 x 2800
   */
-  screenshotScale: 3,
+  screenshotScale: 4,
   screenshotWarmupMs: 600,
 
   useRawBaseForPaths: false,
@@ -4394,7 +4394,7 @@ function readPointCloudBox(
   };
 }
 
-function windowgetPointCloudBounds(
+function getPointCloudBounds(
   pointcloud
 ) {
   if (
