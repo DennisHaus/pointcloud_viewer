@@ -13,7 +13,6 @@
   --muted: #8d8d8d;
   --muted-dark: #666666;
 
-  --accent: #d8d8d8;
   --accent-strong: #ffffff;
 
   --danger: #d37b7b;
@@ -23,8 +22,8 @@
   --header-height: 360px;
   --status-height: 30px;
 
-  --library-header-height: 49px;
-  --inspector-toggle-height: 49px;
+  --panel-header-height: 49px;
+  --inspector-toggle-height: 48px;
 
   font-family:
     Inter,
@@ -85,7 +84,7 @@ select:focus-visible {
 
 
 /* -------------------------------------------------------------------------- */
-/* MAIN APPLICATION LAYOUT                                                    */
+/* APPLICATION LAYOUT                                                         */
 /* -------------------------------------------------------------------------- */
 
 .app-shell {
@@ -106,13 +105,14 @@ select:focus-visible {
 
   width: 100%;
   height: 100%;
+  min-height: 0;
 
   overflow: hidden;
 }
 
 
 /* -------------------------------------------------------------------------- */
-/* RIGHT-SIDE HEADER                                                          */
+/* HEADER                                                                     */
 /* -------------------------------------------------------------------------- */
 
 .topbar {
@@ -121,8 +121,6 @@ select:focus-visible {
 
   top: 0;
   right: 0;
-
-  display: block;
 
   width: var(--interface-width);
   height: var(--header-height);
@@ -140,10 +138,6 @@ select:focus-visible {
 .brand {
   display: block;
   min-width: 0;
-}
-
-.brand-mark {
-  display: none;
 }
 
 .eyebrow {
@@ -257,18 +251,6 @@ button:active {
   background: #2a2a2a;
 }
 
-.button-primary {
-  border-color: #eeeeee;
-  color: #000000;
-  background: #eeeeee;
-}
-
-.button-primary:hover {
-  border-color: #ffffff;
-  color: #000000;
-  background: #ffffff;
-}
-
 .button-secondary {
   color: #dddddd;
   background: #0c0c0c;
@@ -281,7 +263,7 @@ button:active {
 
 
 /* -------------------------------------------------------------------------- */
-/* SCREENSHOT EXPORT CONTROLS                                                 */
+/* SCREENSHOT CONTROLS                                                        */
 /* -------------------------------------------------------------------------- */
 
 .screenshot-export-controls {
@@ -350,13 +332,6 @@ button:active {
   text-transform: uppercase;
 }
 
-.screenshot-scale-select:hover,
-.screenshot-scale-select:focus {
-  border-color: #aaaaaa;
-  color: #ffffff;
-  background-color: #1b1b1b;
-}
-
 
 /* -------------------------------------------------------------------------- */
 /* VIEWER                                                                     */
@@ -364,6 +339,8 @@ button:active {
 
 .viewer-panel {
   position: absolute;
+  z-index: 1;
+
   inset: 0 var(--interface-width) 0 0;
 
   min-width: 0;
@@ -386,14 +363,6 @@ button:active {
 
   width: 100%;
   height: 100%;
-
-  background:
-    radial-gradient(
-      circle at 50% 35%,
-      #111111 0%,
-      #050505 55%,
-      #000000 100%
-    );
 }
 
 #potree_render_area {
@@ -469,13 +438,9 @@ button:active {
   gap: 8px;
 }
 
-.viewer-help {
-  text-align: right;
-}
-
 
 /* -------------------------------------------------------------------------- */
-/* STATUS LIGHTS                                                              */
+/* STATUS DOTS                                                                */
 /* -------------------------------------------------------------------------- */
 
 .status-dot {
@@ -490,24 +455,17 @@ button:active {
   box-shadow: 0 0 9px rgba(238, 238, 238, 0.65);
 }
 
-.status-dot.status-idle {
-  background: #eeeeee;
-  box-shadow: 0 0 9px rgba(238, 238, 238, 0.65);
-}
-
 .status-dot.status-loading {
   background: var(--warning);
-  box-shadow: 0 0 9px rgba(215, 182, 109, 0.7);
 }
 
 .status-dot.status-error {
   background: var(--danger);
-  box-shadow: 0 0 9px rgba(211, 123, 123, 0.7);
 }
 
 
 /* -------------------------------------------------------------------------- */
-/* LOADING OVERLAY                                                            */
+/* LOADING                                                                    */
 /* -------------------------------------------------------------------------- */
 
 .loading-overlay {
@@ -596,63 +554,17 @@ button:active {
 
 
 /* -------------------------------------------------------------------------- */
-/* LIBRARY PANEL                                                              */
+/* PANEL HEADERS                                                              */
 /* -------------------------------------------------------------------------- */
-
-.library-panel {
-  position: absolute;
-  z-index: 20;
-
-  top: var(--header-height);
-  right: 0;
-  bottom: calc(
-    var(--status-height) +
-    var(--inspector-toggle-height)
-  );
-
-  display: flex;
-  flex-direction: column;
-
-  width: var(--interface-width);
-  min-height: 0;
-
-  overflow: hidden;
-
-  border-left: 1px solid var(--border);
-
-  background: var(--black);
-}
-
-/*
-  When the library is collapsed, only its header remains.
-*/
-.library-panel.is-collapsed {
-  top: var(--header-height);
-  bottom: auto;
-
-  height: var(--library-header-height);
-}
-
-/*
-  When expanded, the library uses the available space.
-*/
-.library-panel.is-expanded {
-  top: var(--header-height);
-  bottom: calc(
-    var(--status-height) +
-    var(--inspector-toggle-height)
-  );
-
-  height: auto;
-}
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
 
-  min-height: var(--library-header-height);
-  height: var(--library-header-height);
+  width: 100%;
+  height: var(--panel-header-height);
+  min-height: var(--panel-header-height);
 
   padding: 10px 13px;
 
@@ -685,6 +597,10 @@ button:active {
 }
 
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
   width: 28px;
   height: 28px;
   min-height: 28px;
@@ -695,16 +611,51 @@ button:active {
   background: transparent;
 
   font-size: 17px;
-  font-weight: 400;
-}
-
-.icon-button:hover {
-  color: #ffffff;
-}
-
-.dropdown-toggle {
-  min-width: 28px;
   line-height: 1;
+}
+
+.dropdown-arrow {
+  display: inline-block;
+
+  color: var(--muted);
+
+  font-size: 16px;
+  line-height: 1;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* LIBRARY                                                                    */
+/* -------------------------------------------------------------------------- */
+
+.library-panel {
+  position: absolute;
+  z-index: 20;
+
+  top: var(--header-height);
+  right: 0;
+  bottom: calc(
+    var(--status-height) +
+    var(--inspector-toggle-height)
+  );
+
+  display: flex;
+  flex-direction: column;
+
+  width: var(--interface-width);
+  min-width: 0;
+  min-height: 0;
+
+  overflow: hidden;
+
+  border-left: 1px solid var(--border);
+
+  background: var(--black);
+}
+
+.library-panel.is-collapsed {
+  bottom: auto;
+  height: var(--panel-header-height);
 }
 
 #libraryDropdownContent {
@@ -712,6 +663,7 @@ button:active {
   flex: 1 1 auto;
   flex-direction: column;
 
+  width: 100%;
   min-width: 0;
   min-height: 0;
 
@@ -719,16 +671,18 @@ button:active {
 }
 
 #libraryDropdownContent.hidden {
-  display: none;
+  display: none !important;
 }
 
 .library-list,
 #libraryList {
+  display: block;
+
   flex: 1 1 auto;
 
+  width: 100%;
   min-width: 0;
   min-height: 0;
-  height: auto;
 
   overflow-x: hidden;
   overflow-y: auto;
@@ -737,9 +691,9 @@ button:active {
 }
 
 .scan-card {
-  width: 100%;
-
   display: block;
+
+  width: 100%;
 
   margin-bottom: 5px;
   padding: 9px;
@@ -782,8 +736,6 @@ button:active {
 
   color: #dddddd;
   background: #0e0e0e;
-
-  font-size: 12px;
 }
 
 .scan-name {
@@ -818,7 +770,6 @@ button:active {
 
 .scan-state.loading {
   background: var(--warning);
-  box-shadow: 0 0 7px rgba(215, 182, 109, 0.7);
 }
 
 .scan-visibility-toggle {
@@ -828,10 +779,6 @@ button:active {
 
   color: var(--muted);
   cursor: pointer;
-}
-
-.scan-visibility-toggle:hover {
-  color: #ffffff;
 }
 
 .scan-meta {
@@ -858,8 +805,6 @@ button:active {
   user-select: none;
 
   padding: 0.55rem 0.65rem;
-
-  border-radius: 0;
 
   background: rgba(255, 255, 255, 0.06);
 
@@ -894,18 +839,19 @@ button:active {
 
 .scan-folder-contents {
   min-height: 0;
+
   padding-top: 0.3rem;
   padding-left: 0.45rem;
 }
 
 
 /* -------------------------------------------------------------------------- */
-/* INSPECTOR PANEL                                                            */
+/* INSPECTOR                                                                  */
 /* -------------------------------------------------------------------------- */
 
 .inspector-panel {
   position: absolute;
-  z-index: 20;
+  z-index: 25;
 
   top: calc(
     100% -
@@ -916,6 +862,7 @@ button:active {
   bottom: var(--status-height);
 
   width: var(--interface-width);
+  min-width: 0;
   min-height: 0;
 
   overflow: visible;
@@ -925,26 +872,12 @@ button:active {
   background: var(--black);
 }
 
-/*
-  Collapsed inspector: only the bottom toggle is visible.
-*/
-.inspector-panel.is-collapsed {
-  top: calc(
-    100% -
-    var(--status-height) -
-    var(--inspector-toggle-height)
-  );
-  bottom: var(--status-height);
-
-  height: var(--inspector-toggle-height);
+.inspector-panel.is-expanded {
+  top: var(--header-height);
 }
 
-/*
-  Expanded inspector.
-*/
-.inspector-panel.is-expanded {
-  bottom: var(--status-height);
-  height: auto;
+.inspector-panel.is-collapsed {
+  height: var(--inspector-toggle-height);
 }
 
 .inspector-dropdown {
@@ -957,7 +890,7 @@ button:active {
 
 .inspector-toggle {
   position: absolute;
-  z-index: 20;
+  z-index: 30;
 
   right: 0;
   bottom: 0;
@@ -966,7 +899,6 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
 
   width: 100%;
   height: var(--inspector-toggle-height);
@@ -994,18 +926,9 @@ button:active {
   gap: 3px;
 }
 
-.dropdown-arrow {
-  flex: 0 0 auto;
-
-  color: var(--muted);
-
-  font-size: 16px;
-  line-height: 1;
-}
-
 #inspectorDropdownContent {
   position: absolute;
-  z-index: 19;
+  z-index: 29;
 
   top: 0;
   right: 0;
@@ -1020,17 +943,18 @@ button:active {
   overflow-x: hidden;
   overflow-y: auto;
 
-  border: 0;
-
   background: var(--black);
 }
 
 #inspectorDropdownContent.hidden {
-  display: none;
+  display: none !important;
 }
 
 .inspector-content {
+  width: 100%;
+  min-width: 0;
   min-height: 0;
+
   padding-bottom: 20px;
 }
 
@@ -1053,11 +977,6 @@ button:active {
   font-weight: 750;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.section-heading > span:first-child {
-  color: #dddddd;
-  font-size: 13px;
 }
 
 .metadata-grid {
@@ -1092,38 +1011,9 @@ button:active {
   white-space: nowrap;
 }
 
-.control-toggle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-
-  margin-bottom: 0.75rem;
-}
-
-.control-toggle {
-  min-height: 28px;
-
-  padding: 0.4rem 0.65rem;
-
-  border: 1px solid var(--border-light);
-  border-radius: 0;
-
-  color: inherit;
-  background: var(--surface-3);
-
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.control-toggle[aria-pressed="true"] {
-  border-color: #aaaaaa;
-  background: #1b1b1b;
-}
-
 
 /* -------------------------------------------------------------------------- */
-/* CONTROLS                                                                   */
+/* INSPECTOR CONTROLS                                                         */
 /* -------------------------------------------------------------------------- */
 
 .control-label {
@@ -1148,7 +1038,6 @@ button:active {
 
   font-size: 9px;
   font-weight: 500;
-  letter-spacing: 0.03em;
 }
 
 .control-input,
@@ -1161,15 +1050,12 @@ button:active {
 
   color: var(--text);
   background: var(--surface-3);
-
-  outline: none;
 }
 
 .control-input {
   padding: 4px 7px;
 
   font-size: 10px;
-  letter-spacing: 0.035em;
   text-transform: uppercase;
 }
 
@@ -1180,6 +1066,32 @@ button:active {
 
   font-size: 11px;
   text-align: right;
+}
+
+.control-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  margin-bottom: 0.75rem;
+}
+
+.control-toggle {
+  min-height: 28px;
+
+  padding: 0.4rem 0.65rem;
+
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+
+  color: inherit;
+  background: var(--surface-3);
+}
+
+.control-toggle[aria-pressed="true"] {
+  border-color: #aaaaaa;
+  background: #1b1b1b;
 }
 
 .range-input {
@@ -1193,7 +1105,6 @@ button:active {
   border-radius: 0;
 
   background: #323232;
-  outline: none;
 }
 
 .range-input::-webkit-slider-thumb {
@@ -1235,18 +1146,9 @@ button:active {
   padding: 0 6px;
 }
 
-.helper-text {
-  margin: 11px 0 0;
-
-  color: var(--muted-dark);
-
-  font-size: 9px;
-  line-height: 1.45;
-}
-
 
 /* -------------------------------------------------------------------------- */
-/* EMPTY STATES                                                               */
+/* EMPTY STATE                                                                */
 /* -------------------------------------------------------------------------- */
 
 .empty-state {
@@ -1313,7 +1215,6 @@ button:active {
 
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -1327,7 +1228,7 @@ button:active {
 
 
 /* -------------------------------------------------------------------------- */
-/* FOOTER STATUS BAR                                                          */
+/* STATUS BAR                                                                 */
 /* -------------------------------------------------------------------------- */
 
 .statusbar {
@@ -1377,73 +1278,6 @@ button:active {
 
 
 /* -------------------------------------------------------------------------- */
-/* DYNAMIC PANEL LAYOUT                                                       */
-/* -------------------------------------------------------------------------- */
-
-/*
-  Both panels expanded:
-  They share the available area.
-*/
-.workspace:has(
-  .library-panel.is-expanded
-):has(
-  .inspector-panel.is-expanded
-) {
-  --shared-panel-height:
-    calc(
-      (
-        100% -
-        var(--header-height) -
-        var(--status-height)
-      ) / 2
-    );
-}
-
-.workspace:has(
-  .library-panel.is-expanded
-):has(
-  .inspector-panel.is-expanded
-) .library-panel {
-  top: var(--header-height);
-  bottom: auto;
-
-  height: var(--shared-panel-height);
-}
-
-.workspace:has(
-  .library-panel.is-expanded
-):has(
-  .inspector-panel.is-expanded
-) .inspector-panel {
-  top: calc(
-    var(--header-height) +
-    var(--shared-panel-height)
-  );
-  bottom: var(--status-height);
-
-  height: auto;
-}
-
-/*
-  Library collapsed, inspector expanded:
-  Inspector receives all remaining height.
-*/
-.workspace:has(
-  .library-panel.is-collapsed
-):has(
-  .inspector-panel.is-expanded
-) .inspector-panel {
-  top: calc(
-    var(--header-height) +
-    var(--library-header-height)
-  );
-  bottom: var(--status-height);
-
-  height: auto;
-}
-
-
-/* -------------------------------------------------------------------------- */
 /* SCROLLBARS                                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -1485,6 +1319,7 @@ button:active {
 
   .topbar {
     position: relative;
+
     top: auto;
     right: auto;
 
@@ -1521,45 +1356,41 @@ button:active {
 
   .library-panel {
     position: relative;
-    top: auto;
+
+    top: auto !important;
     right: auto;
-    bottom: auto;
+    bottom: auto !important;
 
     order: 2;
 
     width: 100%;
+
     height: 300px;
 
-    border-top: 1px solid var(--border);
     border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .library-panel.is-collapsed {
+    height: var(--panel-header-height);
   }
 
   .inspector-panel {
     position: relative;
-    top: auto;
+
+    top: auto !important;
     right: auto;
-    bottom: auto;
+    bottom: auto !important;
 
     order: 3;
 
     width: 100%;
+
     height: auto;
     min-height: var(--inspector-toggle-height);
 
-    border-top: 1px solid var(--border);
     border-left: 0;
-  }
-
-  .library-panel.is-collapsed {
-    height: var(--library-header-height);
-  }
-
-  .library-panel.is-expanded {
-    height: 300px;
-  }
-
-  .inspector-panel.is-collapsed {
-    height: var(--inspector-toggle-height);
+    border-top: 1px solid var(--border);
   }
 
   .inspector-panel.is-expanded {
@@ -1569,6 +1400,7 @@ button:active {
 
   .statusbar {
     position: relative;
+
     right: auto;
     bottom: auto;
 
@@ -1624,183 +1456,3 @@ button:active {
     flex-wrap: wrap;
   }
 }
-
-
-/* -------------------------------------------------------------------------- */
-/* FINAL PANEL OVERRIDES                                                      */
-/* -------------------------------------------------------------------------- */
-
-.library-panel,
-.inspector-panel {
-  right: 0 !important;
-
-  width: var(--interface-width) !important;
-
-  min-width: 0 !important;
-  min-height: 0 !important;
-
-  box-sizing: border-box !important;
-}
-
-/* Library */
-.library-panel {
-  display: flex !important;
-  flex-direction: column !important;
-
-  overflow: hidden !important;
-
-  background: var(--black) !important;
-}
-
-.library-panel > .panel-header {
-  display: flex !important;
-  flex: 0 0 auto !important;
-
-  min-height: var(--library-header-height) !important;
-  height: var(--library-header-height) !important;
-}
-
-#libraryDropdownContent {
-  display: flex !important;
-  flex: 1 1 auto !important;
-  flex-direction: column !important;
-
-  min-width: 0 !important;
-  min-height: 0 !important;
-  height: auto !important;
-  max-height: none !important;
-
-  overflow: hidden !important;
-}
-
-#libraryDropdownContent.hidden {
-  display: none !important;
-}
-
-#libraryList,
-.library-list {
-  display: block !important;
-  flex: 1 1 auto !important;
-
-  min-width: 0 !important;
-  min-height: 0 !important;
-  height: auto !important;
-  max-height: none !important;
-
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-}
-
-/* Inspector */
-.inspector-panel {
-  overflow: visible !important;
-
-  background: var(--black) !important;
-}
-
-.inspector-dropdown {
-  position: relative !important;
-
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 0 !important;
-}
-
-.inspector-toggle {
-  position: absolute !important;
-
-  right: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
-
-  z-index: 20 !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-
-  width: 100% !important;
-  height: var(--inspector-toggle-height) !important;
-  min-height: var(--inspector-toggle-height) !important;
-
-  padding: 9px 13px !important;
-
-  border-top: 1px solid var(--border) !important;
-  border-right: 0 !important;
-  border-bottom: 0 !important;
-  border-left: 0 !important;
-  border-radius: 0 !important;
-
-  color: var(--text) !important;
-  background: var(--black) !important;
-}
-
-#inspectorDropdownContent {
-  position: absolute !important;
-
-  top: 0 !important;
-  right: 0 !important;
-  bottom: var(--inspector-toggle-height) !important;
-  left: 0 !important;
-
-  z-index: 19 !important;
-
-  display: block !important;
-
-  min-width: 0 !important;
-  min-height: 0 !important;
-  height: auto !important;
-  max-height: none !important;
-
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-
-  background: var(--black) !important;
-}
-
-#inspectorDropdownContent.hidden {
-  display: none !important;
-}
-
-.inspector-content {
-  min-width: 0 !important;
-  min-height: 0 !important;
-}
-
-.panel-header-actions {
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.35rem !important;
-}
-
-.dropdown-toggle {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  width: 28px !important;
-  height: 28px !important;
-  min-height: 28px !important;
-
-  padding: 0 !important;
-}
-
-.dropdown-arrow {
-  display: inline-block !important;
-
-  color: var(--muted) !important;
-
-  font-size: 16px !important;
-  line-height: 1 !important;
-}
-
-/*
-  Prevent the previous fixed library height
-  and old dynamic rules from taking control.
-*/
-.library-panel,
-.inspector-panel {
-  --library-height: auto !important;
-}
-
-@media (max-width: 480px)
