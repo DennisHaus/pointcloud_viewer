@@ -3317,7 +3317,9 @@ var navigationKeys = {
   forward: false,
   backward: false,
   left: false,
-  right: false
+  right: false,
+  up: false,
+  down: false
 };
 
 var navigationKeyboardBound =
@@ -3370,6 +3372,8 @@ function getNavigationKey(
     key === "a" ||
     key === "s" ||
     key === "d" ||
+    key === "e" ||
+    key === "c" ||
     key === "arrowup" ||
     key === "arrowdown" ||
     key === "arrowleft" ||
@@ -3406,6 +3410,18 @@ function getNavigationKey(
     code === "keyd"
   ) {
     return "d";
+  }
+
+  if (
+    code === "keye"
+  ) {
+    return "e";
+  }
+
+  if (
+    code === "keyc"
+  ) {
+    return "c";
   }
 
   if (
@@ -3482,6 +3498,21 @@ function setNavigationKey(
     navigationKeys.right =
       pressed;
   }
+
+  if (
+  key === "e"
+) {
+  navigationKeys.up =
+    pressed;
+}
+
+if (
+  key === "c"
+) {
+  navigationKeys.down =
+    pressed;
+}
+
 }
 
 function clearNavigationKeys() {
@@ -3495,6 +3526,12 @@ function clearNavigationKeys() {
     false;
 
   navigationKeys.right =
+    false;
+
+  navigationKeys.up =
+    false;
+
+  navigationKeys.down =
     false;
 }
 
@@ -3587,10 +3624,12 @@ function moveViewerWithKeyboard(
   }
 
   var moving =
-    navigationKeys.forward ||
-    navigationKeys.backward ||
-    navigationKeys.left ||
-    navigationKeys.right;
+  navigationKeys.forward ||
+  navigationKeys.backward ||
+  navigationKeys.left ||
+  navigationKeys.right ||
+  navigationKeys.up ||
+  navigationKeys.down;
 
   if (
     !moving
@@ -3697,6 +3736,30 @@ function moveViewerWithKeyboard(
       right
     );
   }
+  if (
+    navigationKeys.up
+  ) {
+    movement.add(
+      direction.clone().set(
+        0,
+        0,
+        1
+      )
+    );
+  }
+
+  if (
+    navigationKeys.down
+  ) {
+    movement.sub(
+      direction.clone().set(
+        0,
+        0,
+        1
+      )
+    );
+  }
+
 
   if (
     typeof movement.lengthSq ===
