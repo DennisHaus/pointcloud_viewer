@@ -6126,10 +6126,26 @@ function downloadActiveScan() {
       "Select a scan first.",
       "error"
     );
-
     return;
   }
 
+  // 1. Passwort-Abfrage über ein Browser-Popup
+  var password = prompt("Bitte geben Sie das Passwort ein:");
+
+  // 2. Überprüfung: Wenn abgebrochen wurde oder das Passwort falsch ist
+  if (password === null) {
+    return; // Nutzer hat auf "Abbrechen" geklickt
+  }
+
+  if (password !== "Brienzauls") {
+    setStatus(
+      "Falsches Passwort!",
+      "error"
+    );
+    return; // Funktion abbrechen
+  }
+
+  // 3. Download-Logik (wird nur ausgeführt, wenn das Passwort "1111" ist)
   var link =
     document.createElement(
       "a"
@@ -6157,6 +6173,7 @@ function downloadActiveScan() {
 
   link.remove();
 }
+
 
 
 /* -------------------------------------------------------------------------- */
