@@ -10,7 +10,7 @@
 
   <meta
     name="description"
-    content="Cloud optimized point cloud viewer for Brienzauls scans."
+    content="Cloud optimized point cloud viewer for Brienz/Brienzauls scans."
   />
 
   <title>Spatial Library Brienzauls</title>
@@ -65,7 +65,7 @@
         <div class="brand-title">
           SPATIAL<br />
           LIBRARY<br />
-          BRIENZAULS-40
+          BRIENZAULS-41
         </div>
 
         <div class="brand-subtitle">
@@ -91,6 +91,7 @@
           href="https://github.com/DennisHaus/pointcloud_viewer/upload/main/scans"
           target="_blank"
           rel="noopener"
+          title="Add COPC-Model through Github max.25MB, through Desktop Github max 100MB"
         >
           Add Model
         </a>
@@ -100,6 +101,7 @@
             id="exportScreenshot"
             class="toolbar-button"
             type="button"
+            title="Export PNG Image to Desktop"
           >
             Export PNG
           </button>
@@ -108,6 +110,7 @@
             id="screenshotScale"
             class="toolbar-button screenshot-scale-select"
             aria-label="Screenshot resolution"
+            title="2x-5x Viewer Resolution"
           >
             <option value="2">
               2x
@@ -159,21 +162,29 @@
           </div>
 
           <div class="panel-header-actions">
-            <button
-              id="toggleLibrary"
-              class="icon-button dropdown-toggle"
-              type="button-noB"
-              title="Open or close scan library"
-              aria-expanded="true"
-              aria-controls="libraryDropdownContent"
-            >
-              <span
-                class="dropdown-arrow"
-                aria-hidden="true"
+              <button
+                id="toggleLibrary"
+                class="icon-button dropdown-toggle"
+                type="button"
+                title="Open or close scan library"
+                aria-expanded="true"
+                aria-controls="libraryDropdownContent"
               >
-                ⌃
-              </span>
-            </button>
+                <svg
+                  class="dropdown-arrow-svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+              </button>
+
 
             <button
               id="refreshLibrary"
@@ -256,7 +267,7 @@
       <div class="viewer-toolbar">
           <button
             id="resetView"
-            title="Zoom All"
+            title="Zoom to All"
             style="background: none; border: none; cursor: pointer;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <!-- Äußerer Rahmen -->

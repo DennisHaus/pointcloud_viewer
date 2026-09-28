@@ -6130,7 +6130,7 @@ function downloadActiveScan() {
   }
 
   // 1. Passwort-Abfrage über ein Browser-Popup
-  var password = prompt("Bitte geben Sie das Passwort ein:");
+  var password = prompt("ENTER PASSWORD");
 
   // 2. Überprüfung: Wenn abgebrochen wurde oder das Passwort falsch ist
   if (password === null) {
@@ -6145,7 +6145,7 @@ function downloadActiveScan() {
     return; // Funktion abbrechen
   }
 
-  // 3. Download-Logik (wird nur ausgeführt, wenn das Passwort "1111" ist)
+  // 3. Download-Logik (wird nur ausgeführt, wenn das Passwort erfüllt ist)
   var link =
     document.createElement(
       "a"
