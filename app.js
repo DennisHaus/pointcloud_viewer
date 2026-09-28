@@ -37,7 +37,7 @@ var CONFIG = {
 
   useRawBaseForPaths: false,
 
-  fitFactor: 0.7,
+  fitFactor: 1.75,
 
   rawBaseUrl:
     "https://raw.githubusercontent.com/DennisHaus/pointcloud_viewer/main"
