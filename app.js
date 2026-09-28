@@ -2676,9 +2676,9 @@ function updateInspector() {
 
   setText(
     "activePointCount",
-    state.activeScan.pointCount ?? false
+    state.activeScan.pointCount && state.activeScan.pointCount !== 0
       ? formatNumber(state.activeScan.pointCount)
-      : ""
+      : "Loaded"
   );
 
 
