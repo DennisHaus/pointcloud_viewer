@@ -33,6 +33,7 @@ var CONFIG = {
       exported PNG:    6748 x 2800
   */
   screenshotScale: 4,
+
   screenshotWarmupMs: 600,
 
   useRawBaseForPaths: false,
@@ -5339,7 +5340,6 @@ function getViewDirection(
   return direction;
 }
 
-
 function fitBounds(
   bounds,
   fitFactor,
@@ -5368,7 +5368,7 @@ function fitBounds(
   }
 
   /*
-    Use Potree's own Vector3 implementation.
+    Use Potree's own Vector3 class.
   */
   var min =
     view.position.clone();
@@ -5400,6 +5400,20 @@ function fitBounds(
     )
   );
 
+  if (
+    !isFinite(min.x) ||
+    !isFinite(min.y) ||
+    !isFinite(min.z) ||
+    !isFinite(max.x) ||
+    !isFinite(max.y) ||
+    !isFinite(max.z)
+  ) {
+    return false;
+  }
+
+  /*
+    Actual center of the scan bounds.
+  */
   var center =
     min.clone()
       .add(
@@ -5409,27 +5423,9 @@ function fitBounds(
         0.5
       );
 
-      var targetCenter =
-      center.clone();
-
-    var verticalOffset =
-      Number(
-        CONFIG.fitVerticalOffset
-      );
-
-    if (
-      !isFinite(
-        verticalOffset
-      )
-    ) {
-      verticalOffset =
-        0;
-    }
-
-    targetCenter.z +=
-      height *
-      verticalOffset;
-
+  /*
+    Size of the bounds.
+  */
   var size =
     max.clone()
       .sub(
@@ -5452,9 +5448,7 @@ function fitBounds(
     );
 
   if (
-    !isFinite(
-      width
-    ) ||
+    !isFinite(width) ||
     width <= 0
   ) {
     width =
@@ -5462,9 +5456,7 @@ function fitBounds(
   }
 
   if (
-    !isFinite(
-      height
-    ) ||
+    !isFinite(height) ||
     height <= 0
   ) {
     height =
@@ -5472,27 +5464,97 @@ function fitBounds(
   }
 
   if (
-    !isFinite(
-      depth
-    ) ||
+    !isFinite(depth) ||
     depth <= 0
   ) {
     depth =
       1;
   }
 
+  /*
+    Keep the current viewing direction.
+  */
   var direction =
-    getViewDirection(
-      view,
-      center
-    );
+    null;
 
   if (
-    !direction
+    view.direction &&
+    typeof view.direction.clone ===
+    "function"
   ) {
-    return false;
+    direction =
+      view.direction.clone();
   }
 
+  if (
+    !direction &&
+    typeof view.getDirection ===
+    "function"
+  ) {
+    direction =
+      view.getDirection();
+
+    if (
+      direction &&
+      typeof direction.clone ===
+      "function"
+    ) {
+      direction =
+        direction.clone();
+    }
+  }
+
+  /*
+    Fallback direction: from camera to scan center.
+  */
+  if (
+    !direction &&
+    typeof center.clone ===
+    "function"
+  ) {
+    direction =
+      center.clone()
+        .sub(
+          view.position
+        );
+  }
+
+  /*
+    Final fallback direction.
+  */
+  if (
+    !direction ||
+    typeof direction.normalize !==
+    "function"
+  ) {
+    direction =
+      view.position.clone();
+
+    direction.set(
+      0,
+      -1,
+      -0.5
+    );
+  }
+
+  if (
+    typeof direction.lengthSq ===
+    "function" &&
+    direction.lengthSq() <
+    0.000001
+  ) {
+    direction.set(
+      0,
+      -1,
+      -0.5
+    );
+  }
+
+  direction.normalize();
+
+  /*
+    Camera field of view.
+  */
   var fov =
     60;
 
@@ -5507,9 +5569,7 @@ function fitBounds(
   }
 
   if (
-    !isFinite(
-      fov
-    ) ||
+    !isFinite(fov) ||
     fov <= 0
   ) {
     fov =
@@ -5521,6 +5581,9 @@ function fitBounds(
     Math.PI /
     180;
 
+  /*
+    Renderer aspect ratio.
+  */
   var aspect =
     1;
 
@@ -5531,24 +5594,26 @@ function fitBounds(
     var canvas =
       viewer.renderer.domElement;
 
+    var canvasWidth =
+      canvas.clientWidth ||
+      canvas.width ||
+      1;
+
+    var canvasHeight =
+      canvas.clientHeight ||
+      canvas.height ||
+      1;
+
     aspect =
-      (
-        canvas.clientWidth ||
-        canvas.width ||
-        1
-      ) /
+      canvasWidth /
       Math.max(
-        canvas.clientHeight ||
-        canvas.height ||
-        1,
+        canvasHeight,
         1
       );
   }
 
   if (
-    !isFinite(
-      aspect
-    ) ||
+    !isFinite(aspect) ||
     aspect <= 0
   ) {
     aspect =
@@ -5571,6 +5636,9 @@ function fitBounds(
       horizontalFov
     );
 
+  /*
+    Bounding-sphere radius.
+  */
   var radius =
     Math.sqrt(
       width *
@@ -5583,70 +5651,132 @@ function fitBounds(
     2;
 
   if (
-    !isFinite(
-      radius
-    ) ||
+    !isFinite(radius) ||
     radius <= 0
   ) {
     radius =
       1;
   }
 
+  /*
+    Fit factor.
+
+    Larger values move the camera closer.
+    Values such as 0.9, 0.97 and 0.998
+    are all accepted.
+  */
+  var safeFitFactor =
+    Number(
+      fitFactor
+    );
+
+  if (
+    !isFinite(safeFitFactor) ||
+    safeFitFactor <= 0
+  ) {
+    safeFitFactor =
+      0.9;
+  }
+
+  /*
+    Base camera distance.
+  */
   var baseDistance =
-  radius /
-  Math.sin(
-    limitingFov /
-    2
-  );
+    radius /
+    Math.sin(
+      limitingFov /
+      2
+    );
 
-if (
-  !isFinite(
-    baseDistance
-  ) ||
-  baseDistance <= 0
-) {
-  baseDistance =
-    1;
-}
+  if (
+    !isFinite(baseDistance) ||
+    baseDistance <= 0
+  ) {
+    baseDistance =
+      1;
+  }
 
-var largestSize =
-  Math.max(
-    width,
-    height,
-    depth
-  );
+  /*
+    Additional distance multiplier.
 
-var minimumDistance =
-  Math.max(
-    largestSize *
-    0.05,
-    0.001
-  );
+    1.00 = normal
+    0.85 = closer
+    0.70 = much closer
+    1.20 = farther away
+  */
+  var distanceMultiplier =
+    Number(
+      CONFIG.fitDistanceMultiplier
+    );
 
-var distance =
-  Math.max(
-    baseDistance,
-    minimumDistance
-  );
+  if (
+    !isFinite(distanceMultiplier) ||
+    distanceMultiplier <= 0
+  ) {
+    distanceMultiplier =
+      1;
+  }
 
-var distanceMultiplier =
-  Number(
-    CONFIG.fitDistanceMultiplier
-  );
+  var distance =
+    baseDistance /
+    safeFitFactor;
 
-if (
-  !isFinite(
-    distanceMultiplier
-  ) ||
-  distanceMultiplier <= 0
-) {
-  distanceMultiplier =
-    1;
-}
+  distance *=
+    distanceMultiplier;
 
-distance *=
-  distanceMultiplier;
+  /*
+    Prevent an invalid or extremely small distance.
+  */
+  var largestSize =
+    Math.max(
+      width,
+      height,
+      depth
+    );
 
+  var minimumDistance =
+    Math.max(
+      largestSize *
+      0.001,
+      0.001
+    );
+
+  distance =
+    Math.max(
+      distance,
+      minimumDistance
+    );
+
+  /*
+    Target center used for looking at the model.
+
+    Z is treated as the vertical axis.
+    Negative values move the target slightly
+    downward, which makes the model appear
+    higher in the viewport.
+  */
+  var targetCenter =
+    center.clone();
+
+  var verticalOffset =
+    Number(
+      CONFIG.fitVerticalOffset
+    );
+
+  if (
+    !isFinite(verticalOffset)
+  ) {
+    verticalOffset =
+      0;
+  }
+
+  targetCenter.z +=
+    depth *
+    verticalOffset;
+
+  /*
+    Position the camera.
+  */
   var cameraPosition =
     targetCenter.clone()
       .sub(
@@ -5660,6 +5790,9 @@ distance *=
     cameraPosition
   );
 
+  /*
+    Look at the adjusted target center.
+  */
   if (
     typeof view.lookAt ===
     "function"
@@ -5672,9 +5805,18 @@ distance *=
   view.radius =
     distance;
 
-  setOrbitCenter(
-    center
-  );
+  /*
+    Keep the actual scan center as
+    the orbit rotation center.
+  */
+  if (
+    typeof setOrbitCenter ===
+    "function"
+  ) {
+    setOrbitCenter(
+      center
+    );
+  }
 
   if (
     viewer.scene &&
@@ -5704,7 +5846,6 @@ distance *=
 
   return true;
 }
-
 
 function fitUsingPotree(
   cloudsToFit,
