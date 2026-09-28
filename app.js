@@ -5665,7 +5665,7 @@ distance *=
     "function"
   ) {
     view.lookAt(
-      targetcenter
+      targetCenter
     );
   }
 
