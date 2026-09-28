@@ -57,7 +57,7 @@
         <div class="brand-title">
           SPATIAL<br />
           LIBRARY<br />
-          BRIENZAULS-correx7
+          BRIENZAULS-correx8
         </div>
 
         <div class="brand-subtitle">
@@ -86,13 +86,33 @@
           Add Model
         </a>
 
-        <button
-          id="exportScreenshot"
-          class="toolbar-button"
-          type="button"
-        >
-          Export PNG 3x
-        </button>
+        <div class="screenshot-export-controls">
+  <select
+    id="screenshotScale"
+    class="control-input screenshot-scale-select"
+    aria-label="Screenshot resolution"
+  >
+    <option value="2">
+      2x
+    </option>
+
+    <option value="3" selected>
+      3x
+    </option>
+
+    <option value="4">
+      4x
+    </option>
+  </select>
+
+  <button
+    id="exportScreenshot"
+    class="toolbar-button"
+    type="button"
+  >
+    Export PNG
+  </button>
+</div>
 
         <input
           id="fileInput"

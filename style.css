@@ -1360,5 +1360,15 @@ button:active {
   padding-left: 0.45rem;
   padding-top: 0.3rem;
 }
+.screenshot-export-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.screenshot-scale-select {
+  width: auto;
+  min-width: 4.5rem;
+}
 
 }

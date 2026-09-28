@@ -32,7 +32,7 @@ var CONFIG = {
       screenshotScale: 2
       exported PNG:    6748 x 2800
   */
-  screenshotScale: 2,
+  screenshotScale: 3,
   screenshotWarmupMs: 600,
 
   useRawBaseForPaths: false,
@@ -1117,10 +1117,21 @@ function reconcileLoadedClouds() {
           refreshedScan.id
         );
 
-      state.activeBounds =
-        getPointCloudBounds(
-          state.activeCloud
-        );
+        state.activeBounds =
+    getPointCloudBounds(
+      state.activeCloud
+    );
+
+  if (
+    !state.activeBounds &&
+    typeof getPointCloudWorldBounds ===
+    "function"
+  ) {
+    state.activeBounds =
+      getPointCloudWorldBounds(
+        state.activeCloud
+      );
+  }
     }
   }
 
@@ -4104,6 +4115,220 @@ function readPointCloudBox(
   };
 }
 
+function getPointCloudBounds(
+  pointcloud
+) {
+  if (
+    !pointcloud
+  ) {
+    return null;
+  }
+
+  var box =
+    pointcloud.boundingBox;
+
+  if (
+    !box &&
+    pointcloud.pcoGeometry
+  ) {
+    box =
+      pointcloud.pcoGeometry.tightBoundingBox ||
+      pointcloud.pcoGeometry.boundingBox;
+  }
+
+  if (
+    !box &&
+    pointcloud.geometry
+  ) {
+    box =
+      pointcloud.geometry.boundingBox;
+  }
+
+  if (
+    !box
+  ) {
+    return null;
+  }
+
+  /*
+    Standard THREE.Box3 format:
+      box.min.x
+      box.min.y
+      box.min.z
+      box.max.x
+      box.max.y
+      box.max.z
+  */
+  if (
+    box.min &&
+    box.max
+  ) {
+    var minX =
+      readBoxCoordinate(
+        box.min,
+        "x",
+        0
+      );
+
+    var minY =
+      readBoxCoordinate(
+        box.min,
+        "y",
+        1
+      );
+
+    var minZ =
+      readBoxCoordinate(
+        box.min,
+        "z",
+        2
+      );
+
+    var maxX =
+      readBoxCoordinate(
+        box.max,
+        "x",
+        0
+      );
+
+    var maxY =
+      readBoxCoordinate(
+        box.max,
+        "y",
+        1
+      );
+
+    var maxZ =
+      readBoxCoordinate(
+        box.max,
+        "z",
+        2
+      );
+
+    if (
+      minX ===
+        null ||
+      minY ===
+        null ||
+      minZ ===
+        null ||
+      maxX ===
+        null ||
+      maxY ===
+        null ||
+      maxZ ===
+        null
+    ) {
+      return null;
+    }
+
+    return {
+      min: {
+        x:
+          Math.min(
+            minX,
+            maxX
+          ),
+
+        y:
+          Math.min(
+            minY,
+            maxY
+          ),
+
+        z:
+          Math.min(
+            minZ,
+            maxZ
+          )
+      },
+
+      max: {
+        x:
+          Math.max(
+            minX,
+            maxX
+          ),
+
+        y:
+          Math.max(
+            minY,
+            maxY
+          ),
+
+        z:
+          Math.max(
+            minZ,
+            maxZ
+          )
+      }
+    };
+  }
+
+  /*
+    Alternative Potree metadata format:
+      lx, ly, lz
+      ux, uy, uz
+  */
+  if (
+    typeof box.lx ===
+      "number" &&
+    typeof box.ly ===
+      "number" &&
+    typeof box.lz ===
+      "number" &&
+    typeof box.ux ===
+      "number" &&
+    typeof box.uy ===
+      "number" &&
+    typeof box.uz ===
+      "number"
+  ) {
+    return {
+      min: {
+        x:
+          Math.min(
+            box.lx,
+            box.ux
+          ),
+
+        y:
+          Math.min(
+            box.ly,
+            box.uy
+          ),
+
+        z:
+          Math.min(
+            box.lz,
+            box.uz
+          )
+      },
+
+      max: {
+        x:
+          Math.max(
+            box.lx,
+            box.ux
+          ),
+
+        y:
+          Math.max(
+            box.ly,
+            box.uy
+          ),
+
+        z:
+          Math.max(
+            box.lz,
+            box.uz
+          )
+      }
+    };
+  }
+
+  return null;
+}
 
 function getPointCloudWorldBounds(
   pointcloud
@@ -5238,6 +5463,44 @@ function getScreenshotFilename(
   );
 }
 
+function getScreenshotScale() {
+  var select =
+    getElement(
+      "screenshotScale"
+    );
+
+  var value =
+    select
+      ? Number(
+          select.value
+        )
+      : Number(
+          CONFIG.screenshotScale
+        );
+
+  if (
+    value !== 2 &&
+    value !== 3 &&
+    value !== 4
+  ) {
+    value =
+      Number(
+        CONFIG.screenshotScale
+      );
+
+    if (
+      value !== 2 &&
+      value !== 3 &&
+      value !== 4
+    ) {
+      value =
+        3;
+    }
+  }
+
+  return value;
+}
+
 function exportScreenshot() {
   if (
     !viewer ||
@@ -5271,14 +5534,8 @@ function exportScreenshot() {
       "exportScreenshot"
     );
 
-  var screenshotScale =
-    Math.max(
-      1,
-      Number(
-        CONFIG.screenshotScale
-      ) ||
-      1
-    );
+    var screenshotScale =
+    getScreenshotScale();
 
   /*
     Use the current physical drawing-buffer dimensions.
