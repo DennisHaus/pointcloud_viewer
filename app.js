@@ -1118,7 +1118,7 @@ function reconcileLoadedClouds() {
         );
 
         state.activeBounds =
-  window.windowgetPointCloudBounds(
+  getPointCloudBounds(
     state.activeCloud
   );
 
@@ -2280,10 +2280,6 @@ function setActiveScan(
   state.activeScan =
     scan;
 
-  /*
-    If a pointcloud was explicitly supplied, use it.
-    Otherwise look it up in loadedClouds.
-  */
   state.activeCloud =
     pointcloud ||
     state.loadedClouds.get(
@@ -2292,16 +2288,43 @@ function setActiveScan(
     null;
 
   state.activeBounds =
-    window.windowgetPointCloudBounds(
+    null;
+
+  if (
+    state.activeCloud &&
+    typeof window.getPointCloudWorldBounds ===
+    "function"
+  ) {
+    state.activeBounds =
+      window.getPointCloudWorldBounds(
+        state.activeCloud
+      );
+  }
+
+  if (
+    !state.activeBounds &&
+    state.activeCloud &&
+    typeof window.getPointCloudBounds ===
+    "function"
+  ) {
+    state.activeBounds =
+      window.getPointCloudBounds(
+        state.activeCloud
+      );
+  }
+
+  if (
+    typeof applyPointDisplayMode ===
+    "function"
+  ) {
+    applyPointDisplayMode(
       state.activeCloud
     );
+  }
 
   updateInspector();
   updateSectionControls();
   renderLibrary();
-  applyPointDisplayMode(
-  state.activeCloud
-);
 }
 
 function updateInspector() {
@@ -4682,7 +4705,7 @@ function getPointCloudWorldBounds(
     "function"
   ) {
     var applicationBounds =
-      windowgetPointCloudBounds(
+      window.getPointCloudBounds(
         pointcloud
       );
 

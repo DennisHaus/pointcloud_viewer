@@ -12,7 +12,13 @@
     name="description"
     content="Cloud optimized point cloud viewer for Brienzauls scans."
   />
+
   <title>Spatial Library Brienzauls</title>
+
+  <link
+    rel="icon"
+    href="data:,"
+  />
 
   <link
     rel="stylesheet"
@@ -57,7 +63,7 @@
         <div class="brand-title">
           SPATIAL<br />
           LIBRARY<br />
-          BRIENZAULS-13
+          BRIENZAULS-16
         </div>
 
         <div class="brand-subtitle">
@@ -87,35 +93,36 @@
         </a>
 
         <div class="screenshot-export-controls">
-    <button
-      id="exportScreenshot"
-      class="toolbar-button"
-      type="button"
-    >
-      Export PNG
-    </button>
+          <button
+            id="exportScreenshot"
+            class="toolbar-button"
+            type="button"
+          >
+            Export PNG
+          </button>
 
-    <select
-      id="screenshotScale"
-      class="toolbar-button screenshot-scale-select"
-      aria-label="Screenshot resolution"
-    >
-      <option value="2">
-        2x
-      </option>
+          <select
+            id="screenshotScale"
+            class="toolbar-button screenshot-scale-select"
+            aria-label="Screenshot resolution"
+          >
+            <option value="2">
+              2x
+            </option>
 
-      <option value="3" selected>
-        3x
-      </option>
+            <option value="3" selected>
+              3x
+            </option>
 
-      <option value="4">
-        4x
-      </option>
-      <option value="4">
-        5x
-      </option>
-    </select>
-  </div>
+            <option value="4">
+              4x
+            </option>
+
+            <option value="5">
+              5x
+            </option>
+          </select>
+        </div>
 
         <input
           id="fileInput"
@@ -128,67 +135,71 @@
 
     <main class="workspace">
 
+      <!-- Scan library ---------------------------------------------------- -->
+
       <aside class="library-panel">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">
-        Scan library
-      </div>
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">
+              Scan library
+            </div>
 
-      <div
-        id="scanCount"
-        class="panel-subtitle"
-      >
-        0 scans
-      </div>
-    </div>
+            <div
+              id="scanCount"
+              class="panel-subtitle"
+            >
+              0 scans
+            </div>
+          </div>
 
-    <div class="panel-header-actions">
-      <button
-        id="toggleLibrary"
-        class="icon-button dropdown-toggle"
-        type="button"
-        title="Open or close scan library"
-        aria-expanded="true"
-        aria-controls="libraryDropdownContent"
-      >
-        ⌃
-      </button>
+          <div class="panel-header-actions">
+            <button
+              id="toggleLibrary"
+              class="icon-button dropdown-toggle"
+              type="button"
+              title="Open or close scan library"
+              aria-expanded="true"
+              aria-controls="libraryDropdownContent"
+            >
+              ⌃
+            </button>
 
-      <button
-        id="refreshLibrary"
-        class="icon-button"
-        title="Refresh library"
-        type="button"
-      >
-        ↻
-      </button>
-    </div>
-  </div>
+            <button
+              id="refreshLibrary"
+              class="icon-button"
+              title="Refresh library"
+              type="button"
+            >
+              ↻
+            </button>
+          </div>
+        </div>
 
-  <div
-    id="libraryDropdownContent"
-    class="panel-dropdown-content"
-  >
-    <div
-      id="libraryList"
-      class="library-list"
-    ></div>
+        <div
+          id="libraryDropdownContent"
+          class="panel-dropdown-content"
+        >
+          <div
+            id="libraryList"
+            class="library-list"
+          ></div>
 
-    <div
-      id="libraryEmpty"
-      class="empty-state"
-    >
-      <div class="empty-icon"></div>
+          <div
+            id="libraryEmpty"
+            class="empty-state"
+          >
+            <div class="empty-icon"></div>
 
-      <strong>No scans found</strong>
+            <strong>No scans found</strong>
 
-      <span>
-        Administrator uploads will appear here permanently.
-      </span>
-    </div>
-  </div>
-</aside>
+            <span>
+              Administrator uploads will appear here permanently.
+            </span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Viewer ---------------------------------------------------------- -->
 
       <section class="viewer-panel">
         <div
@@ -263,342 +274,386 @@
         </div>
       </section>
 
+      <!-- Inspector ------------------------------------------------------- -->
+
       <aside class="inspector-panel">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">
-        Inspector
-      </div>
+        <div class="inspector-dropdown">
 
-      <div class="panel-subtitle">
-        Active scan properties
-      </div>
-    </div>
+          <div
+            id="inspectorDropdownContent"
+            class="panel-dropdown-content hidden"
+          >
+            <div
+              id="inspectorEmpty"
+              class="empty-state"
+            >
+              <div class="empty-icon">
+                ◇
+              </div>
 
-    <button
-      id="toggleInspector"
-      class="icon-button dropdown-toggle"
-      type="button"
-      title="Open or close inspector"
-      aria-expanded="true"
-      aria-controls="inspectorDropdownContent"
-    >
-      ⌃
-    </button>
-  </div>
+              <strong>
+                No scan selected
+              </strong>
 
-  <div
-    id="inspectorDropdownContent"
-    class="panel-dropdown-content"
-  >
-    <div
-      id="inspectorEmpty"
-      class="empty-state"
-    >
-      <div class="empty-icon">◇</div>
-
-      <strong>No scan selected</strong>
-
-      <span>
-        Select a scan from the library.
-      </span>
-    </div>
-
-    <div
-      id="inspectorContent"
-      class="inspector-content hidden"
-    >
-          <section class="inspector-section">
-            <div class="section-heading">
-              <span id="activeScanName">
-                Scan
+              <span>
+                Select a scan from the library.
               </span>
             </div>
 
-            <div class="metadata-grid">
-              <div>
-                <span>Format</span>
-                <strong>COPC LAZ</strong>
-              </div>
-
-              <div>
-                <span>Points</span>
-                <strong id="activePointCount">
-                  —
-                </strong>
-              </div>
-
-              <div>
-                <span>File size</span>
-                <strong id="activeFileSize">
-                  —
-                </strong>
-              </div>
-
-              <div>
-                <span>CRS</span>
-                <strong id="activeCrs">
-                  —
-                </strong>
-              </div>
-            </div>
-          </section>
-
-          <section class="inspector-section">
-            <div class="section-heading">
-              Appearance
-            </div>
-
-            <div class="control-toggle-row">
-  <span class="control-label">
-    Point display
-  </span>
-
-  <button
-    id="pointDisplayMode"
-    class="control-toggle"
-    type="button"
-    aria-pressed="false"
-  >
-    Depth-sized
-  </button>
-</div>
-
-            <label
-              for="colorMode"
-              class="control-label"
-            >
-              Color mode
-            </label>
-
-            <select
-              id="colorMode"
-              class="control-input"
-            >
-              <option value="RGB">
-                RGB
-              </option>
-
-              <option value="ELEVATION">
-                Elevation
-              </option>
-
-              <option value="INTENSITY">
-                Intensity
-              </option>
-
-              <option value="CLASSIFICATION">
-                Classification
-              </option>
-
-              <option value="RETURN_NUMBER">
-                Return number
-              </option>
-            </select>
-
-            <label
-              for="pointSize"
-              class="control-label"
-            >
-              Point size
-
-              <output id="pointSizeValue">
-                1.5
-              </output>
-            </label>
-
-            <input
-              id="pointSize"
-              class="range-input"
-              type="range"
-              min="0.5"
-              max="8"
-              step="0.1"
-              value="1.5"
-            />
-
-            <label
-              for="pointOpacity"
-              class="control-label"
-            >
-              Opacity
-
-              <output id="pointOpacityValue">
-                100%
-              </output>
-            </label>
-
-            <input
-              id="pointOpacity"
-              class="range-input"
-              type="range"
-              min="0.1"
-              max="1"
-              step="0.05"
-              value="1"
-            />
-
-            <label
-              for="pointBudget"
-              class="control-label"
-            >
-              Point budget
-
-              <output id="pointBudgetValue">
-                3.0M
-              </output>
-            </label>
-
-            <input
-              id="pointBudget"
-              class="range-input"
-              type="range"
-              min="250000"
-              max="100000000"
-              step="250000"
-              value="3000000"
-            />
-          </section>
-
-          <section class="inspector-section">
-            <div class="section-heading">
-              Sections
-            </div>
-
-            <label
-              for="sectionMode"
-              class="control-label"
-            >
-              Section type
-            </label>
-
-            <select
-              id="sectionMode"
-              class="control-input"
-            >
-              <option value="none">
-                No section
-              </option>
-
-              <option value="horizontal">
-                Horizontal section
-              </option>
-
-              <option value="vertical">
-                Vertical section
-              </option>
-            </select>
-
             <div
-              id="sectionAxisWrapper"
-              class="hidden"
+              id="inspectorContent"
+              class="inspector-content hidden"
             >
-              <label
-                for="sectionAxis"
-                class="control-label"
-              >
-                Vertical axis
-              </label>
+              <section class="inspector-section">
+                <div class="section-heading">
+                  <span id="activeScanName">
+                    Scan
+                  </span>
+                </div>
 
-              <select
-                id="sectionAxis"
-                class="control-input"
-              >
-                <option value="x">
-                  X axis
-                </option>
+                <div class="metadata-grid">
+                  <div>
+                    <span>
+                      Format
+                    </span>
 
-                <option value="y">
-                  Y axis
-                </option>
-              </select>
+                    <strong>
+                      COPC LAZ
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      Points
+                    </span>
+
+                    <strong id="activePointCount">
+                      —
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      File size
+                    </span>
+
+                    <strong id="activeFileSize">
+                      —
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      CRS
+                    </span>
+
+                    <strong id="activeCrs">
+                      —
+                    </strong>
+                  </div>
+                </div>
+              </section>
+
+              <section class="inspector-section">
+                <div class="section-heading">
+                  Appearance
+                </div>
+
+                <div class="control-toggle-row">
+                  <span class="control-label">
+                    Point display
+                  </span>
+
+                  <button
+                    id="pointDisplayMode"
+                    class="control-toggle"
+                    type="button"
+                    aria-pressed="false"
+                  >
+                    Depth-sized
+                  </button>
+                </div>
+
+                <label
+                  for="colorMode"
+                  class="control-label"
+                >
+                  Color mode
+                </label>
+
+                <select
+                  id="colorMode"
+                  class="control-input"
+                >
+                  <option value="RGB">
+                    RGB
+                  </option>
+
+                  <option value="ELEVATION">
+                    Elevation
+                  </option>
+
+                  <option value="INTENSITY">
+                    Intensity
+                  </option>
+
+                  <option value="CLASSIFICATION">
+                    Classification
+                  </option>
+
+                  <option value="RETURN_NUMBER">
+                    Return number
+                  </option>
+                </select>
+
+                <label
+                  for="pointSize"
+                  class="control-label"
+                >
+                  Point size
+
+                  <output id="pointSizeValue">
+                    1.5
+                  </output>
+                </label>
+
+                <input
+                  id="pointSize"
+                  class="range-input"
+                  type="range"
+                  min="0.5"
+                  max="8"
+                  step="0.1"
+                  value="1.5"
+                />
+
+                <label
+                  for="pointOpacity"
+                  class="control-label"
+                >
+                  Opacity
+
+                  <output id="pointOpacityValue">
+                    100%
+                  </output>
+                </label>
+
+                <input
+                  id="pointOpacity"
+                  class="range-input"
+                  type="range"
+                  min="0.1"
+                  max="1"
+                  step="0.05"
+                  value="1"
+                />
+
+                <label
+                  for="pointBudget"
+                  class="control-label"
+                >
+                  Point budget
+
+                  <output id="pointBudgetValue">
+                    3.0M
+                  </output>
+                </label>
+
+                <input
+                  id="pointBudget"
+                  class="range-input"
+                  type="range"
+                  min="250000"
+                  max="100000000"
+                  step="250000"
+                  value="3000000"
+                />
+              </section>
+
+              <section class="inspector-section">
+                <div class="section-heading">
+                  Sections
+                </div>
+
+                <label
+                  for="sectionMode"
+                  class="control-label"
+                >
+                  Section type
+                </label>
+
+                <select
+                  id="sectionMode"
+                  class="control-input"
+                >
+                  <option value="none">
+                    No section
+                  </option>
+
+                  <option value="horizontal">
+                    Horizontal section
+                  </option>
+
+                  <option value="vertical">
+                    Vertical section
+                  </option>
+                </select>
+
+                <div
+                  id="sectionAxisWrapper"
+                  class="hidden"
+                >
+                  <label
+                    for="sectionAxis"
+                    class="control-label"
+                  >
+                    Vertical axis
+                  </label>
+
+                  <select
+                    id="sectionAxis"
+                    class="control-input"
+                  >
+                    <option value="x">
+                      X axis
+                    </option>
+
+                    <option value="y">
+                      Y axis
+                    </option>
+                  </select>
+                </div>
+
+                <label
+                  for="sectionPosition"
+                  class="control-label"
+                >
+                  Position
+
+                  <output id="sectionPositionValue">
+                    —
+                  </output>
+                </label>
+
+                <input
+                  id="sectionPosition"
+                  class="range-input"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value="0.5"
+                  disabled
+                />
+
+                <label
+                  for="sectionThickness"
+                  class="control-label"
+                >
+                  Thickness
+
+                  <output id="sectionThicknessValue">
+                    —
+                  </output>
+                </label>
+
+                <input
+                  id="sectionThickness"
+                  class="number-input"
+                  type="number"
+                  min="0.001"
+                  step="0.01"
+                  value="1"
+                  disabled
+                />
+
+                <div class="section-buttons">
+                  <button
+                    id="applySection"
+                    class="button button-secondary"
+                    type="button"
+                  >
+                    Apply
+                  </button>
+
+                  <button
+                    id="clearSection"
+                    class="button button-ghost"
+                    type="button"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </section>
+
+              <section class="inspector-section">
+                <div class="section-heading">
+                  <span>
+                    ⌖
+                  </span>
+
+                  Bounds
+                </div>
+
+                <div class="bounds-list">
+                  <div>
+                    <span>
+                      X
+                    </span>
+
+                    <strong id="boundsX">
+                      —
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      Y
+                    </span>
+
+                    <strong id="boundsY">
+                      —
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>
+                      Z
+                    </span>
+
+                    <strong id="boundsZ">
+                      —
+                    </strong>
+                  </div>
+                </div>
+              </section>
             </div>
+          </div>
 
-            <label
-              for="sectionPosition"
-              class="control-label"
+          <button
+            id="toggleInspector"
+            class="inspector-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="inspectorDropdownContent"
+          >
+            <span class="inspector-toggle-text">
+              <span class="panel-title">
+                Inspector
+              </span>
+
+              <span class="panel-subtitle">
+                Active scan properties
+              </span>
+            </span>
+
+            <span
+              class="dropdown-arrow"
+              aria-hidden="true"
             >
-              Position
-
-              <output id="sectionPositionValue">
-                —
-              </output>
-            </label>
-
-            <input
-              id="sectionPosition"
-              class="range-input"
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value="0.5"
-              disabled
-            />
-
-            <label
-              for="sectionThickness"
-              class="control-label"
-            >
-              Thickness
-
-              <output id="sectionThicknessValue">
-                —
-              </output>
-            </label>
-
-            <input
-              id="sectionThickness"
-              class="number-input"
-              type="number"
-              min="0.001"
-              step="0.01"
-              value="1"
-              disabled
-            />
-
-            <div class="section-buttons">
-              <button
-                id="applySection"
-                class="button button-secondary"
-                type="button"
-              >
-                Apply
-              </button>
-
-              <button
-                id="clearSection"
-                class="button button-ghost"
-                type="button"
-              >
-                Clear
-              </button>
-            </div>
-          </section>
-
-          <section class="inspector-section">
-            <div class="section-heading">
-              <span>⌖</span>
-              Bounds
-            </div>
-
-            <div class="bounds-list">
-              <div>
-                <span>X</span>
-                <strong id="boundsX">—</strong>
-              </div>
-
-              <div>
-                <span>Y</span>
-                <strong id="boundsY">—</strong>
-              </div>
-
-              <div>
-                <span>Z</span>
-                <strong id="boundsZ">—</strong>
-              </div>
-            </div>
-          </section>
+              ⌃
+            </span>
+          </button>
         </div>
       </aside>
     </main>
@@ -609,8 +664,13 @@
       </span>
 
       <div>
-        <span>Accepted: .copc.laz</span>
-        <span>Maximum: 95 MiB</span>
+        <span>
+          Accepted: .copc.laz
+        </span>
+
+        <span>
+          Maximum: 95 MiB
+        </span>
       </div>
     </footer>
   </div>
