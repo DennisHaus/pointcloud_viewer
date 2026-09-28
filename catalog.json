@@ -12,6 +12,18 @@
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-24"
+    },
+    {
+      "id": "scans-stallikon-5mio-edit",
+      "name": "Stallikon 5mio Edit",
+      "filename": "stallikon_5mio_edit.copc.laz",
+      "path": "./scans/stallikon_5mio_edit.copc.laz",
+      "url": "./scans/stallikon_5mio_edit.copc.laz",
+      "format": "copc",
+      "sizeBytes": 31418483,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-09-28"
     }
   ]
 }
