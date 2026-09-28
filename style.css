@@ -1362,14 +1362,6 @@ button:active {
   padding-left: 0.45rem;
   padding-top: 0.3rem;
 }
-.screenshot-export-controls {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
 
 .screenshot-scale-select {
   width: auto;
@@ -1383,5 +1375,85 @@ button:active {
   line-height: inherit;
   cursor: pointer;
 }
+
+.screenshot-export-controls {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/*
+  The select uses the same height as the Export PNG button.
+*/
+.screenshot-export-controls #screenshotScale {
+  appearance: none;
+  -webkit-appearance: none;
+
+  align-self: stretch;
+  height: auto !important;
+  min-height: 0;
+
+  box-sizing: border-box;
+
+  /*
+    Sharp corners.
+  */
+  border-radius: 0 !important;
+
+  /*
+    Space for the custom arrow.
+  */
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-right: 2rem;
+  padding-left: 0.75rem;
+
+  line-height: 1;
+  cursor: pointer;
+
+  /*
+    Custom CSS arrow.
+  */
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent 50%,
+      currentColor 50%
+    ),
+    linear-gradient(
+      135deg,
+      currentColor 50%,
+      transparent 50%
+    );
+
+  background-position:
+    calc(100% - 0.85rem) 50%,
+    calc(100% - 0.55rem) 50%;
+
+  background-size:
+    0.3rem 0.3rem,
+    0.3rem 0.3rem;
+
+  background-repeat: no-repeat;
+}
+
+/*
+  Keep the same sharp outline while focused.
+*/
+.screenshot-export-controls #screenshotScale:focus {
+  border-radius: 0 !important;
+}
+
+/*
+  Optional: make both controls have exactly the same
+  fixed height. Use this only if stretch is not enough.
+*/
+.screenshot-export-controls #exportScreenshot,
+.screenshot-export-controls #screenshotScale {
+  height: 2.4rem;
+  box-sizing: border-box;
+} 
 
 }
