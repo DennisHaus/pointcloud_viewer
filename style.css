@@ -172,6 +172,7 @@ select:focus-visible {
   font-weight: 600;
   letter-spacing: 0.11em;
   line-height: 1.6;
+  margin-bottom: 12px;
 }
 
 .topbar-actions {
