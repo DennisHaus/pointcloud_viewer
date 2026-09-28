@@ -921,7 +921,7 @@ button:active {
 
   border-left: 1px solid var(--border);
 
-  background: var(--darkgray);
+  background: var(--black);
 }
 
 .inspector-panel.is-expanded {
@@ -958,12 +958,12 @@ button:active {
 
   padding: 9px 13px;
 
-  border: 0;
+  border: 1px;
   border-top: 1px solid var(--border);
   border-radius: 0;
 
   color: var(--text);
-  background: var(--black);
+  background: var(--darkgray);
 
   text-align: left;
 }
