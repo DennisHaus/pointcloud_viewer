@@ -65,16 +65,17 @@
         <div class="brand-title">
           SPATIAL<br />
           LIBRARY<br />
-          BRIENZAULS-36
+          BRIENZAULS-38
         </div>
 
         <div class="brand-subtitle">
           copc viewer | for collecting, storing and visualizing spatial recodings
           of Brinz/Brinzauls during the Seminarweek 2026 |
-          beta version<br />
+          beta version <br />
           <br />
           developed by Dennis Häusler, Professur Voser, Institute for Landscape and Urban Studies, ETH Zürich |
           haeusler@arch.ethz.ch | assisted by AI gpt 5.6
+          <br />
         </div>
       </div>
 
@@ -146,7 +147,7 @@
         <div class="panel-header">
           <div>
             <div class="panel-title">
-              Scan library
+              Model library
             </div>
 
             <div
@@ -252,13 +253,17 @@
           </div>
         </div>
 
-        <div class="viewer-toolbar">
+      <div class="viewer-toolbar">
           <button
             id="fitView"
-            class="toolbar-button"
-            type="button"
-          >
-            Fit
+            title="Zoom All"
+            style="background: none; border: none; cursor: pointer;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <!-- Äußerer Rahmen -->
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <!-- Alternativ: Vier expandierende Pfeile für "Fit All" -->
+              <path d="m15 9 3-3m0 0h-4m4 0v4M9 15l-3 3m0 0h4m-4 0v-4" />
+            </svg>
           </button>
 
           <button
@@ -271,19 +276,27 @@
 
           <button
             id="resetView"
-            class="toolbar-button"
-            type="button"
-          >
-            Fit All
-          </button>
+            title="Zoom to Selected" style="background: none; border: none; cursor: pointer;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <!-- Fokus-Ecken -->
+              <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+              <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+              <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+              <!-- Zentrales Element -->
+              <circle cx="12" cy="12" r="2" fill="currentColor" />
+            </svg>
+            </button>
 
-          <button
+            <button
             id="downloadScan"
-            class="toolbar-button"
-            type="button"
-          >
-            Download COPC
-          </button>
+            title="Download" style="background: none; border: none; cursor: pointer;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Der nach unten zeigende Pfeil -->
+                <path d="M12 5v11" />
+                <path d="m19 12-7 7-7-7" />
+              </svg>
+            </button>
         </div>
       </section>
 
