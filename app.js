@@ -4768,7 +4768,7 @@ function fitBounds(
     safeFitFactor > 1
   ) {
     safeFitFactor =
-      0.9;
+      0.7;
   }
 
   var distance =
@@ -4786,7 +4786,7 @@ function fitBounds(
     distance <= 0
   ) {
     distance =
-      1;
+      0.7;
   }
 
   distance =
