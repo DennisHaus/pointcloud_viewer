@@ -3359,6 +3359,13 @@ function getNavigationKey(
     ).toLowerCase();
 
   if (
+    key === "," ||
+    key === "."
+  ) {
+    return key;
+  }
+
+  if (
     key === "w" ||
     key === "a" ||
     key === "s" ||
@@ -3366,9 +3373,7 @@ function getNavigationKey(
     key === "arrowup" ||
     key === "arrowdown" ||
     key === "arrowleft" ||
-    key === "arrowright" ||
-    key === "," ||
-    key === "."
+    key === "arrowright"
   ) {
     return key;
   }
@@ -3380,74 +3385,64 @@ function getNavigationKey(
     ).toLowerCase();
 
   if (
-    code ===
-    "keyw"
+    code === "keyw"
   ) {
     return "w";
   }
 
   if (
-    code ===
-    "keya"
+    code === "keya"
   ) {
     return "a";
   }
 
   if (
-    code ===
-    "keys"
+    code === "keys"
   ) {
     return "s";
   }
 
   if (
-    code ===
-    "keyd"
+    code === "keyd"
   ) {
     return "d";
   }
 
   if (
-    code ===
-    "arrowup"
+    code === "arrowup"
   ) {
     return "arrowup";
   }
 
   if (
-    code ===
-    "arrowdown"
+    code === "arrowdown"
   ) {
     return "arrowdown";
   }
 
   if (
-    code ===
-    "arrowleft"
+    code === "arrowleft"
   ) {
     return "arrowleft";
   }
 
   if (
-    code ===
-    "arrowright"
+    code === "arrowright"
   ) {
     return "arrowright";
   }
 
   if (
-  code ===
-  "comma"
-) {
-  return ",";
-}
+    code === "comma"
+  ) {
+    return ",";
+  }
 
-if (
-  code ===
-  "period"
-) {
-  return ".";
-}
+  if (
+    code === "period"
+  ) {
+    return ".";
+  }
 
   return "";
 }
@@ -3501,6 +3496,40 @@ function clearNavigationKeys() {
 
   navigationKeys.right =
     false;
+}
+
+function adjustNavigationSpeed(
+  direction
+) {
+  var currentSpeed =
+    Number(
+      state.navigationSpeed
+    ) ||
+    Number(
+      CONFIG.navigationSpeed
+    ) ||
+    0.35;
+
+  var multiplier =
+    direction > 0
+      ? 1.25
+      : 0.8;
+
+  state.navigationSpeed =
+    clamp(
+      currentSpeed *
+      multiplier,
+      0.02,
+      8
+    );
+
+  setStatus(
+    "Navigation speed: " +
+    state.navigationSpeed.toFixed(
+      2
+    ),
+    "idle"
+  );
 }
 
 function adjustNavigationSpeed(
@@ -3786,24 +3815,30 @@ function bindNavigationKeyboard() {
           event
         );
 
+      if (
+        !key
+      ) {
+        return;
+      }
+
+      if (
+        key === "," ||
+        key === "."
+      ) {
         if (
-  key === "," ||
-  key === "."
-) {
-  if (
-    !event.repeat
-  ) {
-    adjustNavigationSpeed(
-      key === "."
-        ? 1
-        : -1
-    );
-  }
+          !event.repeat
+        ) {
+          adjustNavigationSpeed(
+            key === "."
+              ? 1
+              : -1
+          );
+        }
 
-  event.preventDefault();
+        event.preventDefault();
 
-  return;
-}
+        return;
+      }
 
       event.preventDefault();
 
@@ -3823,12 +3858,18 @@ function bindNavigationKeyboard() {
           event
         );
 
-        if (
-    key === "," ||
-    key === "."
-  ) {
-    return;
-  }
+      if (
+        !key
+      ) {
+        return;
+      }
+
+      if (
+        key === "," ||
+        key === "."
+      ) {
+        return;
+      }
 
       event.preventDefault();
 
@@ -3860,7 +3901,6 @@ function bindNavigationKeyboard() {
     navigationAnimationLoop
   );
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* VIEW CONTROLS                                                              */
