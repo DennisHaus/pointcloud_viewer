@@ -307,6 +307,251 @@ function bindDropdown(
   );
 }
 
+function updatePanelLayout() {
+  var workspace =
+    document.querySelector(
+      ".workspace"
+    );
+
+  var topbar =
+    document.querySelector(
+      ".topbar"
+    );
+
+  var statusbar =
+    document.querySelector(
+      ".statusbar"
+    );
+
+  var library =
+    getElement(
+      "libraryDropdownContent"
+    );
+
+  var libraryPanel =
+    document.querySelector(
+      ".library-panel"
+    );
+
+  var inspectorPanel =
+    document.querySelector(
+      ".inspector-panel"
+    );
+
+  var inspectorButton =
+    getElement(
+      "toggleInspector"
+    );
+
+  if (
+    !workspace ||
+    !topbar ||
+    !statusbar ||
+    !libraryPanel ||
+    !inspectorPanel ||
+    !inspectorButton
+  ) {
+    return;
+  }
+
+  /*
+    Keep the existing mobile layout.
+  */
+  if (
+    window.innerWidth <=
+    850
+  ) {
+    libraryPanel.style.removeProperty(
+      "top"
+    );
+
+    libraryPanel.style.removeProperty(
+      "height"
+    );
+
+    libraryPanel.style.removeProperty(
+      "bottom"
+    );
+
+    inspectorPanel.style.removeProperty(
+      "top"
+    );
+
+    inspectorPanel.style.removeProperty(
+      "height"
+    );
+
+    inspectorPanel.style.removeProperty(
+      "bottom"
+    );
+
+    return;
+  }
+
+  var workspaceHeight =
+    workspace.clientHeight ||
+    window.innerHeight;
+
+  var headerHeight =
+    topbar.offsetHeight;
+
+  var statusHeight =
+    statusbar.offsetHeight;
+
+  var panelAreaTop =
+    headerHeight;
+
+  var panelAreaBottom =
+    workspaceHeight -
+    statusHeight;
+
+  var panelAreaHeight =
+    Math.max(
+      panelAreaBottom -
+      panelAreaTop,
+      0
+    );
+
+  var libraryHeader =
+    libraryPanel.querySelector(
+      ".panel-header"
+    );
+
+  var libraryHeaderHeight =
+    libraryHeader
+      ? libraryHeader.offsetHeight
+      : 48;
+
+  var inspectorToggleHeight =
+    inspectorButton.offsetHeight ||
+    48;
+
+  var libraryButton =
+    getElement(
+      "toggleLibrary"
+    );
+
+  var libraryExpanded =
+    libraryButton &&
+    libraryButton.getAttribute(
+      "aria-expanded"
+    ) ===
+    "true";
+
+  var inspectorExpanded =
+    inspectorButton.getAttribute(
+      "aria-expanded"
+    ) ===
+    "true";
+
+  var libraryHeight;
+  var inspectorHeight;
+
+  if (
+    libraryExpanded &&
+    inspectorExpanded
+  ) {
+    libraryHeight =
+      Math.floor(
+        panelAreaHeight /
+        2
+      );
+
+    inspectorHeight =
+      panelAreaHeight -
+      libraryHeight;
+  } else if (
+    libraryExpanded
+  ) {
+    libraryHeight =
+      Math.max(
+        panelAreaHeight -
+        inspectorToggleHeight,
+        libraryHeaderHeight
+      );
+
+    inspectorHeight =
+      panelAreaHeight -
+      libraryHeight;
+  } else if (
+    inspectorExpanded
+  ) {
+    libraryHeight =
+      libraryHeaderHeight;
+
+    inspectorHeight =
+      panelAreaHeight -
+      libraryHeight;
+  } else {
+    libraryHeight =
+      libraryHeaderHeight;
+
+    inspectorHeight =
+      inspectorToggleHeight;
+  }
+
+  libraryHeight =
+    Math.max(
+      libraryHeight,
+      libraryHeaderHeight
+    );
+
+  inspectorHeight =
+    Math.max(
+      inspectorHeight,
+      inspectorToggleHeight
+    );
+
+  /*
+    Position the library.
+  */
+  libraryPanel.style.setProperty(
+    "top",
+    panelAreaTop +
+    "px",
+    "important"
+  );
+
+  libraryPanel.style.setProperty(
+    "bottom",
+    "auto",
+    "important"
+  );
+
+  libraryPanel.style.setProperty(
+    "height",
+    libraryHeight +
+    "px",
+    "important"
+  );
+
+  /*
+    Position the inspector directly below
+    the library.
+  */
+  inspectorPanel.style.setProperty(
+    "top",
+    panelAreaTop +
+    libraryHeight +
+    "px",
+    "important"
+  );
+
+  inspectorPanel.style.setProperty(
+    "bottom",
+    statusHeight +
+    "px",
+    "important"
+  );
+
+  inspectorPanel.style.setProperty(
+    "height",
+    inspectorHeight +
+    "px",
+    "important"
+  );
+}
+
 
 /* -------------------------------------------------------------------------- */
 /* POTREE INITIALIZATION                                                      */
@@ -6991,7 +7236,10 @@ function exportScreenshot() {
 /* -------------------------------------------------------------------------- */
 /* EVENTS                                                                     */
 /* -------------------------------------------------------------------------- */
-bindDropdown(
+
+
+function bindEvents() {
+  bindDropdown(
   "toggleLibrary",
   "libraryDropdownContent"
 );
@@ -7001,7 +7249,16 @@ bindDropdown(
   "inspectorDropdownContent"
 );
 
-function bindEvents() {
+window.addEventListener(
+  "resize",
+  updatePanelLayout
+);
+
+window.setTimeout(
+  updatePanelLayout,
+  0
+);
+
   addEvent(
     "scanSearch",
     "input",

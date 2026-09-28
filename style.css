@@ -1624,3 +1624,183 @@ button:active {
     flex-wrap: wrap;
   }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* FINAL PANEL OVERRIDES                                                      */
+/* -------------------------------------------------------------------------- */
+
+.library-panel,
+.inspector-panel {
+  right: 0 !important;
+
+  width: var(--interface-width) !important;
+
+  min-width: 0 !important;
+  min-height: 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* Library */
+.library-panel {
+  display: flex !important;
+  flex-direction: column !important;
+
+  overflow: hidden !important;
+
+  background: var(--black) !important;
+}
+
+.library-panel > .panel-header {
+  display: flex !important;
+  flex: 0 0 auto !important;
+
+  min-height: var(--library-header-height) !important;
+  height: var(--library-header-height) !important;
+}
+
+#libraryDropdownContent {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+
+  overflow: hidden !important;
+}
+
+#libraryDropdownContent.hidden {
+  display: none !important;
+}
+
+#libraryList,
+.library-list {
+  display: block !important;
+  flex: 1 1 auto !important;
+
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* Inspector */
+.inspector-panel {
+  overflow: visible !important;
+
+  background: var(--black) !important;
+}
+
+.inspector-dropdown {
+  position: relative !important;
+
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.inspector-toggle {
+  position: absolute !important;
+
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+
+  z-index: 20 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  width: 100% !important;
+  height: var(--inspector-toggle-height) !important;
+  min-height: var(--inspector-toggle-height) !important;
+
+  padding: 9px 13px !important;
+
+  border-top: 1px solid var(--border) !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  border-left: 0 !important;
+  border-radius: 0 !important;
+
+  color: var(--text) !important;
+  background: var(--black) !important;
+}
+
+#inspectorDropdownContent {
+  position: absolute !important;
+
+  top: 0 !important;
+  right: 0 !important;
+  bottom: var(--inspector-toggle-height) !important;
+  left: 0 !important;
+
+  z-index: 19 !important;
+
+  display: block !important;
+
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+
+  background: var(--black) !important;
+}
+
+#inspectorDropdownContent.hidden {
+  display: none !important;
+}
+
+.inspector-content {
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+.panel-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+}
+
+.dropdown-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+
+  padding: 0 !important;
+}
+
+.dropdown-arrow {
+  display: inline-block !important;
+
+  color: var(--muted) !important;
+
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+/*
+  Prevent the previous fixed library height
+  and old dynamic rules from taking control.
+*/
+.library-panel,
+.inspector-panel {
+  --library-height: auto !important;
+}
+
+@media (max-width: 480px)
