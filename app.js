@@ -2675,11 +2675,12 @@ function updateInspector() {
   );
 
   setText(
-  "activePointCount",
-  state.activeScan.pointCount !== undefined && state.activeScan.pointCount !== null
-    ? formatNumber(state.activeScan.pointCount)
-    : "Loaded"
-);
+    "activePointCount",
+    state.activeScan.pointCount ?? false
+      ? formatNumber(state.activeScan.pointCount)
+      : ""
+  );
+
 
 
   setText(

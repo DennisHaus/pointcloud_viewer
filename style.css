@@ -620,9 +620,9 @@ button:active {
 .panel-title {
   color: var(--text);
 
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.13em;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.19em;
   text-transform: uppercase;
 }
 
