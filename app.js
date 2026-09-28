@@ -4013,6 +4013,52 @@ function makeThreeVector(
   );
 }
 
+function getThreeNamespace() {
+  return (
+    window.THREE ||
+    (
+      window.Potree &&
+      window.Potree.THREE
+    ) ||
+    null
+  );
+}
+
+
+function makeThreeVector(
+  value
+) {
+  var THREE_NAMESPACE =
+    getThreeNamespace();
+
+  if (
+    !THREE_NAMESPACE ||
+    typeof THREE_NAMESPACE.Vector3 !==
+    "function"
+  ) {
+    return null;
+  }
+
+  return new THREE_NAMESPACE.Vector3(
+    getVectorValue(
+      value,
+      "x",
+      0
+    ),
+    getVectorValue(
+      value,
+      "y",
+      1
+    ),
+    getVectorValue(
+      value,
+      "z",
+      2
+    )
+  );
+}
+
+
 function getPointCloudWorldBounds(
   pointcloud
 ) {
@@ -4022,6 +4068,59 @@ function getPointCloudWorldBounds(
     return null;
   }
 
+  var THREE_NAMESPACE =
+    getThreeNamespace();
+
+  if (
+    !THREE_NAMESPACE ||
+    typeof THREE_NAMESPACE.Vector3 !==
+    "function"
+  ) {
+    return null;
+  }
+
+  /*
+    Prefer Potree's own world-bounds method
+    when it is available.
+  */
+  if (
+    typeof pointcloud.getBoundingBoxWorld ===
+    "function"
+  ) {
+    try {
+      var directBounds =
+        pointcloud.getBoundingBoxWorld();
+
+      if (
+        directBounds &&
+        directBounds.min &&
+        directBounds.max
+      ) {
+        return {
+          min:
+            makeThreeVector(
+              directBounds.min
+            ),
+
+          max:
+            makeThreeVector(
+              directBounds.max
+            )
+        };
+      }
+    } catch (
+      error
+    ) {
+      console.warn(
+        "Could not read Potree world bounds:",
+        error
+      );
+    }
+  }
+
+  /*
+    Fallback to the point-cloud bounding box.
+  */
   var box =
     pointcloud.boundingBox;
 
@@ -4042,59 +4141,237 @@ function getPointCloudWorldBounds(
     return null;
   }
 
-  var min =
+  var localMin =
     makeThreeVector(
       box.min
     );
 
-  var max =
+  var localMax =
     makeThreeVector(
       box.max
     );
 
   if (
-    !min ||
-    !max
+    !localMin ||
+    !localMax
   ) {
     return null;
   }
 
-  var THREE_NAMESPACE =
-    getThreeNamespace();
+  /*
+    If the point cloud has a transformation,
+    transform all eight box corners into world
+    coordinates.
+  */
+  if (
+    typeof pointcloud.updateMatrixWorld ===
+    "function"
+  ) {
+    pointcloud.updateMatrixWorld(
+      true
+    );
+  }
 
   if (
-    THREE_NAMESPACE &&
-    typeof THREE_NAMESPACE.Box3 ===
+    pointcloud.matrixWorld &&
+    typeof localMin.clone ===
     "function" &&
-    pointcloud.matrixWorld
+    typeof localMin.applyMatrix4 ===
+    "function" &&
+    typeof THREE_NAMESPACE.Box3 ===
+    "function"
   ) {
     var worldBox =
-      new THREE_NAMESPACE.Box3(
-        min,
-        max
-      );
+      new THREE_NAMESPACE.Box3();
 
     if (
-      typeof worldBox.applyMatrix4 ===
+      typeof worldBox.makeEmpty ===
       "function"
     ) {
-      worldBox.applyMatrix4(
-        pointcloud.matrixWorld
-      );
+      worldBox.makeEmpty();
+    }
 
-      min =
-        worldBox.min;
+    var corners = [
+      new THREE_NAMESPACE.Vector3(
+        localMin.x,
+        localMin.y,
+        localMin.z
+      ),
 
-      max =
-        worldBox.max;
+      new THREE_NAMESPACE.Vector3(
+        localMin.x,
+        localMin.y,
+        localMax.z
+      ),
+
+      new THREE_NAMESPACE.Vector3(
+        localMin.x,
+        localMax.y,
+        localMin.z
+      ),
+
+      new THREE_NAMESPACE.Vector3(
+        localMin.x,
+        localMax.y,
+        localMax.z
+      ),
+
+      new THREE_NAMESPACE.Vector3(
+        localMax.x,
+        localMin.y,
+        localMin.z
+      ),
+
+      new THREE_NAMESPACE.Vector3(
+        localMax.x,
+        localMin.y,
+        localMax.z
+      ),
+
+      new THREE_NAMESPACE.Vector3(
+        localMax.x,
+        localMax.y,
+        localMin.z
+      ),
+
+      new THREE_NAMESPACE.Vector3(
+        localMax.x,
+        localMax.y,
+        localMax.z
+      )
+    ];
+
+    corners.forEach(
+      function (corner) {
+        corner.applyMatrix4(
+          pointcloud.matrixWorld
+        );
+
+        if (
+          typeof worldBox.expandByPoint ===
+          "function"
+        ) {
+          worldBox.expandByPoint(
+            corner
+          );
+        }
+      }
+    );
+
+    if (
+      worldBox.min &&
+      worldBox.max
+    ) {
+      return {
+        min:
+          worldBox.min.clone(),
+
+        max:
+          worldBox.max.clone()
+      };
     }
   }
 
+  /*
+    If no transformation is available,
+    use the original bounding box.
+  */
   return {
-    min: min,
-    max: max
+    min:
+      localMin,
+
+    max:
+      localMax
   };
 }
+
+
+function getCombinedPointCloudBounds(
+  pointclouds
+) {
+  if (
+    !Array.isArray(
+      pointclouds
+    ) ||
+    pointclouds.length ===
+    0
+  ) {
+    return null;
+  }
+
+  var combined =
+    null;
+
+  pointclouds.forEach(
+    function (pointcloud) {
+      var bounds =
+        getPointCloudWorldBounds(
+          pointcloud
+        );
+
+      if (
+        !bounds ||
+        !bounds.min ||
+        !bounds.max
+      ) {
+        return;
+      }
+
+      if (
+        !combined
+      ) {
+        combined = {
+          min:
+            bounds.min.clone(),
+
+          max:
+            bounds.max.clone()
+        };
+
+        return;
+      }
+
+      combined.min.x =
+        Math.min(
+          combined.min.x,
+          bounds.min.x
+        );
+
+      combined.min.y =
+        Math.min(
+          combined.min.y,
+          bounds.min.y
+        );
+
+      combined.min.z =
+        Math.min(
+          combined.min.z,
+          bounds.min.z
+        );
+
+      combined.max.x =
+        Math.max(
+          combined.max.x,
+          bounds.max.x
+        );
+
+      combined.max.y =
+        Math.max(
+          combined.max.y,
+          bounds.max.y
+        );
+
+      combined.max.z =
+        Math.max(
+          combined.max.z,
+          bounds.max.z
+        );
+    }
+  );
+
+  return combined;
+}
+
 
 function setOrbitCenter(
   center
@@ -4115,6 +4392,12 @@ function setOrbitCenter(
     viewer.controls ||
     null;
 
+  var centerCopy =
+    typeof center.clone ===
+    "function"
+      ? center.clone()
+      : center;
+
   if (
     view
   ) {
@@ -4123,9 +4406,9 @@ function setOrbitCenter(
       "function"
     ) {
       view.setPivot(
-        center.clone
-          ? center.clone()
-          : center
+        centerCopy.clone
+          ? centerCopy.clone()
+          : centerCopy
       );
     }
 
@@ -4135,7 +4418,7 @@ function setOrbitCenter(
       "function"
     ) {
       view.pivot.copy(
-        center
+        centerCopy
       );
     }
 
@@ -4145,7 +4428,7 @@ function setOrbitCenter(
       "function"
     ) {
       view.target.copy(
-        center
+        centerCopy
       );
     }
   }
@@ -4158,9 +4441,9 @@ function setOrbitCenter(
       "function"
     ) {
       controls.setPivot(
-        center.clone
-          ? center.clone()
-          : center
+        centerCopy.clone
+          ? centerCopy.clone()
+          : centerCopy
       );
     }
 
@@ -4170,7 +4453,7 @@ function setOrbitCenter(
       "function"
     ) {
       controls.pivot.copy(
-        center
+        centerCopy
       );
     }
 
@@ -4180,11 +4463,402 @@ function setOrbitCenter(
       "function"
     ) {
       controls.target.copy(
-        center
+        centerCopy
       );
     }
   }
 }
+
+
+function getCurrentViewDirection(
+  view
+) {
+  if (
+    !view
+  ) {
+    return null;
+  }
+
+  var direction =
+    null;
+
+  if (
+    view.direction &&
+    typeof view.direction.clone ===
+    "function"
+  ) {
+    direction =
+      view.direction.clone();
+  } else if (
+    typeof view.getDirection ===
+    "function"
+  ) {
+    direction =
+      view.getDirection();
+
+    if (
+      direction &&
+      typeof direction.clone ===
+      "function"
+    ) {
+      direction =
+        direction.clone();
+    }
+  }
+
+  return direction;
+}
+
+
+function fitBounds(
+  bounds,
+  fitFactor,
+  statusMessage
+) {
+  if (
+    !viewer ||
+    !viewer.scene ||
+    !bounds ||
+    !bounds.min ||
+    !bounds.max
+  ) {
+    return false;
+  }
+
+  var THREE_NAMESPACE =
+    getThreeNamespace();
+
+  if (
+    !THREE_NAMESPACE ||
+    typeof THREE_NAMESPACE.Vector3 !==
+    "function"
+  ) {
+    setStatus(
+      "Three.js vectors are unavailable.",
+      "error"
+    );
+
+    return false;
+  }
+
+  var view =
+    viewer.scene.view;
+
+  if (
+    !view ||
+    !view.position
+  ) {
+    return false;
+  }
+
+  var min =
+    makeThreeVector(
+      bounds.min
+    );
+
+  var max =
+    makeThreeVector(
+      bounds.max
+    );
+
+  if (
+    !min ||
+    !max
+  ) {
+    return false;
+  }
+
+  /*
+    Calculate the center of the selected
+    or combined point-cloud bounds.
+  */
+  var center =
+    min.clone()
+      .add(
+        max
+      )
+      .multiplyScalar(
+        0.5
+      );
+
+  /*
+    Calculate the diagonal and radius.
+    A bounding sphere is used so the whole
+    bounding box remains inside the view
+    regardless of camera direction.
+  */
+  var size =
+    max.clone()
+      .sub(
+        min
+      );
+
+  var radius =
+    size.length() *
+    0.5;
+
+  var maximumSize =
+    Math.max(
+      Math.abs(
+        size.x
+      ),
+      Math.abs(
+        size.y
+      ),
+      Math.abs(
+        size.z
+      )
+    );
+
+  if (
+    !isFinite(
+      radius
+    ) ||
+    radius <= 0
+  ) {
+    radius =
+      Math.max(
+        maximumSize *
+        0.5,
+        1
+      );
+  }
+
+  /*
+    Keep the current camera direction.
+  */
+  var direction =
+    getCurrentViewDirection(
+      view
+    );
+
+  if (
+    !direction ||
+    typeof direction.normalize !==
+    "function"
+  ) {
+    direction =
+      new THREE_NAMESPACE.Vector3(
+        0,
+        -1,
+        -0.5
+      );
+  }
+
+  direction.normalize();
+
+  /*
+    Read the current field of view.
+  */
+  var fov =
+    60;
+
+  if (
+    typeof viewer.getFOV ===
+    "function"
+  ) {
+    fov =
+      Number(
+        viewer.getFOV()
+      );
+  }
+
+  if (
+    !isFinite(
+      fov
+    ) ||
+    fov <= 0
+  ) {
+    fov =
+      60;
+  }
+
+  var verticalFov =
+    fov *
+    Math.PI /
+    180;
+
+  /*
+    Determine the renderer aspect ratio.
+  */
+  var aspect =
+    1;
+
+  if (
+    viewer.renderer &&
+    viewer.renderer.domElement
+  ) {
+    var canvas =
+      viewer.renderer.domElement;
+
+    var canvasWidth =
+      canvas.clientWidth ||
+      canvas.width ||
+      1;
+
+    var canvasHeight =
+      canvas.clientHeight ||
+      canvas.height ||
+      1;
+
+    aspect =
+      canvasWidth /
+      Math.max(
+        canvasHeight,
+        1
+      );
+  }
+
+  if (
+    !isFinite(
+      aspect
+    ) ||
+    aspect <= 0
+  ) {
+    aspect =
+      1;
+  }
+
+  var horizontalFov =
+    2 *
+    Math.atan(
+      Math.tan(
+        verticalFov /
+        2
+      ) *
+      aspect
+    );
+
+  /*
+    Use the narrower field of view so the
+    complete bounds fit both horizontally
+    and vertically.
+  */
+  var limitingFov =
+    Math.min(
+      verticalFov,
+      horizontalFov
+    );
+
+  var safeFitFactor =
+    Number(
+      fitFactor
+    );
+
+  if (
+    !isFinite(
+      safeFitFactor
+    ) ||
+    safeFitFactor <= 0 ||
+    safeFitFactor > 1
+  ) {
+    safeFitFactor =
+      0.9;
+  }
+
+  var distance =
+    radius /
+    Math.sin(
+      limitingFov /
+      2
+    ) /
+    safeFitFactor;
+
+  if (
+    !isFinite(
+      distance
+    ) ||
+    distance <= 0
+  ) {
+    distance =
+      1;
+  }
+
+  /*
+    Prevent the camera from ending up
+    unrealistically close to tiny scans.
+  */
+  distance =
+    Math.max(
+      distance,
+      maximumSize *
+      0.05,
+      0.001
+    );
+
+  /*
+    Position the camera behind the center
+    while preserving its current direction.
+  */
+  var cameraPosition =
+    center.clone()
+      .sub(
+        direction.clone()
+          .multiplyScalar(
+            distance
+          )
+      );
+
+  view.position.copy(
+    cameraPosition
+  );
+
+  /*
+    Make the camera look at the center.
+  */
+  if (
+    typeof view.lookAt ===
+    "function"
+  ) {
+    view.lookAt(
+      center
+    );
+  }
+
+  /*
+    Keep Potree's orbit/navigation radius
+    synchronized with the new camera position.
+  */
+  view.radius =
+    distance;
+
+  /*
+    Make the selected or combined center
+    the orbit rotation center.
+  */
+  setOrbitCenter(
+    center
+  );
+
+  if (
+    viewer.scene &&
+    typeof viewer.scene.getActiveCamera ===
+    "function"
+  ) {
+    var camera =
+      viewer.scene.getActiveCamera();
+
+    if (
+      camera &&
+      typeof camera.updateProjectionMatrix ===
+      "function"
+    ) {
+      camera.updateProjectionMatrix();
+    }
+  }
+
+  if (
+    statusMessage
+  ) {
+    setStatus(
+      statusMessage,
+      "idle"
+    );
+  }
+
+  return true;
+}
+
 
 function fitActiveScan() {
   if (
@@ -4200,463 +4874,75 @@ function fitActiveScan() {
     return;
   }
 
-  var activeCloud =
-    state.activeCloud;
-
-  var worldBounds =
+  /*
+    Do not check activeCloud.visible here.
+    The Fit button must work for the selected
+    scan even if that scan is hidden.
+  */
+  var bounds =
     getPointCloudWorldBounds(
-      activeCloud
+      state.activeCloud
     );
 
   if (
-    worldBounds
+    !bounds
   ) {
-    var center =
-      worldBounds.min
-        .clone()
-        .add(
-          worldBounds.max
-        )
-        .multiplyScalar(
-          0.5
-        );
-
-    fitBounds(
-      worldBounds,
-      0.9,
-      "Focused on " +
-      (
-        state.activeScan
-          ? state.activeScan.name
-          : "active scan"
-      )
-    );
-
-    setOrbitCenter(
-      center
+    setStatus(
+      "The selected scan has no usable bounds.",
+      "error"
     );
 
     return;
   }
 
-  /*
-    Fallback for Potree versions that do not expose
-    a usable point-cloud bounding box.
-  */
-  var pointclouds =
-    viewer.scene.pointclouds ||
-    [];
-
-  var previousVisibility =
-    [];
-
-  pointclouds.forEach(
-    function (cloud) {
-      previousVisibility.push({
-        cloud: cloud,
-        visible:
-          cloud.visible !==
-          false
-      });
-
-      cloud.visible =
-        cloud ===
-        activeCloud;
-    }
-  );
-
-  try {
-    viewer.fitToScreen(
-      0.9
-    );
-  } finally {
-    previousVisibility.forEach(
-      function (item) {
-        item.cloud.visible =
-          item.visible;
-      }
-    );
-  }
-
-  if (
-    state.activeBounds
-  ) {
-    var fallbackCenter =
-      makeThreeVector({
-        x:
-          (
-            state.activeBounds.min.x +
-            state.activeBounds.max.x
-          ) /
-          2,
-        y:
-          (
-            state.activeBounds.min.y +
-            state.activeBounds.max.y
-          ) /
-          2,
-        z:
-          (
-            state.activeBounds.min.z +
-            state.activeBounds.max.z
-          ) /
-          2
-      });
-
-    if (
-      fallbackCenter
-    ) {
-      setOrbitCenter(
-        fallbackCenter
-      );
-    }
-  }
-
-  setStatus(
+  fitBounds(
+    bounds,
+    0.9,
     "Focused on " +
     (
       state.activeScan
         ? state.activeScan.name
         : "active scan"
-    ),
-    "idle"
+    )
   );
 }
 
-function fitBounds(
-  bounds,
-  fitFactor,
-  statusMessage
-) {
-  if (
-    !viewer ||
-    !viewer.scene ||
-    !bounds ||
-    !bounds.min ||
-    !bounds.max
-  ) {
-    return;
-  }
-
-  var view =
-    viewer.scene.view;
-
-  if (
-    !view ||
-    !view.position
-  ) {
-    return;
-  }
-
-  /*
-   * Center of bounding box
-   */
-  var center =
-    bounds.min.clone()
-      .add(bounds.max)
-      .multiplyScalar(0.5);
-
-  /*
-   * Size of bounding box
-   */
-  var size =
-    bounds.max.clone()
-      .sub(bounds.min);
-
-  var width =
-    Math.abs(size.x);
-
-  var height =
-    Math.abs(size.y);
-
-  var depth =
-    Math.abs(size.z);
-
-  /*
-   * Protect against zero-sized bounds.
-   */
-  if (
-    !isFinite(width) ||
-    width <= 0
-  ) {
-    width = 1;
-  }
-
-  if (
-    !isFinite(height) ||
-    height <= 0
-  ) {
-    height = 1;
-  }
-
-  if (
-    !isFinite(depth) ||
-    depth <= 0
-  ) {
-    depth = 1;
-  }
-
-  /*
-   * Keep current camera direction.
-   */
-  var direction = null;
-
-  if (
-    view.direction &&
-    typeof view.direction.clone ===
-      "function"
-  ) {
-    direction =
-      view.direction.clone();
-  }
-
-  if (
-    !direction &&
-    typeof view.getDirection ===
-      "function"
-  ) {
-    direction =
-      view.getDirection();
-  }
-
-  if (
-    !direction ||
-    typeof direction.normalize !==
-      "function"
-  ) {
-    var THREE_NAMESPACE =
-  getThreeNamespace();
-
-if (
-  THREE_NAMESPACE &&
-  typeof THREE_NAMESPACE.Vector3 ===
-  "function"
-) {
-  direction =
-    new THREE_NAMESPACE.Vector3(
-      0,
-      -1,
-      -0.5
-    );
-}
-  }
-
-  direction.normalize();
-
-  /*
-   * Camera FOV.
-   */
-  var fov = 60;
-
-  if (
-    typeof viewer.getFOV ===
-      "function"
-  ) {
-    fov =
-      Number(
-        viewer.getFOV()
-      );
-  }
-
-  if (
-    !isFinite(fov) ||
-    fov <= 0
-  ) {
-    fov = 60;
-  }
-
-  var verticalFov =
-    fov *
-    Math.PI /
-    180;
-
-  /*
-   * Renderer aspect ratio.
-   */
-  var aspect = 1;
-
-  if (
-    viewer.renderer &&
-    viewer.renderer.domElement
-  ) {
-    var canvas =
-      viewer.renderer.domElement;
-
-    aspect =
-      canvas.clientWidth /
-      Math.max(
-        canvas.clientHeight,
-        1
-      );
-  }
-
-  if (
-    !isFinite(aspect) ||
-    aspect <= 0
-  ) {
-    aspect = 1;
-  }
-
-  var horizontalFov =
-    2 *
-    Math.atan(
-      Math.tan(
-        verticalFov / 2
-      ) *
-      aspect
-    );
-
-  /*
-   * Required camera distance.
-   */
-  var verticalDistance =
-    (
-      height / 2
-    ) /
-    Math.tan(
-      verticalFov / 2
-    );
-
-  var horizontalDistance =
-    (
-      width / 2
-    ) /
-    Math.tan(
-      horizontalFov / 2
-    );
-
-  var distance =
-    Math.max(
-      verticalDistance,
-      horizontalDistance,
-      depth / 2
-    );
-
-  /*
-   * 0.9 means the object should occupy
-   * roughly 90% of the available view.
-   */
-  if (
-    !isFinite(fitFactor) ||
-    fitFactor <= 0
-  ) {
-    fitFactor = 0.9;
-  }
-
-  distance =
-    distance /
-    fitFactor;
-
-  /*
-   * Prevent the camera from becoming
-   * unrealistically close to tiny clouds.
-   */
-  var maxSize =
-    Math.max(
-      width,
-      height,
-      depth
-    );
-
-  distance =
-    Math.max(
-      distance,
-      maxSize * 0.05
-    );
-
-  /*
-   * Position camera behind the center.
-   */
-  var cameraPosition =
-    center.clone()
-      .sub(
-        direction
-          .clone()
-          .multiplyScalar(
-            distance
-          )
-      );
-
-  view.position.copy(
-    cameraPosition
-  );
-
-  /*
-   * Look directly at the center.
-   */
-  if (
-    typeof view.lookAt ===
-      "function"
-  ) {
-    view.lookAt(
-      center
-    );
-  }
-  setOrbitCenter(
-  center
-);
-
-  /*
-   * Keep Potree's radius synchronized.
-   */
-  view.radius =
-    distance;
-
-  if (
-    viewer.scene &&
-    typeof viewer.scene.getActiveCamera ===
-      "function"
-  ) {
-    var camera =
-      viewer.scene.getActiveCamera();
-
-    if (
-      camera &&
-      typeof camera.updateProjectionMatrix ===
-        "function"
-    ) {
-      camera.updateProjectionMatrix();
-    }
-  }
-
-  if (
-    statusMessage
-  ) {
-    setStatus(
-      statusMessage,
-      "idle"
-    );
-  }
-}
 
 function fitAllScans() {
   if (
     !viewer ||
     !viewer.scene
   ) {
+    setStatus(
+      "Potree scene is unavailable.",
+      "error"
+    );
+
     return;
   }
 
   var pointclouds =
-    viewer.scene.pointclouds || [];
-
-  var visibleClouds =
+    viewer.scene.pointclouds ||
     [];
 
-  pointclouds.forEach(
-    function (cloud) {
-      if (
-        cloud.visible !== false
-      ) {
-        visibleClouds.push(
-          cloud
+  /*
+    Only visible point clouds are included.
+    Hidden point clouds are deliberately excluded.
+  */
+  var visibleClouds =
+    pointclouds.filter(
+      function (pointcloud) {
+        return (
+          pointcloud &&
+          pointcloud.visible !==
+          false
         );
       }
-    }
-  );
+    );
 
   if (
-    visibleClouds.length === 0
+    visibleClouds.length ===
+    0
   ) {
     setStatus(
       "No visible scans.",
@@ -4666,40 +4952,26 @@ function fitAllScans() {
     return;
   }
 
-  var previousVisibility =
-    [];
-
-  pointclouds.forEach(
-    function (cloud) {
-      previousVisibility.push({
-        cloud: cloud,
-        visible:
-          cloud.visible !== false
-      });
-
-      cloud.visible =
-        visibleClouds.indexOf(
-          cloud
-        ) !== -1;
-    }
-  );
-
-  try {
-    viewer.fitToScreen(
-      0.9
+  var bounds =
+    getCombinedPointCloudBounds(
+      visibleClouds
     );
-  } finally {
-    previousVisibility.forEach(
-      function (item) {
-        item.cloud.visible =
-          item.visible;
-      }
+
+  if (
+    !bounds
+  ) {
+    setStatus(
+      "Visible scans have no usable bounds.",
+      "error"
     );
+
+    return;
   }
 
-  setStatus(
-    "Focused on all visible scans.",
-    "idle"
+  fitBounds(
+    bounds,
+    0.9,
+    "Focused on all visible scans."
   );
 }
 
