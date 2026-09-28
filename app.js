@@ -4786,7 +4786,7 @@ function fitBounds(
     distance <= 0
   ) {
     distance =
-      0.7;
+      1;
   }
 
   distance =
