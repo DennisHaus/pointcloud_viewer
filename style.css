@@ -1349,8 +1349,8 @@ button:active {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 0px;
+  height: 0px;
 }
 
 ::-webkit-scrollbar-track {
@@ -1358,7 +1358,7 @@ button:active {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3b3b3b;
+  background: none;
 }
 
 
@@ -1533,10 +1533,15 @@ button:active {
 
 .topbar-button-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: flex-end;
   gap: 0.65rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.topbar-button-row > * {
+  flex: 0 0 auto;
 }
 
 .description-link {
@@ -1566,7 +1571,7 @@ button:active {
   max-height: 82vh;
   padding: 0;
   border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
+  border-radius: 0px;
   background: #ffffff;
   color: #1d1d1b;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
@@ -1589,7 +1594,7 @@ button:active {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 0px solid rgba(0, 0, 0, 0);
 }
 
 .description-dialog-header h2 {
@@ -1614,7 +1619,7 @@ button:active {
 }
 
 .description-close:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.00);
 }
 
 .description-dialog-body {
