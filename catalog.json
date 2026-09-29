@@ -2,40 +2,52 @@
   "version": 1,
   "scans": [
     {
-      "id": "scans-brinzauls-years-br13-lv95-ln02-15-brienz-2025-shift-2765k-1171k",
-      "name": "Br13 Lv95 Ln02 15 Brienz 2025 Shift 2765k 1171k",
-      "filename": "BR13_LV95_LN02_15_Brienz_2025_shift-2765k_-1171k.copc.laz",
-      "path": "./scans/Brinzauls Years/BR13_LV95_LN02_15_Brienz_2025_shift-2765k_-1171k.copc.laz",
-      "url": "./scans/Brinzauls Years/BR13_LV95_LN02_15_Brienz_2025_shift-2765k_-1171k.copc.laz",
+      "id": "scans-brinzauls-years-2020-brienzauls",
+      "name": "2020 Brienzauls",
+      "filename": "2020_Brienzauls.copc.laz",
+      "path": "./scans/Brinzauls Years/2020_Brienzauls.copc.laz",
+      "url": "./scans/Brinzauls Years/2020_Brienzauls.copc.laz",
       "format": "copc",
-      "sizeBytes": 84093700,
+      "sizeBytes": 94308437,
       "pointCount": null,
       "crs": null,
-      "uploadedAt": "2026-09-28"
+      "uploadedAt": "2026-09-29"
     },
     {
-      "id": "scans-brinzauls-years-bri5-lv95-ln02-bri5-lv95-ln02-2001-brienzauls-2021-shift-2765k-1171k",
-      "name": "Bri5 Lv95 Ln02 Bri5 Lv95 Ln02 2001 Brienzauls 2021 Shift 2765k 1171k",
-      "filename": "BRI5_LV95_LN02_BRI5_LV95_LN02_2001_Brienzauls_2021_shift_-2765k_-1171k.copc.laz",
-      "path": "./scans/Brinzauls Years/BRI5_LV95_LN02_BRI5_LV95_LN02_2001_Brienzauls_2021_shift_-2765k_-1171k.copc.laz",
-      "url": "./scans/Brinzauls Years/BRI5_LV95_LN02_BRI5_LV95_LN02_2001_Brienzauls_2021_shift_-2765k_-1171k.copc.laz",
+      "id": "scans-brinzauls-years-2021-brienzauls",
+      "name": "2021 Brienzauls",
+      "filename": "2021 Brienzauls.copc.laz",
+      "path": "./scans/Brinzauls Years/2021 Brienzauls.copc.laz",
+      "url": "./scans/Brinzauls Years/2021 Brienzauls.copc.laz",
       "format": "copc",
       "sizeBytes": 83380105,
       "pointCount": null,
       "crs": null,
-      "uploadedAt": "2026-09-28"
+      "uploadedAt": "2026-09-29"
     },
     {
-      "id": "scans-brinzauls-years-bri8-lv95-ln02-15-brienz-2023-2765k-1171k",
-      "name": "Bri8 Lv95 Ln02 15 Brienz 2023 2765k 1171k",
-      "filename": "BRI8_LV95_LN02_15_Brienz_2023_-2765k_-1171k.copc.laz",
-      "path": "./scans/Brinzauls Years/BRI8_LV95_LN02_15_Brienz_2023_-2765k_-1171k.copc.laz",
-      "url": "./scans/Brinzauls Years/BRI8_LV95_LN02_15_Brienz_2023_-2765k_-1171k.copc.laz",
+      "id": "scans-brinzauls-years-2023-brienzauls",
+      "name": "2023 Brienzauls",
+      "filename": "2023_Brienzauls.copc.laz",
+      "path": "./scans/Brinzauls Years/2023_Brienzauls.copc.laz",
+      "url": "./scans/Brinzauls Years/2023_Brienzauls.copc.laz",
       "format": "copc",
       "sizeBytes": 93853575,
       "pointCount": null,
       "crs": null,
-      "uploadedAt": "2026-09-28"
+      "uploadedAt": "2026-09-29"
+    },
+    {
+      "id": "scans-brinzauls-years-2025-brienzauls",
+      "name": "2025 Brienzauls",
+      "filename": "2025_Brienzauls.copc.laz",
+      "path": "./scans/Brinzauls Years/2025_Brienzauls.copc.laz",
+      "url": "./scans/Brinzauls Years/2025_Brienzauls.copc.laz",
+      "format": "copc",
+      "sizeBytes": 84093700,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-09-29"
     },
     {
       "id": "scans-stallikon-test-stallikon-15mio",
