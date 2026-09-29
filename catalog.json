@@ -8,7 +8,7 @@
       "path": "./scans/Brinzauls Years/2020 Brienzauls.copc.laz",
       "url": "./scans/Brinzauls Years/2020 Brienzauls.copc.laz",
       "format": "copc",
-      "sizeBytes": 94179774,
+      "sizeBytes": 100780397,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-29"
@@ -20,7 +20,7 @@
       "path": "./scans/Brinzauls Years/2021 Brienzauls.copc.laz",
       "url": "./scans/Brinzauls Years/2021 Brienzauls.copc.laz",
       "format": "copc",
-      "sizeBytes": 74693105,
+      "sizeBytes": 74694099,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-29"
@@ -45,6 +45,18 @@
       "url": "./scans/Brinzauls Years/2025 Brienzauls.copc.laz",
       "format": "copc",
       "sizeBytes": 86183159,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-09-29"
+    },
+    {
+      "id": "scans-brinzauls-years-2028-brienzauls",
+      "name": "2028 Brienzauls",
+      "filename": "2028_Brienzauls.copc.laz",
+      "path": "./scans/Brinzauls Years/2028_Brienzauls.copc.laz",
+      "url": "./scans/Brinzauls Years/2028_Brienzauls.copc.laz",
+      "format": "copc",
+      "sizeBytes": 101197035,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-29"
