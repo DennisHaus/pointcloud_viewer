@@ -1523,21 +1523,52 @@ button:active {
 /* TOPBAR DESCRIPTION LINK                                                    */
 /* -------------------------------------------------------------------------- */
 
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
 .topbar-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.65rem;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.topbar-button-row {
+.screenshot-export-controls {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 0.65rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
+/* Alle vier Controls gleiche Höhe */
+.topbar-actions > .button,
+.topbar-actions > .toolbar-button,
+.screenshot-export-controls > .toolbar-button {
+  height: 2.25rem;
+  min-height: 2.25rem;
+  box-sizing: border-box;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  margin: 0;
+  line-height: 1;
+}
+
+/* Einheitliche Innenabstände */
+.topbar-actions > .button,
+.topbar-actions > button.toolbar-button {
+  padding: 0 0.8rem;
+}
+
+/* Select ebenfalls sauber zentrieren */
+.screenshot-scale-select {
+  padding: 0 0.55rem;
+  vertical-align: middle;
+}
 .description-link {
   padding: 0;
   border: 1px;
