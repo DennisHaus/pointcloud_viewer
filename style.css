@@ -1564,16 +1564,16 @@ button:active {
   max-width: 760px;
   max-height: 82vh;
   padding: 0;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 0px solid rgba(0, 0, 0, 0);
   border-radius: 0px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.8);
   color: #1d1d1b;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
 }
 
 .description-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
 }
 
 .description-dialog-inner {
@@ -1608,7 +1608,7 @@ button:active {
   background: transparent;
   color: inherit;
   font-size: 1.6rem;
-  line-height: 1;
+  line-height: 0;
   cursor: pointer;
 }
 
