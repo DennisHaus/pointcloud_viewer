@@ -71,12 +71,17 @@ button {
   cursor: pointer;
 }
 
-button:focus-visible,
 input:focus-visible,
 select:focus-visible {
   outline: 1px solid #999999;
   outline-offset: 2px;
 }
+
+button:focus-visible,{
+  outline:none;
+  outline-offset: 2px;
+}
+
 
 .hidden {
   display: none !important;
@@ -1601,13 +1606,13 @@ button:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* width: 2rem;
-  height: 2rem; */
+  width: 2rem;
+  height: 2rem;
   padding: 0;
   border: none;
   border-radius: 0%;
   background: transparent;
-  color: rgba(0, 0, 0, 0.8);
+  color: rgba(0, 0, 0, 1);
   font-size: 1.6rem;
   line-height: 0;
   cursor: pointer;
@@ -1615,7 +1620,7 @@ button:active {
 
 .description-close:hover {
   background: rgba(0, 0, 0, 0);
-  color: rgba(0, 0, 0, 1);
+  color: rgba(255, 255, 255, 1);
 }
 
 .description-dialog-body {
