@@ -4,9 +4,9 @@
     {
       "id": "scans-brinzauls-years-2020-brienzauls",
       "name": "2020 Brienzauls",
-      "filename": "2020_Brienzauls.copc.laz",
-      "path": "./scans/Brinzauls Years/2020_Brienzauls.copc.laz",
-      "url": "./scans/Brinzauls Years/2020_Brienzauls.copc.laz",
+      "filename": "2020 Brienzauls.copc.laz",
+      "path": "./scans/Brinzauls Years/2020 Brienzauls.copc.laz",
+      "url": "./scans/Brinzauls Years/2020 Brienzauls.copc.laz",
       "format": "copc",
       "sizeBytes": 94179774,
       "pointCount": null,
@@ -20,7 +20,7 @@
       "path": "./scans/Brinzauls Years/2021 Brienzauls.copc.laz",
       "url": "./scans/Brinzauls Years/2021 Brienzauls.copc.laz",
       "format": "copc",
-      "sizeBytes": 83380105,
+      "sizeBytes": 74693105,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-29"
@@ -28,11 +28,11 @@
     {
       "id": "scans-brinzauls-years-2023-brienzauls",
       "name": "2023 Brienzauls",
-      "filename": "2023_Brienzauls.copc.laz",
-      "path": "./scans/Brinzauls Years/2023_Brienzauls.copc.laz",
-      "url": "./scans/Brinzauls Years/2023_Brienzauls.copc.laz",
+      "filename": "2023 Brienzauls.copc.laz",
+      "path": "./scans/Brinzauls Years/2023 Brienzauls.copc.laz",
+      "url": "./scans/Brinzauls Years/2023 Brienzauls.copc.laz",
       "format": "copc",
-      "sizeBytes": 93853575,
+      "sizeBytes": 83490243,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-29"
@@ -40,11 +40,11 @@
     {
       "id": "scans-brinzauls-years-2025-brienzauls",
       "name": "2025 Brienzauls",
-      "filename": "2025_Brienzauls.copc.laz",
-      "path": "./scans/Brinzauls Years/2025_Brienzauls.copc.laz",
-      "url": "./scans/Brinzauls Years/2025_Brienzauls.copc.laz",
+      "filename": "2025 Brienzauls.copc.laz",
+      "path": "./scans/Brinzauls Years/2025 Brienzauls.copc.laz",
+      "url": "./scans/Brinzauls Years/2025 Brienzauls.copc.laz",
       "format": "copc",
-      "sizeBytes": 84093700,
+      "sizeBytes": 86183159,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-29"
