@@ -3872,6 +3872,21 @@ var navigationKeyboardBound =
 var navigationLastTime =
   0;
 
+  var navigationRamp =
+    0;
+
+  var navigationDirection =
+    null;
+
+  var navigationAccelerationTime =
+    0.25;
+
+  var navigationDecelerationTime =
+    0.20;
+
+  var navigationTurnTime =
+    0.12;
+
 function isTypingInField(
   target
 ) {
@@ -4659,21 +4674,6 @@ function readPointCloudBox(
 
   var maxZ =
     null;
-
-  var navigationRamp =
-    0;
-
-  var navigationDirection =
-    null;
-
-  var navigationAccelerationTime =
-    0.25;
-
-  var navigationDecelerationTime =
-    0.20;
-
-  var navigationTurnTime =
-    0.12;
 
   if (
     box.min &&
