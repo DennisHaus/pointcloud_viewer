@@ -1601,20 +1601,21 @@ button:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  /* width: 2rem;
+  height: 2rem; */
   padding: 0;
   border: none;
   border-radius: 0%;
   background: transparent;
   color: rgba(0, 0, 0, 0.8);
   font-size: 1.6rem;
-  line-height: 1;
+  line-height: 0;
   cursor: pointer;
 }
 
 .description-close:hover {
-  background: rgba(0, 0, 0, 1);
+  background: rgba(0, 0, 0, 0);
+  color: rgba(0, 0, 0, 1);
 }
 
 .description-dialog-body {
