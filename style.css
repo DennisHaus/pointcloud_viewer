@@ -186,10 +186,13 @@ select:focus-visible {
 
 .topbar-actions {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.6rem;
-
-  flex-wrap: nowrap;
+  flex-wrap: nowrap !important;
+  width: 100%;
+  min-width: 0;
 }
 
 .admin-badge {
@@ -1522,15 +1525,6 @@ button:active {
 /* -------------------------------------------------------------------------- */
 /* TOPBAR DESCRIPTION LINK                                                    */
 /* -------------------------------------------------------------------------- */
-
-.topbar-actions {
-  display: flex;
-  align-items: right;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.65rem;
-}
-
 .topbar-button-row {
   display: flex;
   flex-direction: row;
