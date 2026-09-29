@@ -3879,13 +3879,13 @@ var navigationLastTime =
     null;
 
   var navigationAccelerationTime =
-    0.25;
+    0.9;
 
   var navigationDecelerationTime =
-    0.20;
+    0.9;
 
   var navigationTurnTime =
-    0.12;
+    0.9;
 
 function isTypingInField(
   target
