@@ -20,7 +20,7 @@
 var CONFIG = {
   catalogUrl: "./catalog.json",
 
-  defaultPointBudget: 3000000,
+  defaultPointBudget: 30000000,
 
   navigationSpeed:  0.35,
 
