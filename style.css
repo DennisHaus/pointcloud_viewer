@@ -1649,26 +1649,3 @@ button:active {
   margin-bottom: 0.45rem;
   line-height: 1.45;
 }
-
-@media (max-width: 850px) {
-  .topbar-actions {
-    align-items: stretch;
-  }
-
-  .topbar-button-row {
-    justify-content: flex-start;
-  }
-
-  .description-link {
-    align-self: flex-start;
-  }
-
-  .description-dialog {
-    width: calc(100vw - 1rem);
-    max-height: 90vh;
-  }
-
-  .description-dialog-inner {
-    max-height: 90vh;
-  }
-}
