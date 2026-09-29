@@ -32,7 +32,7 @@ var CONFIG = {
       screenshotScale: 2
       exported PNG:    6748 x 2800
   */
-  screenshotScale: 4,
+  screenshotScale: 5,
 
   screenshotWarmupMs: 600,
 
@@ -6453,6 +6453,7 @@ function getScreenshotScale() {
         );
 
   if (
+    value = 1 &&
     value !== 2 &&
     value !== 3 &&
     value !== 4 &&
@@ -6464,6 +6465,7 @@ function getScreenshotScale() {
       );
 
     if (
+      value = 1 &&
       value !== 2 &&
       value !== 3 &&
       value !== 4 &&
