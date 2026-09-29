@@ -6453,7 +6453,7 @@ function getScreenshotScale() {
         );
 
   if (
-    value = 1 &&
+    value !== 1 &&
     value !== 2 &&
     value !== 3 &&
     value !== 4 &&
@@ -6465,7 +6465,7 @@ function getScreenshotScale() {
       );
 
     if (
-      value = 1 &&
+      value !== 1 &&
       value !== 2 &&
       value !== 3 &&
       value !== 4 &&
@@ -7611,23 +7611,14 @@ function exportScreenshot() {
 
 function openDescriptionDialog() {
   var dialog =
-    getElement(
-      "descriptionDialog"
-    );
+    getElement("descriptionDialog");
 
-  if (
-    !dialog
-  ) {
+  if (!dialog) {
     return;
   }
 
-  if (
-    typeof dialog.showModal ===
-    "function"
-  ) {
-    if (
-      !dialog.open
-    ) {
+  if (typeof dialog.showModal === "function") {
+    if (!dialog.open) {
       dialog.showModal();
     }
 
@@ -7637,40 +7628,29 @@ function openDescriptionDialog() {
   /*
     Fallback for browsers without dialog.showModal().
   */
-  dialog.setAttribute(
-    "open",
-    ""
-  );
+  dialog.setAttribute("open", "");
 }
 
 function closeDescriptionDialog() {
   var dialog =
-    getElement(
-      "descriptionDialog"
-    );
+    getElement("descriptionDialog");
 
-  if (
-    !dialog
-  ) {
+  if (!dialog) {
     return;
   }
 
   if (
-    typeof dialog.close ===
-    "function" &&
+    typeof dialog.close === "function" &&
     dialog.open
   ) {
     dialog.close();
-
     return;
   }
 
-  dialog.removeAttribute(
-    "open"
-  );
+  dialog.removeAttribute("open");
 }
 
-ffunction bindDescriptionDialog() {
+function bindDescriptionDialog() {
   var dialog =
     getElement("descriptionDialog");
 
@@ -7680,26 +7660,23 @@ ffunction bindDescriptionDialog() {
   var closeButton =
     getElement("closeDescription");
 
-  if (
-    !dialog
-  ) {
+  if (!dialog) {
+    console.warn("descriptionDialog was not found.");
     return;
   }
 
-  if (
-    openButton
-  ) {
+  if (openButton) {
     openButton.addEventListener(
       "click",
       function () {
         openDescriptionDialog();
       }
     );
+  } else {
+    console.warn("OpenDescription button was not found.");
   }
 
-  if (
-    closeButton
-  ) {
+  if (closeButton) {
     closeButton.addEventListener(
       "click",
       function () {
@@ -7709,14 +7686,12 @@ ffunction bindDescriptionDialog() {
   }
 
   /*
-    Close when clicking outside the dialog content.
+    Close when clicking the dialog backdrop.
   */
   dialog.addEventListener(
     "click",
     function (event) {
-      if (
-        event.target === dialog
-      ) {
+      if (event.target === dialog) {
         closeDescriptionDialog();
       }
     }
@@ -7732,35 +7707,6 @@ ffunction bindDescriptionDialog() {
     }
   );
 }
-
-  /*
-    Close when clicking outside the dialog content.
-  */
-  dialog.addEventListener(
-    "click",
-    function (event) {
-      var rectangle =
-        dialog.getBoundingClientRect();
-
-      var clickedOutside =
-        event.clientX <
-          rectangle.left ||
-        event.clientX >
-          rectangle.right ||
-        event.clientY <
-          rectangle.top ||
-        event.clientY >
-          rectangle.bottom;
-
-      if (
-        clickedOutside
-      ) {
-        closeDescriptionDialog();
-      }
-    }
-  );
-}
-
 
 /* -------------------------------------------------------------------------- */
 /* EVENTS                                                                     */
@@ -8235,3 +8181,6 @@ function formatCoordinate(
     3
   );
 }
+
+
+bindDescriptionDialog();
