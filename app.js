@@ -3872,6 +3872,21 @@ var navigationKeyboardBound =
 var navigationLastTime =
   0;
 
+  var navigationRamp =
+    0;
+
+  var navigationDirection =
+    null;
+
+  var navigationAccelerationTime =
+    0.9;
+
+  var navigationDecelerationTime =
+    0.9;
+
+  var navigationTurnTime =
+    0.9;
+
 function isTypingInField(
   target
 ) {
@@ -4113,40 +4128,6 @@ function adjustNavigationSpeed(
   );
 }
 
-function adjustNavigationSpeed(
-  direction
-) {
-  var currentSpeed =
-    Number(
-      state.navigationSpeed
-    ) ||
-    Number(
-      CONFIG.navigationSpeed
-    ) ||
-    0.35;
-
-  var multiplier =
-    direction > 0
-      ? 1.25
-      : 0.8;
-
-  state.navigationSpeed =
-    clamp(
-      currentSpeed *
-      multiplier,
-      0.02,
-      8
-    );
-
-  setStatus(
-    "Navigation speed: " +
-    state.navigationSpeed.toFixed(
-      2
-    ),
-    "idle"
-  );
-}
-
 function moveViewerWithKeyboard(
   deltaSeconds
 ) {
@@ -4163,20 +4144,6 @@ function moveViewerWithKeyboard(
 
   if (
     !view.position
-  ) {
-    return;
-  }
-
-  var moving =
-  navigationKeys.forward ||
-  navigationKeys.backward ||
-  navigationKeys.left ||
-  navigationKeys.right ||
-  navigationKeys.up ||
-  navigationKeys.down;
-
-  if (
-    !moving
   ) {
     return;
   }
@@ -4242,7 +4209,12 @@ function moveViewerWithKeyboard(
     right.normalize();
   }
 
-  var movement =
+  /*
+    Build the desired movement direction.
+    This is the target direction, not the
+    final movement yet.
+  */
+  var targetMovement =
     direction.clone().set(
       0,
       0,
@@ -4252,7 +4224,7 @@ function moveViewerWithKeyboard(
   if (
     navigationKeys.forward
   ) {
-    movement.add(
+    targetMovement.add(
       direction
     );
   }
@@ -4260,7 +4232,7 @@ function moveViewerWithKeyboard(
   if (
     navigationKeys.backward
   ) {
-    movement.sub(
+    targetMovement.sub(
       direction
     );
   }
@@ -4268,7 +4240,7 @@ function moveViewerWithKeyboard(
   if (
     navigationKeys.left
   ) {
-    movement.sub(
+    targetMovement.sub(
       right
     );
   }
@@ -4276,14 +4248,15 @@ function moveViewerWithKeyboard(
   if (
     navigationKeys.right
   ) {
-    movement.add(
+    targetMovement.add(
       right
     );
   }
+
   if (
     navigationKeys.up
   ) {
-    movement.add(
+    targetMovement.add(
       direction.clone().set(
         0,
         0,
@@ -4295,7 +4268,7 @@ function moveViewerWithKeyboard(
   if (
     navigationKeys.down
   ) {
-    movement.sub(
+    targetMovement.sub(
       direction.clone().set(
         0,
         0,
@@ -4304,17 +4277,110 @@ function moveViewerWithKeyboard(
     );
   }
 
+  var hasTargetMovement =
+    typeof targetMovement.lengthSq ===
+    "function" &&
+    targetMovement.lengthSq() >
+    0.000001;
 
   if (
-    typeof movement.lengthSq ===
-    "function" &&
-    movement.lengthSq() <
-    0.000001
+    hasTargetMovement
   ) {
+    targetMovement.normalize();
+
+    /*
+      Ramp from 0 to 1 while a direction
+      is being pressed.
+    */
+    navigationRamp =
+      Math.min(
+        1,
+        navigationRamp +
+        deltaSeconds /
+        navigationAccelerationTime
+      );
+  } else {
+    /*
+      Ramp from 1 back to 0 after release.
+    */
+    navigationRamp =
+      Math.max(
+        0,
+        navigationRamp -
+        deltaSeconds /
+        navigationDecelerationTime
+      );
+  }
+
+  /*
+    Convert the linear ramp into a soft
+    Catmull-Rom acceleration/deceleration.
+  */
+  var speedFactor =
+    navigationCatmullEase(
+      navigationRamp
+    );
+
+  /*
+    Smooth changes between directions too.
+    This prevents an abrupt snap when changing
+    from forward to left, for example.
+  */
+  if (
+    hasTargetMovement
+  ) {
+    if (
+      !navigationDirection
+    ) {
+      navigationDirection =
+        targetMovement.clone();
+    } else {
+      var turnAlpha =
+        1 -
+        Math.exp(
+          -deltaSeconds /
+          navigationTurnTime
+        );
+
+      navigationDirection.lerp(
+        targetMovement,
+        turnAlpha
+      );
+
+      if (
+        navigationDirection.lengthSq() <
+        0.000001
+      ) {
+        navigationDirection =
+          targetMovement.clone();
+      } else {
+        navigationDirection.normalize();
+      }
+    }
+  }
+
+  /*
+    Once fully stopped, discard the old
+    direction so a new direction starts cleanly.
+  */
+  if (
+    !hasTargetMovement &&
+    navigationRamp ===
+    0
+  ) {
+    navigationDirection =
+      null;
+
     return;
   }
 
-  movement.normalize();
+  if (
+    !navigationDirection ||
+    speedFactor <=
+    0
+  ) {
+    return;
+  }
 
   var radius =
     Number(
@@ -4325,36 +4391,74 @@ function moveViewerWithKeyboard(
     !isFinite(
       radius
     ) ||
-    radius <= 0
+    radius <=
+    0
   ) {
     radius =
       1;
   }
 
+  var navigationSpeed =
+    Number(
+      state.navigationSpeed
+    ) ||
+    Number(
+      CONFIG.navigationSpeed
+    ) ||
+    0.35;
+
   var speed =
-  radius *
-  Number(
-    state.navigationSpeed
-  );
+    radius *
+    navigationSpeed;
 
   if (
     !isFinite(
       speed
     ) ||
-    speed <= 0
+    speed <=
+    0
   ) {
-    speed =
-      1;
+    return;
   }
 
-  movement.multiplyScalar(
+  var displacement =
+    navigationDirection.clone();
+
+  displacement.multiplyScalar(
     speed *
+    speedFactor *
     deltaSeconds
   );
 
   view.position.add(
-    movement
+    displacement
   );
+}
+
+function clearNavigationKeys() {
+  navigationKeys.forward =
+    false;
+
+  navigationKeys.backward =
+    false;
+
+  navigationKeys.left =
+    false;
+
+  navigationKeys.right =
+    false;
+
+  navigationKeys.up =
+    false;
+
+  navigationKeys.down =
+    false;
+
+  navigationRamp =
+    0;
+
+  navigationDirection =
+    null;
 }
 
 function navigationAnimationLoop(
@@ -4707,6 +4811,79 @@ function readPointCloudBox(
         )
     }
   };
+}
+
+function catmullRomScalar(
+  p0,
+  p1,
+  p2,
+  p3,
+  t
+) {
+  var t2 =
+    t *
+    t;
+
+  var t3 =
+    t2 *
+    t;
+
+  return 0.5 * (
+    2 *
+    p1 +
+    (
+      -p0 +
+      p2
+    ) *
+    t +
+    (
+      2 *
+      p0 -
+      5 *
+      p1 +
+      4 *
+      p2 -
+      p3
+    ) *
+    t2 +
+    (
+      -p0 +
+      3 *
+      p1 -
+      3 *
+      p2 +
+      p3
+    ) *
+    t3
+  );
+}
+
+function navigationCatmullEase(
+  t
+) {
+  t =
+    Math.max(
+      0,
+      Math.min(
+        1,
+        t
+      )
+    );
+
+  /*
+    These virtual control points create
+    zero-slope start and stop behavior.
+
+    Result:
+    3t² - 2t³
+  */
+  return catmullRomScalar(
+    1,
+    0,
+    1,
+    0,
+    t
+  );
 }
 
 function getPointCloudBounds(
