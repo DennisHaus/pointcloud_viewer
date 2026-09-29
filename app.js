@@ -7603,6 +7603,111 @@ function exportScreenshot() {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* DESCRIPTION DIALOG                                                         */
+/* -------------------------------------------------------------------------- */
+
+function openDescriptionDialog() {
+  var dialog =
+    getElement(
+      "descriptionDialog"
+    );
+
+  if (
+    !dialog
+  ) {
+    return;
+  }
+
+  if (
+    typeof dialog.showModal ===
+    "function"
+  ) {
+    if (
+      !dialog.open
+    ) {
+      dialog.showModal();
+    }
+
+    return;
+  }
+
+  /*
+    Fallback for browsers without dialog.showModal().
+  */
+  dialog.setAttribute(
+    "open",
+    ""
+  );
+}
+
+function closeDescriptionDialog() {
+  var dialog =
+    getElement(
+      "descriptionDialog"
+    );
+
+  if (
+    !dialog
+  ) {
+    return;
+  }
+
+  if (
+    typeof dialog.close ===
+    "function" &&
+    dialog.open
+  ) {
+    dialog.close();
+
+    return;
+  }
+
+  dialog.removeAttribute(
+    "open"
+  );
+}
+
+function bindDescriptionDialog() {
+  var dialog =
+    getElement(
+      "descriptionDialog"
+    );
+
+  if (
+    !dialog
+  ) {
+    return;
+  }
+
+  /*
+    Close when clicking outside the dialog content.
+  */
+  dialog.addEventListener(
+    "click",
+    function (event) {
+      var rectangle =
+        dialog.getBoundingClientRect();
+
+      var clickedOutside =
+        event.clientX <
+          rectangle.left ||
+        event.clientX >
+          rectangle.right ||
+        event.clientY <
+          rectangle.top ||
+        event.clientY >
+          rectangle.bottom;
+
+      if (
+        clickedOutside
+      ) {
+        closeDescriptionDialog();
+      }
+    }
+  );
+}
+
 
 /* -------------------------------------------------------------------------- */
 /* EVENTS                                                                     */
