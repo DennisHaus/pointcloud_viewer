@@ -7670,17 +7670,68 @@ function closeDescriptionDialog() {
   );
 }
 
-function bindDescriptionDialog() {
+ffunction bindDescriptionDialog() {
   var dialog =
-    getElement(
-      "descriptionDialog"
-    );
+    getElement("descriptionDialog");
+
+  var openButton =
+    getElement("OpenDescription");
+
+  var closeButton =
+    getElement("closeDescription");
 
   if (
     !dialog
   ) {
     return;
   }
+
+  if (
+    openButton
+  ) {
+    openButton.addEventListener(
+      "click",
+      function () {
+        openDescriptionDialog();
+      }
+    );
+  }
+
+  if (
+    closeButton
+  ) {
+    closeButton.addEventListener(
+      "click",
+      function () {
+        closeDescriptionDialog();
+      }
+    );
+  }
+
+  /*
+    Close when clicking outside the dialog content.
+  */
+  dialog.addEventListener(
+    "click",
+    function (event) {
+      if (
+        event.target === dialog
+      ) {
+        closeDescriptionDialog();
+      }
+    }
+  );
+
+  /*
+    Allow closing with the Escape key.
+  */
+  dialog.addEventListener(
+    "cancel",
+    function () {
+      closeDescriptionDialog();
+    }
+  );
+}
 
   /*
     Close when clicking outside the dialog content.
