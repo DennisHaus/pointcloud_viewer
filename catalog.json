@@ -8,7 +8,7 @@
       "path": "./scans/Brinzauls Years/2020_Brienzauls.copc.laz",
       "url": "./scans/Brinzauls Years/2020_Brienzauls.copc.laz",
       "format": "copc",
-      "sizeBytes": 94308437,
+      "sizeBytes": 94179774,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-29"
@@ -56,7 +56,7 @@
       "path": "./scans/Stallikon Test/stallikon_15mio.copc.laz",
       "url": "./scans/Stallikon Test/stallikon_15mio.copc.laz",
       "format": "copc",
-      "sizeBytes": 78004810,
+      "sizeBytes": 77992273,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-28"
@@ -68,7 +68,7 @@
       "path": "./scans/Stallikon Test/stallikon_5mio_edit.copc.laz",
       "url": "./scans/Stallikon Test/stallikon_5mio_edit.copc.laz",
       "format": "copc",
-      "sizeBytes": 31418483,
+      "sizeBytes": 31602374,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-28"

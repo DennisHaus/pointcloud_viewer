@@ -3149,7 +3149,7 @@ function applyPointDisplayMode(
     material.size =
       getNumberValue(
         "pointSize",
-        1.0
+        0.5
       );
   }
 
@@ -3243,13 +3243,13 @@ function applyPointSize() {
   var value =
     getNumberValue(
       "pointSize",
-      1.0
+      0.5
     );
 
   setText(
     "pointSizeValue",
     value.toFixed(
-      1
+      0.5
     )
   );
 
