@@ -175,6 +175,17 @@ select:focus-visible {
   margin-bottom: 12px;
 }
 
+.subtitle-link {
+  color: var(--white);
+  text-decoration: none;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  line-height: 1.6;
+  margin-bottom: 12px;
+
+}
+
 .topbar-actions {
   display: flex;
   align-items: center;
@@ -1531,7 +1542,7 @@ button:active {
 
 .description-link {
   padding: 0;
-  border: none;
+  border: 1px;
   background: transparent;
   color: inherit;
   font: inherit;
