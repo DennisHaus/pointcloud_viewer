@@ -96,6 +96,18 @@
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-28"
+    },
+    {
+      "id": "scans-studentgroup1-stallikon-15mio",
+      "name": "Stallikon 15mio",
+      "filename": "stallikon_15mio.copc.laz",
+      "path": "./scans/StudentGroup1/stallikon_15mio.copc.laz",
+      "url": "./scans/StudentGroup1/stallikon_15mio.copc.laz",
+      "format": "copc",
+      "sizeBytes": 77992273,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-09-30"
     }
   ]
 }
