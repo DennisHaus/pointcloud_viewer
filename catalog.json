@@ -50,16 +50,16 @@
       "uploadedAt": "2026-09-29"
     },
     {
-      "id": "scans-brinzauls-years-2028-brienzauls",
-      "name": "2028 Brienzauls",
-      "filename": "2028_Brienzauls.copc.laz",
-      "path": "./scans/Brinzauls Years/2028_Brienzauls.copc.laz",
-      "url": "./scans/Brinzauls Years/2028_Brienzauls.copc.laz",
+      "id": "scans-brinzauls-years-2058-brienzauls",
+      "name": "2058 Brienzauls",
+      "filename": "2058_Brienzauls.copc.laz",
+      "path": "./scans/Brinzauls Years/2058_Brienzauls.copc.laz",
+      "url": "./scans/Brinzauls Years/2058_Brienzauls.copc.laz",
       "format": "copc",
       "sizeBytes": 101197035,
       "pointCount": null,
       "crs": null,
-      "uploadedAt": "2026-09-29"
+      "uploadedAt": "2026-09-30"
     },
     {
       "id": "scans-stallikon-test-stallikon-15mio",

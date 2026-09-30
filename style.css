@@ -71,12 +71,18 @@ button {
   cursor: pointer;
 }
 
-button:focus-visible,
 input:focus-visible,
 select:focus-visible {
   outline: 1px solid #999999;
   outline-offset: 2px;
 }
+
+button:focus-visible,{
+  outline: 0px;
+  outline-offset: 0px;
+  cursor: pointer;
+}
+
 
 .hidden {
   display: none !important;
@@ -175,23 +181,25 @@ select:focus-visible {
   margin-bottom: 12px;
 }
 
-.subtitle-link {
-  color: var(--white);
+.subtitle-link,
+.subtitle-link:visited,
+.subtitle-link:hover,
+.subtitle-link:active,
+.subtitle-link:focus {
+  color: inherit;
   text-decoration: none;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.11em;
-  line-height: 1.6;
-  margin-bottom: 12px;
-
+  cursor: pointer;
 }
 
 .topbar-actions {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.6rem;
-
-  flex-wrap: nowrap;
+  flex-wrap: nowrap !important;
+  width: 100%;
+  min-width: 0;
 }
 
 .admin-badge {
@@ -1351,8 +1359,8 @@ button:active {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 0px;
+  height: 0px;
 }
 
 ::-webkit-scrollbar-track {
@@ -1360,7 +1368,7 @@ button:active {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3b3b3b;
+  background: none;
 }
 
 
@@ -1524,20 +1532,17 @@ button:active {
 /* -------------------------------------------------------------------------- */
 /* TOPBAR DESCRIPTION LINK                                                    */
 /* -------------------------------------------------------------------------- */
-
-.topbar-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.65rem;
-}
-
 .topbar-button-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: flex-end;
   gap: 0.65rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.topbar-button-row > * {
+  flex: 0 0 auto;
 }
 
 .description-link {
@@ -1566,16 +1571,16 @@ button:active {
   max-width: 760px;
   max-height: 82vh;
   padding: 0;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
-  background: #ffffff;
+  border: 0px solid rgba(0, 0, 0, 0);
+  border-radius: 0px;
+  background: rgba(255, 255, 255, 0.65);
   color: #1d1d1b;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3);
 }
 
 .description-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
 }
 
 .description-dialog-inner {
@@ -1590,7 +1595,7 @@ button:active {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 0px solid rgba(0, 0, 0, 0);
 }
 
 .description-dialog-header h2 {
@@ -1606,16 +1611,17 @@ button:active {
   height: 2rem;
   padding: 0;
   border: none;
-  border-radius: 50%;
+  border-radius: 0%;
   background: transparent;
-  color: inherit;
+  color: rgba(0, 0, 0, 1);
   font-size: 1.6rem;
-  line-height: 1;
+  line-height: 0;
   cursor: pointer;
 }
 
 .description-close:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0);
+  color: rgba(255, 255, 255, 1);
 }
 
 .description-dialog-body {
@@ -1632,8 +1638,10 @@ button:active {
 }
 
 .description-dialog-body h3 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.75rem;
   font-size: 1rem;
+  text-transform: uppercase;
+
 }
 
 .description-dialog-body p {
@@ -1649,27 +1657,4 @@ button:active {
 .description-dialog-body li {
   margin-bottom: 0.45rem;
   line-height: 1.45;
-}
-
-@media (max-width: 850px) {
-  .topbar-actions {
-    align-items: stretch;
-  }
-
-  .topbar-button-row {
-    justify-content: flex-start;
-  }
-
-  .description-link {
-    align-self: flex-start;
-  }
-
-  .description-dialog {
-    width: calc(100vw - 1rem);
-    max-height: 90vh;
-  }
-
-  .description-dialog-inner {
-    max-height: 90vh;
-  }
 }
