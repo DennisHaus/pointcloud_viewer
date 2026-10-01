@@ -86,6 +86,18 @@
       "uploadedAt": "2026-09-28"
     },
     {
+      "id": "scans-studentgroup1-brinzauls-under-landslide",
+      "name": "Brinzauls Under Landslide",
+      "filename": "Brinzauls under Landslide.png",
+      "path": "./scans/StudentGroup1/Brinzauls under Landslide.png",
+      "url": "./scans/StudentGroup1/Brinzauls under Landslide.png",
+      "format": "png",
+      "sizeBytes": 1577842,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-10-01"
+    },
+    {
       "id": "scans-studentgroup1-stallikon-15mio",
       "name": "Stallikon 15mio",
       "filename": "stallikon_15mio.copc.laz",
@@ -105,18 +117,6 @@
       "url": "./scans/StudentGroup1/stallikon_5mio_edit.copc.laz",
       "format": "copc",
       "sizeBytes": 31602374,
-      "pointCount": null,
-      "crs": null,
-      "uploadedAt": "2026-10-01"
-    },
-    {
-      "id": "scans-test",
-      "name": "Test",
-      "filename": "Test.png",
-      "path": "./scans/Test.png",
-      "url": "./scans/Test.png",
-      "format": "png",
-      "sizeBytes": 1577842,
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-10-01"
