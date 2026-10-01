@@ -96,6 +96,18 @@
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-09-30"
+    },
+    {
+      "id": "scans-studentgroup1-stallikon-5mio-edit",
+      "name": "Stallikon 5mio Edit",
+      "filename": "stallikon_5mio_edit.copc.laz",
+      "path": "./scans/StudentGroup1/stallikon_5mio_edit.copc.laz",
+      "url": "./scans/StudentGroup1/stallikon_5mio_edit.copc.laz",
+      "format": "copc",
+      "sizeBytes": 31602374,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-10-01"
     }
   ]
 }
