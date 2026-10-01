@@ -1991,105 +1991,129 @@ function createScanCard(
   return card;
 }
 
-function renderLibraryTree(
-  node,
-  container,
-  query
-) {
-  node.folders.forEach(
-    function (
-      child,
-      folderName
-    ) {
-      if (
-        !treeContainsQuery(
-          child,
-          query
-        )
-      ) {
-        return;
-      }
+function renderLibrary() {
+  var list =
+    getElement(
+      "libraryList"
+    );
 
-      var folder =
-        document.createElement(
-          "details"
-        );
+  var empty =
+    getElement(
+      "libraryEmpty"
+    );
 
-      folder.className =
-        "scan-folder";
+  var search =
+    getElement(
+      "scanSearch"
+    );
 
-      folder.open =
-        false;
+  if (
+    !list
+  ) {
+    return;
+  }
 
-      var summary =
-        document.createElement(
-          "summary"
-        );
+  /*
+    Remember which folders are currently open.
+  */
+  var openFolders =
+    new Set();
 
-      summary.textContent =
-        folderName;
-
-      var count =
-        document.createElement(
-          "span"
-        );
-
-      count.className =
-        "scan-folder-count";
-
-      count.textContent =
-        countTreeScans(
-          child
-        );
-
-      summary.appendChild(
-        count
-      );
-
-      var contents =
-        document.createElement(
-          "div"
-        );
-
-      contents.className =
-        "scan-folder-contents";
-
-      folder.appendChild(
-        summary
-      );
-
-      folder.appendChild(
-        contents
-      );
-
-      renderLibraryTree(
-        child,
-        contents,
-        query
-      );
-
-      container.appendChild(
+  list
+    .querySelectorAll(
+      "details.scan-folder"
+    )
+    .forEach(
+      function (
         folder
-      );
-    }
-  );
+      ) {
+        if (
+          folder.open &&
+          folder.dataset.folderPath
+        ) {
+          openFolders.add(
+            folder.dataset.folderPath
+          );
+        }
+      }
+    );
 
-  node.scans.forEach(
-    function (scan) {
-      if (
-        scanMatchesQuery(
+  var hasRenderedBefore =
+    list.dataset.libraryRendered ===
+    "true";
+
+  var query =
+    search &&
+    search.value
+      ? search.value
+        .trim()
+        .toLowerCase()
+      : "";
+
+  while (
+    list.firstChild
+  ) {
+    list.removeChild(
+      list.firstChild
+    );
+  }
+
+  updateScanCount();
+
+  var visibleScans =
+    state.catalog.filter(
+      function (
+        scan
+      ) {
+        return scanMatchesQuery(
           scan,
           query
-        )
-      ) {
-        container.appendChild(
-          createScanCard(
-            scan
-          )
         );
       }
+    );
+
+  if (
+    visibleScans.length ===
+    0
+  ) {
+    if (
+      empty
+    ) {
+      empty.classList.remove(
+        "hidden"
+      );
     }
+
+    list.dataset.libraryRendered =
+      "true";
+
+    return;
+  }
+
+  if (
+    empty
+  ) {
+    empty.classList.add(
+      "hidden"
+    );
+  }
+
+  var tree =
+    buildLibraryTree(
+      state.catalog
+    );
+
+  renderLibraryTree(
+    tree,
+    list,
+    query,
+    "",
+    openFolders,
+    !hasRenderedBefore
   );
+
+  list.dataset.libraryRendered =
+    "true";
 }
 
 function renderLibrary() {
