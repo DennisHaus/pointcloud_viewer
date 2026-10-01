@@ -17,35 +17,49 @@
 /* CONFIGURATION                                                              */
 /* -------------------------------------------------------------------------- */
 
+var LOCATION_CONFIG =
+  window.LOCATION_CONFIG || {};
+
 var CONFIG = {
-  catalogUrl: "./catalog.json",
+  catalogUrl:
+    LOCATION_CONFIG.catalogUrl ||
+    "./catalog.json",
 
-  defaultPointBudget: 30000000,
+  defaultPointBudget:
+    30000000,
 
-  navigationSpeed:  0.35,
+  navigationSpeed:
+    0.35,
 
-  /*
-    The screenshot uses the current renderer size.
+  screenshotScale:
+    5,
 
-    Example:
-      current renderer: 3374 x 1400
-      screenshotScale: 2
-      exported PNG:    6748 x 2800
-  */
-  screenshotScale: 5,
+  screenshotWarmupMs:
+    600,
 
-  screenshotWarmupMs: 600,
+  useRawBaseForPaths:
+    LOCATION_CONFIG.useRawBaseForPaths === true,
 
-  useRawBaseForPaths: false,
+  fitFactor:
+    0.95,
 
-  fitFactor: 0.95,
+  fitDistanceMultiplier:
+    0.8,
 
-  fitDistanceMultiplier: 0.8,
-
-  fitVerticalOffset: -0.4,
+  fitVerticalOffset:
+    -0.4,
 
   rawBaseUrl:
-    "https://raw.githubusercontent.com/DennisHaus/pointcloud_viewer/main"
+    LOCATION_CONFIG.rawBaseUrl ||
+    "",
+
+  scanPathPrefix:
+    LOCATION_CONFIG.scanPathPrefix ||
+    "scans/",
+
+  downloadPassword:
+    LOCATION_CONFIG.downloadPassword ||
+    ""
 };
 
 
@@ -1115,12 +1129,21 @@ function normalizeScan(
       id
     );
 
+    var scanPathPrefix =
+    String(
+      CONFIG.scanPathPrefix ||
+      "scans/"
+    ).replace(
+      /\/+$/,
+      ""
+    ) + "/";
+
   var path =
     String(
       scan.path ||
       (
         filename
-          ? "scans/" +
+          ? scanPathPrefix +
             filename
           : ""
       )
@@ -6314,7 +6337,16 @@ function downloadActiveScan() {
     return; // Nutzer hat auf "Abbrechen" geklickt
   }
 
-  if (password !== "Brienzauls") {
+  var configuredPassword =
+    String(
+      CONFIG.downloadPassword ||
+      ""
+    );
+
+  if (
+    !configuredPassword ||
+    password !== configuredPassword
+  ) {
     setStatus(
       "Falsches Passwort!",
       "error"

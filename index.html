@@ -8,12 +8,9 @@
     content="width=device-width, initial-scale=1.0"
   />
 
-  <meta
-    name="description"
-    content="Cloud optimized point cloud viewer for Brienz/Brienzauls scans."
-  />
+  <div class="brand-title" id="brandTitle"></div>
 
-  <title>Spatial Library Brinzauls</title>
+  <div class="brand-subtitle" id="brandSubtitle"></div>
 
   <link
     rel="icon"
@@ -58,32 +55,23 @@
 
     <header class="topbar">
       <div class="brand">
-        <div class="eyebrow">
-          © ETH ZURICH
-        </div>
+        <div
+    id="brandEyebrow"
+    class="eyebrow"
+  >
+</div>
 
-        <div class="brand-title">
-          SPATIAL<br />
-          LIBRARY<br />
-          BRINZAULS-k
-        </div>
+  <div
+    id="brandTitle"
+    class="brand-title"
+  >
+</div>
 
-        <div class="brand-subtitle">
-          copc viewer & point cloud model interface | for collecting, storing and visualizing spatial recodings and spatial visions
-          of Brienz/Brinzauls during the Seminarweek 2026 |
-          beta version <br />
-          <br />
-          developed at Professur Voser, Institute for Landscape and Urban Studies, ETH Zürich
-          | assisted by AI gpt 5.6 |
-          <a
-          class="subtitle-link"
-          href="https://kyotodesignlab.github.io/campus-garden"
-          target="_blank"
-          >
-          inspired by Campus Garden XR, Kyoto Design Lab
-        </a>
-        </div>
-      </div>
+  <div
+    id="brandSubtitle"
+    class="brand-subtitle"
+  >
+</div>
 
       <div class="topbar-actions">
 
@@ -93,14 +81,15 @@
         ></span>
 
         <a
-          class="button button-secondary"
-          href="https://github.com/DennisHaus/pointcloud_viewer/upload/main/scans"
-          target="_blank"
-          rel="noopener"
-          title="Add COPC-Model through Github max.25MB, through Desktop Github max 100MB"
-        >
-          Add Model
-        </a>
+  id="addModel"
+  class="button button-secondary"
+  href="#"
+  target="_blank"
+  rel="noopener"
+  title="Add COPC-Model through Github"
+>
+  Add Model
+</a>
 
         <div class="screenshot-export-controls">
           <button
@@ -775,267 +764,8 @@
       </div>
 
       <div class="description-dialog-body">
-
-        <section>
-          <h3>Overview</h3>
-
-          <p>
-            Spatial Library Brienzauls is a point-cloud viewer for loading,
-            visualizing, inspecting and comparing COPC LAZ scans.
-          </p>
-
-          <p>
-            Select a scan from the model library to load it into the viewer.
-            Several scans can be loaded and displayed at the same time.
-            Registered users can upload and download models. Sections can be visualized and images exported.
-          </p>
-        </section>
-
-        <section>
-          <h3>Navigation</h3>
-
-          <ul>
-            <li>
-              <strong>Left mouse button + drag:</strong>
-              Orbit around the point cloud.
-            </li>
-
-            <li>
-              <strong>Right mouse button + drag:</strong>
-              Pan the view.
-            </li>
-
-            <li>
-              <strong>Mouse wheel:</strong>
-              Zoom in and out.
-            </li>
-
-            <li>
-              <strong>W or Arrow Up:</strong>
-              Move forward.
-            </li>
-
-            <li>
-              <strong>S or Arrow Down:</strong>
-              Move backward.
-            </li>
-
-            <li>
-              <strong>A or Arrow Left:</strong>
-              Move left.
-            </li>
-
-            <li>
-              <strong>D or Arrow Right:</strong>
-              Move right.
-            </li>
-
-            <li>
-              <strong>E:</strong>
-              Move upward.
-            </li>
-
-            <li>
-              <strong>C:</strong>
-              Move downward.
-            </li>
-
-            <li>
-              <strong>, and .:</strong>
-              Decrease or increase keyboard navigation speed.
-            </li>
-          </ul>
-
-          <p>
-            The keyboard movement is smooth when a key is held down.
-          </p>
-        </section>
-
-        <section>
-          <h3>Model library</h3>
-
-          <ul>
-            <li>
-              Click a scan name to select it.
-            </li>
-
-            <li>
-              If the scan has not been loaded yet, clicking it will load it.
-            </li>
-
-            <li>
-              Click the visibility symbol next to a scan to show or hide it.
-            </li>
-
-            <li>
-              Loaded scans can remain visible while another scan is selected.
-            </li>
-
-            <li>
-              Folders can be opened and closed to organize scans.
-            </li>
-
-            <li>
-              Use the refresh button to reload the scan catalog.
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h3>Viewer controls</h3>
-
-          <ul>
-            <li>
-              <strong>Zoom to All:</strong>
-              Fits all currently visible scans into the viewer.
-            </li>
-
-            <li>
-              <strong>Zoom to Selected:</strong>
-              Focuses the camera on the active scan.
-            </li>
-
-            <li>
-              <strong>Download:</strong>
-              Downloads the currently selected scan. A password is required.
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h3>Screenshot export</h3>
-
-          <p>
-            Use <strong>Export PNG</strong> to save the current viewer
-            perspective as a PNG image.
-          </p>
-
-          <p>
-            The resolution selector allows you to export the image at
-            2x, 3x, 4x or 5x the current viewer resolution.
-          </p>
-        </section>
-
-        <section>
-          <h3>Inspector</h3>
-
-          <p>
-            Open the Inspector panel to modify the active scan.
-          </p>
-
-          <ul>
-            <li>
-              <strong>Point display:</strong>
-              Switch between depth-sized points and single-pixel points.
-            </li>
-
-            <li>
-              <strong>Color mode:</strong>
-              Choose RGB, elevation, intensity, classification.
-            </li>
-
-            <li>
-              <strong>Point size:</strong>
-              Change the size of the points.
-            </li>
-
-            <li>
-              <strong>Opacity:</strong>
-              Make the point cloud transparent.
-            </li>
-
-            <li>
-              <strong>Point budget:</strong>
-              Define the maximum number of points rendered by the viewer.
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h3>Sections</h3>
-
-          <p>
-            The Sections controls allow you to inspect only part of a point cloud.
-          </p>
-
-          <ul>
-            <li>
-              <strong>Horizontal section:</strong>
-              Creates a slice along the Z axis.
-            </li>
-
-            <li>
-              <strong>Vertical section:</strong>
-              Creates a slice along the X or Y axis.
-            </li>
-
-            <li>
-              <strong>Position:</strong>
-              Moves the section through the point cloud.
-            </li>
-
-            <li>
-              <strong>Thickness:</strong>
-              Changes the thickness of the section.
-            </li>
-
-            <li>
-              Use <strong>Apply</strong> to create the section and
-              <strong>Clear</strong> to remove it.
-            </li>
-          </ul>
-        </section>
-
-        <section>
-          <h3>Upload and file format</h3>
-
-          <p>
-            Use <strong>Add Model</strong> to upload a COPC LAZ model through
-            the connected GitHub repository.
-          </p>
-
-          <p>
-            Accepted format:
-            <strong>.copc.laz</strong>
-          </p>
-        </section>
-
-        <section>
-          <h3>Impressum</h3>
-
-          <p>
-            © ETH Zürich, developed at Profesur Voser, Institute for Landscape and Urban Studies, ETH Zürich, assisted by AI gpt 5.6.
-            The work is inspired by
-            <a
-            class="subtitle-link"
-            href="https://kyotodesignlab.github.io/campus-garden"
-            target="_blank"
-            >
-            <strong>Campus Garden XR</strong>
-          </a>
-          developed at Kyoto Design Lab and other landscape visualization web applications like: <a
-          class="subtitle-link"
-          href="https://bradcantrell.github.io/sediment-interface/"
-          target="_blank"
-          >
-          <strong>Sediment Interface</strong>
-        </a> developed at University of Virginia. </br>
-      </br>
-        Contract Inforamtion:</br>
-        <strong>Professur Voser</strong></br>
-        c/o Dennis Häusler</br>
-        Institute for Landscape and Urban Studies</br>
-        ETH Zürich, Switzerland</br>
-        haeusler@arch.ethz.ch
-
-          </p>
-
-        </section>
-
-      </div>
-    </div>
-  </dialog>
-
+  <div id="descriptionContent"></div>
+</div>
 
   <!-- Potree dependencies -->
   <script src="./libs/jquery/jquery-3.1.1.min.js"></script>
@@ -1059,6 +789,8 @@
   <script src="./libs/plasio/js/laslaz.js"></script>
 
   <!-- Application code must load last -->
-  <script src="./app.js"></script>
+  <script src="./location-config.js"></script>
+<script src="./location-loader.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>
