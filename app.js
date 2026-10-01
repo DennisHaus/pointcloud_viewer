@@ -1113,12 +1113,15 @@ function isImageScan(scan) {
     format === "jpg" ||
     format === "jpeg" ||
     format === "png" ||
-    format === "image"
+    format === "image" ||
+    format === "mp4" ||
+    format === "mov" ||
+    format === "video"
   ) {
     return true;
   }
 
-  return /\.(jpg|jpeg|png)(\?.*)?$/i.test(
+  return /\.(jpg|jpeg|png|mp4|mov)(\?.*)?$/i.test(
     scan.url ||
     scan.path ||
     scan.filename ||
@@ -1283,7 +1286,7 @@ function normalizeScan(
     !normalizedFormat
   ) {
     normalizedFormat =
-      /\.(jpg|jpeg|png)(\?.*)?$/i.test(
+      /\.(jpg|jpeg|png|mp4|mov)(\?.*)?$/i.test(
         path ||
         filename
       )
@@ -2040,13 +2043,13 @@ function renderLibraryTree(
         folderPath;
 
       /*
-        Open folders on the first render.
+        Open foldopers on the first render.
         Afterwards, restore the user's
         previous open/closed state.
       */
       folder.open =
         firstRender
-          ? true
+          ? false
           : openFolders.has(
               folderPath
             );
@@ -2260,7 +2263,7 @@ function openImagePopup(
     !scan.url
   ) {
     setStatus(
-      "This image has no valid URL.",
+      "This media file has no valid URL.",
       "error"
     );
 
@@ -2290,12 +2293,8 @@ function openImagePopup(
   if (
     !container
   ) {
-    console.error(
-      "imagePopupContainer was not found."
-    );
-
     setStatus(
-      "Image popup container is unavailable.",
+      "Media popup container is unavailable.",
       "error"
     );
 
@@ -2351,7 +2350,7 @@ function openImagePopup(
   title.textContent =
     scan.name ||
     scan.filename ||
-    "Image";
+    "Media";
 
   var closeButton =
     document.createElement(
@@ -2368,11 +2367,11 @@ function openImagePopup(
     "×";
 
   closeButton.title =
-    "Close image";
+    "Close";
 
   closeButton.setAttribute(
     "aria-label",
-    "Close image"
+    "Close media"
   );
 
   titlebar.appendChild(
@@ -2391,21 +2390,59 @@ function openImagePopup(
   content.className =
     "image-popup-content";
 
-  var image =
-    document.createElement(
-      "img"
-    );
+  var media;
+  var isVideo =
+    /\.mp4(\?.*)?$/i.test(
+      scan.url ||
+      scan.path ||
+      scan.filename ||
+      ""
+    ) ||
+    String(
+      scan.format ||
+      ""
+    ).toLowerCase() ===
+      "mp4";
 
-  image.src =
+  if (
+    isVideo
+  ) {
+    media =
+      document.createElement(
+        "video"
+      );
+
+    media.controls =
+      true;
+
+    media.preload =
+      "metadata";
+
+    media.playsInline =
+      true;
+
+    media.setAttribute(
+      "aria-label",
+      scan.name ||
+      "Video"
+    );
+  } else {
+    media =
+      document.createElement(
+        "img"
+      );
+
+    media.alt =
+      scan.name ||
+      scan.filename ||
+      "Image";
+  }
+
+  media.src =
     scan.url;
 
-  image.alt =
-    scan.name ||
-    scan.filename ||
-    "Image";
-
   content.appendChild(
-    image
+    media
   );
 
   popup.appendChild(
@@ -2484,27 +2521,49 @@ function openImagePopup(
 
   bindImagePopupResizing(
     popup,
-    image
-  );
-
-  image.addEventListener(
-    "load",
-    function () {
-      setImagePopupAspectRatio(
-        popup,
-        image
-      );
-    }
+    media
   );
 
   if (
-    image.complete &&
-    image.naturalWidth >
-    0
+    isVideo
+  ) {
+    media.addEventListener(
+      "loadedmetadata",
+      function () {
+        setImagePopupAspectRatio(
+          popup,
+          media
+        );
+      }
+    );
+  } else {
+    media.addEventListener(
+      "load",
+      function () {
+        setImagePopupAspectRatio(
+          popup,
+          media
+        );
+      }
+    );
+  }
+
+  if (
+    (
+      !isVideo &&
+      media.complete &&
+      media.naturalWidth >
+      0
+    ) ||
+    (
+      isVideo &&
+      media.readyState >=
+      1
+    )
   ) {
     setImagePopupAspectRatio(
       popup,
-      image
+      media
     );
   }
 
@@ -2566,20 +2625,35 @@ function bringImagePopupToFront(
 
 function setImagePopupAspectRatio(
   popup,
-  image
+  media
 ) {
   if (
     !popup ||
-    !image ||
-    !image.naturalWidth ||
-    !image.naturalHeight
+    !media
+  ) {
+    return;
+  }
+
+  var mediaWidth =
+    media.naturalWidth ||
+    media.videoWidth ||
+    0;
+
+  var mediaHeight =
+    media.naturalHeight ||
+    media.videoHeight ||
+    0;
+
+  if (
+    !mediaWidth ||
+    !mediaHeight
   ) {
     return;
   }
 
   var aspectRatio =
-    image.naturalWidth /
-    image.naturalHeight;
+    mediaWidth /
+    mediaHeight;
 
   if (
     !isFinite(
@@ -2666,7 +2740,6 @@ function setImagePopupAspectRatio(
     ) +
     "px";
 }
-
 
 function bindImagePopupDragging(
   popup,
@@ -2789,7 +2862,7 @@ function bindImagePopupDragging(
 
 function bindImagePopupResizing(
   popup,
-  image
+  media
 ) {
   var handles =
     popup.querySelectorAll(
@@ -2823,14 +2896,24 @@ function bindImagePopupResizing(
             ) ||
             aspectRatio <= 0
           ) {
-            if (
-              image.naturalWidth &&
-              image.naturalHeight
-            ) {
-              aspectRatio =
-                image.naturalWidth /
-                image.naturalHeight;
-            }
+            var mediaWidth =
+  image.naturalWidth ||
+  image.videoWidth ||
+  0;
+
+var mediaHeight =
+  image.naturalHeight ||
+  image.videoHeight ||
+  0;
+
+if (
+  mediaWidth &&
+  mediaHeight
+) {
+  aspectRatio =
+    mediaWidth /
+    mediaHeight;
+}
           }
 
           if (

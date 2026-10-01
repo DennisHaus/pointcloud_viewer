@@ -1786,7 +1786,8 @@ button:active {
   overflow: hidden;
 }
 
-.image-popup-content img {
+.image-popup-content img,
+.image-popup-content video {
   display: block;
 
   width: 100%;
@@ -1796,7 +1797,6 @@ button:active {
 
   user-select: none;
   -webkit-user-drag: none;
-  pointer-events: none;
 }
 
 /* Corner-only resizing */

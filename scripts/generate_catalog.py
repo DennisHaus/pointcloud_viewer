@@ -17,6 +17,8 @@ SUPPORTED_SUFFIXES = (
     ".png",
     ".jpg",
     ".jpeg",
+    ".mp4",
+    ".mov",
 )
 
 
@@ -41,6 +43,12 @@ def get_format(filename):
     ):
         return "jpg"
 
+    if lower_name.endswith(".mp4"):
+        return "mp4"
+
+    if lower_name.endswith(".mov"):
+                return "mov"
+
     if lower_name.endswith(".copc.laz"):
         return "copc"
 
@@ -63,6 +71,8 @@ def remove_known_suffix(filename):
         ".png",
         ".laz",
         ".las",
+        ".mp4",
+        ".mov",
     ):
         if lower_name.endswith(suffix):
             return filename[
