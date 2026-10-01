@@ -2676,7 +2676,7 @@ function bindImagePopup() {
       );
     }
   );
-}
+
 
 
 
