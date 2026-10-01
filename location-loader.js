@@ -46,7 +46,7 @@ function applyLocationConfig() {
   if (brandTitle) {
     brandTitle.innerHTML =
       config.brandTitle ||
-      config.brandTitleHtml ||
+      config.brandTitleHtml || brandTitle.textContent ||
       "";
   }
 
@@ -58,7 +58,7 @@ function applyLocationConfig() {
   if (brandSubtitle) {
     brandSubtitle.innerHTML =
       config.brandSubtitle ||
-      config.brandSubtitleHtml ||
+      config.brandSubtitleHtml ||  brandSubtitle.textContent ||
       "";
   }
 
