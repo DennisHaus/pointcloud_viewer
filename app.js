@@ -1991,6 +1991,142 @@ function createScanCard(
   return card;
 }
 
+function renderLibraryTree(
+  node,
+  container,
+  query,
+  parentFolderPath,
+  openFolders,
+  firstRender
+) {
+  parentFolderPath =
+    parentFolderPath ||
+    "";
+
+  openFolders =
+    openFolders ||
+    new Set();
+
+  node.folders.forEach(
+    function (
+      child,
+      folderName
+    ) {
+      if (
+        !treeContainsQuery(
+          child,
+          query
+        )
+      ) {
+        return;
+      }
+
+      var folderPath =
+        parentFolderPath
+          ? parentFolderPath +
+            "/" +
+            folderName
+          : folderName;
+
+      var folder =
+        document.createElement(
+          "details"
+        );
+
+      folder.className =
+        "scan-folder";
+
+      folder.dataset.folderPath =
+        folderPath;
+
+      /*
+        Open folders on the first render.
+        Afterwards, restore the user's
+        previous open/closed state.
+      */
+      folder.open =
+        firstRender
+          ? true
+          : openFolders.has(
+              folderPath
+            );
+
+      var summary =
+        document.createElement(
+          "summary"
+        );
+
+      summary.textContent =
+        folderName;
+
+      var count =
+        document.createElement(
+          "span"
+        );
+
+      count.className =
+        "scan-folder-count";
+
+      count.textContent =
+        countTreeScans(
+          child
+        );
+
+      summary.appendChild(
+        count
+      );
+
+      var contents =
+        document.createElement(
+          "div"
+        );
+
+      contents.className =
+        "scan-folder-contents";
+
+      folder.appendChild(
+        summary
+      );
+
+      folder.appendChild(
+        contents
+      );
+
+      renderLibraryTree(
+        child,
+        contents,
+        query,
+        folderPath,
+        openFolders,
+        firstRender
+      );
+
+      container.appendChild(
+        folder
+      );
+    }
+  );
+
+  node.scans.forEach(
+    function (
+      scan
+    ) {
+      if (
+        scanMatchesQuery(
+          scan,
+          query
+        )
+      ) {
+        container.appendChild(
+          createScanCard(
+            scan
+          )
+        );
+      }
+    }
+  );
+}
+
 function renderLibrary() {
   var list =
     getElement(
@@ -2114,91 +2250,6 @@ function renderLibrary() {
 
   list.dataset.libraryRendered =
     "true";
-}
-
-function renderLibrary() {
-  var list =
-    getElement(
-      "libraryList"
-    );
-
-  var empty =
-    getElement(
-      "libraryEmpty"
-    );
-
-  var search =
-    getElement(
-      "scanSearch"
-    );
-
-  if (
-    !list
-  ) {
-    return;
-  }
-
-  var query =
-    search &&
-    search.value
-      ? search.value
-        .trim()
-        .toLowerCase()
-      : "";
-
-  while (
-    list.firstChild
-  ) {
-    list.removeChild(
-      list.firstChild
-    );
-  }
-
-  updateScanCount();
-
-  var visibleScans =
-    state.catalog.filter(
-      function (scan) {
-        return scanMatchesQuery(
-          scan,
-          query
-        );
-      }
-    );
-
-  if (
-    visibleScans.length ===
-    0
-  ) {
-    if (
-      empty
-    ) {
-      empty.classList.remove(
-        "hidden"
-      );
-    }
-
-    return;
-  }
-
-  if (
-    empty
-  ) {
-    empty.classList.add(
-      "hidden"
-    );
-  }
-
-  var tree =
-    buildLibraryTree(
-      state.catalog
-    );
-
-  renderLibraryTree(
-    tree,
-    list,
-    query
-  );
 }
 
 function openImagePopup(
