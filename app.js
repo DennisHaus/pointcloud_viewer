@@ -1744,20 +1744,6 @@ function createScanCard(
       "div"
     );
 
-  icon.className =
-    "scan-card-icon";
-
-  /*
-    Optional visual distinction for images.
-    You can style these characters with CSS,
-    or remove this assignment if your icon is
-    handled entirely by CSS.
-  */
-  icon.textContent =
-    imageScan
-      ? "▧"
-      : "";
-
   var name =
     document.createElement(
       "div"
@@ -1765,6 +1751,15 @@ function createScanCard(
 
   name.className =
     "scan-name";
+
+    if (
+    imageScan
+  ) {
+    name.classList.add(
+      "image-scan-name"
+    );
+  }
+
 
   name.textContent =
     scan.name;
@@ -1946,7 +1941,7 @@ function createScanCard(
     imageScan
       ? String(
           scan.format ||
-          "IMAGE"
+          "image"
         ).toUpperCase()
       : "COPC";
 

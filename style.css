@@ -797,8 +797,6 @@ button:active {
   display: grid;
   place-items: center;
 
-  border: 0px solid var(--border-light);
-
   color: #dddddd;
   background: #0e0e0e;
 }
@@ -815,6 +813,21 @@ button:active {
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.scan-name.image-scan-name {
+  min-width: 0;
+  overflow: hidden;
+
+  color: #dddddd;
+
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: lowercase;
+  white-space: nowrap;
+  font-style: italic;
 }
 
 .scan-state {
