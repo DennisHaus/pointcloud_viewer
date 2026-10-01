@@ -2176,9 +2176,7 @@ function renderLibrary() {
   );
 }
 
-function openImagePopup(
-  scan
-) {
+function openImagePopup(scan) {
   if (
     !scan ||
     !scan.url
@@ -2218,9 +2216,7 @@ function openImagePopup(
     return;
   }
 
-  if (
-    title
-  ) {
+  if (title) {
     title.textContent =
       scan.name ||
       scan.filename ||
@@ -2232,173 +2228,34 @@ function openImagePopup(
     scan.filename ||
     "Image";
 
-  state.activeImageId =
-    scan.id;
-
-  /*
-    Set the image URL.
-  */
   image.src =
     scan.url;
-
-  /*
-    Set the popup ratio after the image
-    dimensions are available.
-  */
-  function applyImageAspectRatio() {
-    if (
-      !image.naturalWidth ||
-      !image.naturalHeight
-    ) {
-      return;
-    }
-
-    var aspectRatio =
-      image.naturalWidth /
-      image.naturalHeight;
-
-    if (
-      !isFinite(
-        aspectRatio
-      ) ||
-      aspectRatio <= 0
-    ) {
-      return;
-    }
-
-    popup.dataset.imageAspectRatio =
-      String(
-        aspectRatio
-      );
-
-    /*
-      Initial popup width.
-    */
-    var width =
-      popup.offsetWidth ||
-      620;
-
-    /*
-      Keep the whole popup at the same
-      aspect ratio as the image.
-    */
-    var height =
-      width /
-      aspectRatio;
-
-    var minimumWidth =
-      240;
-
-    var minimumHeight =
-      160;
-
-    width =
-      Math.max(
-        width,
-        minimumWidth
-      );
-
-    height =
-      Math.max(
-        height,
-        minimumHeight
-      );
-
-    /*
-      Recalculate width if minimum height
-      affected the ratio.
-    */
-    width =
-      height *
-      aspectRatio;
-
-    /*
-      Do not make the initial window larger
-      than the viewport.
-    */
-    var maximumWidth =
-      window.innerWidth *
-      0.8;
-
-    var maximumHeight =
-      window.innerHeight *
-      0.8;
-
-    if (
-      width >
-      maximumWidth
-    ) {
-      width =
-        maximumWidth;
-
-      height =
-        width /
-        aspectRatio;
-    }
-
-    if (
-      height >
-      maximumHeight
-    ) {
-      height =
-        maximumHeight;
-
-      width =
-        height *
-        aspectRatio;
-    }
-
-    popup.style.width =
-      Math.round(
-        width
-      ) +
-      "px";
-
-    popup.style.height =
-      Math.round(
-        height
-      ) +
-      "px";
-
-    popup.style.aspectRatio =
-      String(
-        aspectRatio
-      );
-  }
-
-  /*
-    If the image is already cached,
-    naturalWidth is immediately available.
-  */
-  if (
-    image.complete &&
-    image.naturalWidth >
-    0
-  ) {
-    applyImageAspectRatio();
-  } else {
-    image.onload =
-      applyImageAspectRatio;
-  }
 
   popup.classList.remove(
     "hidden"
   );
 
-  /*
-    Apply once more after showing the popup,
-    because offsetWidth is reliable when visible.
-  */
-  window.requestAnimationFrame(
-    function () {
-      if (
-        image.naturalWidth >
-        0
-      ) {
-        applyImageAspectRatio();
-      }
-    }
-  );
+  state.activeImageId =
+    scan.id;
+
+  if (
+    !popup.dataset.positioned
+  ) {
+    popup.style.left =
+      "80px";
+
+    popup.style.top =
+      "80px";
+
+    popup.style.width =
+      "620px";
+
+    popup.style.height =
+      "460px";
+
+    popup.dataset.positioned =
+      "true";
+  }
 
   renderLibrary();
 
@@ -2596,365 +2453,229 @@ function bindImagePopup() {
     Resizing from edges and corners.
   */
   var handles =
-  popup.querySelectorAll(
-    ".image-resize-handle"
-  );
+    popup.querySelectorAll(
+      ".image-resize-handle"
+    );
 
-handles.forEach(
-  function (
-    handle
-  ) {
-    handle.addEventListener(
-      "pointerdown",
-      function (
-        event
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
+  handles.forEach(
+    function (handle) {
+      handle.addEventListener(
+        "pointerdown",
+        function (event) {
+          event.preventDefault();
+          event.stopPropagation();
 
-        var direction =
-          Array.from(
-            handle.classList
-          ).find(
-            function (
-              className
-            ) {
-              return (
-                className.indexOf(
-                  "image-resize-"
-                ) === 0 &&
-                className !==
-                  "image-resize-handle"
-              );
-            }
-          );
-
-        if (
-          !direction
-        ) {
-          return;
-        }
-
-        direction =
-          direction.replace(
-            "image-resize-",
-            ""
-          );
-
-        var aspectRatio =
-          Number(
-            popup.dataset.imageAspectRatio
-          );
-
-        /*
-          Do not resize until the image
-          aspect ratio is known.
-        */
-        if (
-          !isFinite(
-            aspectRatio
-          ) ||
-          aspectRatio <= 0
-        ) {
-          return;
-        }
-
-        var rect =
-          popup.getBoundingClientRect();
-
-        var startX =
-          event.clientX;
-
-        var startY =
-          event.clientY;
-
-        var startLeft =
-          rect.left;
-
-        var startTop =
-          rect.top;
-
-        var startWidth =
-          rect.width;
-
-        var startHeight =
-          rect.height;
-
-        var minimumWidth =
-          240;
-
-        var minimumHeight =
-          Math.max(
-            160,
-            minimumWidth /
-            aspectRatio
-          );
-
-        handle.setPointerCapture(
-          event.pointerId
-        );
-
-        function resize(
-          moveEvent
-        ) {
-          var dx =
-            moveEvent.clientX -
-            startX;
-
-          var dy =
-            moveEvent.clientY -
-            startY;
-
-          /*
-            Calculate a candidate width from
-            horizontal pointer movement.
-          */
-          var widthFromX;
-
-          if (
-            direction === "ne" ||
-            direction === "se"
-          ) {
-            widthFromX =
-              startWidth +
-              dx;
-          } else {
-            widthFromX =
-              startWidth -
-              dx;
-          }
-
-          /*
-            Calculate a candidate width from
-            vertical pointer movement.
-          */
-          var heightFromY;
-
-          if (
-            direction === "se" ||
-            direction === "sw"
-          ) {
-            heightFromY =
-              startHeight +
-              dy;
-          } else {
-            heightFromY =
-              startHeight -
-              dy;
-          }
-
-          var widthFromY =
-            heightFromY *
-            aspectRatio;
-
-          /*
-            Use whichever movement is larger.
-            This makes diagonal corner dragging
-            feel natural while preserving ratio.
-          */
-          var width;
-
-          if (
-            Math.abs(
-              dx
-            ) *
-            aspectRatio >=
-            Math.abs(
-              dy
-            )
-          ) {
-            width =
-              widthFromX;
-          } else {
-            width =
-              widthFromY;
-          }
-
-          width =
-            Math.max(
-              width,
-              minimumWidth
+          var direction =
+            Array.from(
+              handle.classList
+            ).find(
+              function (className) {
+                return (
+                  className.indexOf(
+                    "image-resize-"
+                  ) === 0 &&
+                  className !==
+                    "image-resize-handle"
+                );
+              }
             );
 
-          var height =
-            width /
-            aspectRatio;
-
-          /*
-            Keep the opposite corner fixed.
-          */
-          var left =
-            startLeft;
-
-          var top =
-            startTop;
-
           if (
-            direction === "nw" ||
-            direction === "sw"
+            !direction
           ) {
-            left =
-              startLeft +
-              startWidth -
-              width;
+            return;
           }
 
-          if (
-            direction === "nw" ||
-            direction === "ne"
-          ) {
-            top =
-              startTop +
-              startHeight -
-              height;
-          }
+          direction =
+            direction.replace(
+              "image-resize-",
+              ""
+            );
 
-          /*
-            Keep the complete popup inside
-            the browser viewport.
-          */
-          if (
-            left < 0
-          ) {
-            left =
-              0;
+          var rect =
+            popup.getBoundingClientRect();
 
-            width =
-              startLeft +
+          var startX =
+            event.clientX;
+
+          var startY =
+            event.clientY;
+
+          var startLeft =
+            rect.left;
+
+          var startTop =
+            rect.top;
+
+          var startWidth =
+            rect.width;
+
+          var startHeight =
+            rect.height;
+
+          var minimumWidth =
+            240;
+
+          var minimumHeight =
+            160;
+
+          handle.setPointerCapture(
+            event.pointerId
+          );
+
+          function resize(moveEvent) {
+            var dx =
+              moveEvent.clientX -
+              startX;
+
+            var dy =
+              moveEvent.clientY -
+              startY;
+
+            var left =
+              startLeft;
+
+            var top =
+              startTop;
+
+            var width =
               startWidth;
 
-            width =
-              Math.max(
-                width,
-                minimumWidth
-              );
-
-            height =
-              width /
-              aspectRatio;
-          }
-
-          if (
-            top < 0
-          ) {
-            top =
-              0;
-
-            height =
-              startTop +
+            var height =
               startHeight;
 
-            height =
-              Math.max(
-                height,
-                minimumHeight
-              );
+            if (
+              direction.indexOf(
+                "e"
+              ) !== -1
+            ) {
+              width =
+                Math.max(
+                  minimumWidth,
+                  startWidth + dx
+                );
+            }
 
-            width =
-              height *
-              aspectRatio;
-          }
+            if (
+              direction.indexOf(
+                "s"
+              ) !== -1
+            ) {
+              height =
+                Math.max(
+                  minimumHeight,
+                  startHeight + dy
+                );
+            }
 
-          if (
-            left +
-            width >
-            window.innerWidth
-          ) {
-            width =
-              window.innerWidth -
-              left;
+            if (
+              direction.indexOf(
+                "w"
+              ) !== -1
+            ) {
+              width =
+                Math.max(
+                  minimumWidth,
+                  startWidth - dx
+                );
 
-            width =
+              left =
+                startLeft +
+                startWidth -
+                width;
+            }
+
+            if (
+              direction.indexOf(
+                "n"
+              ) !== -1
+            ) {
+              height =
+                Math.max(
+                  minimumHeight,
+                  startHeight - dy
+                );
+
+              top =
+                startTop +
+                startHeight -
+                height;
+            }
+
+            if (
+              left < 0
+            ) {
+              width +=
+                left;
+
+              left =
+                0;
+            }
+
+            if (
+              top < 0
+            ) {
+              height +=
+                top;
+
+              top =
+                0;
+            }
+
+            popup.style.left =
+              left + "px";
+
+            popup.style.top =
+              top + "px";
+
+            popup.style.width =
               Math.max(
                 width,
                 minimumWidth
-              );
+              ) + "px";
 
-            height =
-              width /
-              aspectRatio;
-          }
-
-          if (
-            top +
-            height >
-            window.innerHeight
-          ) {
-            height =
-              window.innerHeight -
-              top;
-
-            height =
+            popup.style.height =
               Math.max(
                 height,
                 minimumHeight
-              );
-
-            width =
-              height *
-              aspectRatio;
+              ) + "px";
           }
 
-          popup.style.left =
-            Math.round(
-              left
-            ) +
-            "px";
+          function end() {
+            handle.removeEventListener(
+              "pointermove",
+              resize
+            );
 
-          popup.style.top =
-            Math.round(
-              top
-            ) +
-            "px";
+            handle.removeEventListener(
+              "pointerup",
+              end
+            );
 
-          popup.style.width =
-            Math.round(
-              width
-            ) +
-            "px";
+            handle.removeEventListener(
+              "pointercancel",
+              end
+            );
+          }
 
-          popup.style.height =
-            Math.round(
-              height
-            ) +
-            "px";
-        }
-
-        function end() {
-          handle.removeEventListener(
+          handle.addEventListener(
             "pointermove",
             resize
           );
 
-          handle.removeEventListener(
+          handle.addEventListener(
             "pointerup",
             end
           );
 
-          handle.removeEventListener(
+          handle.addEventListener(
             "pointercancel",
             end
           );
         }
-
-        handle.addEventListener(
-          "pointermove",
-          resize
-        );
-
-        handle.addEventListener(
-          "pointerup",
-          end
-        );
-
-        handle.addEventListener(
-          "pointercancel",
-          end
-        );
-      }
-    );
-  }
-);
+      );
+    }
+  );
 
 
 
