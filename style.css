@@ -1721,7 +1721,7 @@ button:active {
   padding: 0 8px 0 14px;
 
   color: white;
-  background: #242a33;
+  background: black;
 
   border-radius: 8px 8px 0 0;
 
@@ -1764,7 +1764,7 @@ button:active {
 }
 
 .image-popup-close:hover {
-  background: #c0392b;
+  background: #202226;
 }
 
 .image-popup-content {

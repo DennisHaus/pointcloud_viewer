@@ -10,7 +10,7 @@ window.LOCATION_CONFIG = {
   brandTitle: `
     SPATIAL<br>
     LIBRARY<br>
-    BRINZAULS 6
+    BRINZAULS 7
   `,
 
   brandSubtitle: `
