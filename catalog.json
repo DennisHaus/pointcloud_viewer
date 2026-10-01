@@ -98,6 +98,18 @@
       "uploadedAt": "2026-10-01"
     },
     {
+      "id": "scans-studentgroup1-skizzen",
+      "name": "Skizzen",
+      "filename": "Skizzen.png",
+      "path": "./scans/StudentGroup1/Skizzen.png",
+      "url": "./scans/StudentGroup1/Skizzen.png",
+      "format": "png",
+      "sizeBytes": 1963387,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-10-01"
+    },
+    {
       "id": "scans-studentgroup1-stallikon-15mio",
       "name": "Stallikon 15mio",
       "filename": "stallikon_15mio.copc.laz",
