@@ -1,13 +1,20 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const config = window.LOCATION_CONFIG;
+"use strict";
+
+function applyLocationConfig() {
+  const config =
+    window.LOCATION_CONFIG;
 
   if (!config) {
-    console.error("LOCATION_CONFIG was not found.");
+    console.error(
+      "LOCATION_CONFIG was not found."
+    );
+
     return;
   }
 
   document.title =
-    config.pageTitle || document.title;
+    config.pageTitle ||
+    document.title;
 
   const metaDescription =
     document.querySelector(
@@ -22,7 +29,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const brandEyebrow =
-    document.getElementById("brandEyebrow");
+    document.getElementById(
+      "brandEyebrow"
+    );
 
   if (brandEyebrow) {
     brandEyebrow.textContent =
@@ -30,25 +39,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const brandTitle =
-    document.getElementById("brandTitle");
+    document.getElementById(
+      "brandTitle"
+    );
 
   if (brandTitle) {
     brandTitle.innerHTML =
-      config.brandTitle || "";
+      config.brandTitle ||
+      config.brandTitleHtml ||
+      "";
   }
 
   const brandSubtitle =
-    document.getElementById("brandSubtitle");
+    document.getElementById(
+      "brandSubtitle"
+    );
 
   if (brandSubtitle) {
     brandSubtitle.innerHTML =
-      config.brandSubtitle || "";
+      config.brandSubtitle ||
+      config.brandSubtitleHtml ||
+      "";
   }
 
   const addModel =
-    document.getElementById("addModel");
+    document.getElementById(
+      "addModel"
+    );
 
-  if (addModel && config.uploadUrl) {
+  if (
+    addModel &&
+    config.uploadUrl
+  ) {
     addModel.href =
       config.uploadUrl;
   }
@@ -72,4 +94,28 @@ document.addEventListener("DOMContentLoaded", () => {
     descriptionContent.innerHTML =
       config.readmeHtml || "";
   }
-});
+
+  console.log(
+    "Location configuration applied:",
+    config
+  );
+}
+
+/*
+  This works whether the script is loaded
+  before or after DOMContentLoaded.
+*/
+if (
+  document.readyState ===
+  "loading"
+) {
+  document.addEventListener(
+    "DOMContentLoaded",
+    applyLocationConfig,
+    {
+      once: true
+    }
+  );
+} else {
+  applyLocationConfig();
+}
