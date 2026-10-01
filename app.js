@@ -74,6 +74,7 @@ var state = {
   activeCloud: null,
   activeBounds: null,
   sectionVolume: null,
+  activeImageId: null,
   navigationSpeed:
     Number(
       CONFIG.navigationSpeed
@@ -97,6 +98,7 @@ document.addEventListener(
 
 function initialize() {
   bindEvents();
+  bindImagePopup();
   initializeControls();
 
   if (!initializeViewer()) {
@@ -1093,6 +1095,33 @@ function flattenCatalogEntries(
   return result;
 }
 
+function isImageScan(scan) {
+  if (!scan) {
+    return false;
+  }
+
+  var format =
+    String(
+      scan.format ||
+      ""
+    ).toLowerCase();
+
+  if (
+    format === "jpg" ||
+    format === "jpeg" ||
+    format === "png" ||
+    format === "image"
+  ) {
+    return true;
+  }
+
+  return /\.(jpg|jpeg|png)(\?.*)?$/i.test(
+    scan.url ||
+    scan.path ||
+    scan.filename ||
+    ""
+  );
+}
 
 function normalizeScan(
   scan,
@@ -1241,6 +1270,23 @@ function normalizeScan(
         path
       );
   }
+  var normalizedFormat =
+    String(
+      scan.format ||
+      ""
+    ).toLowerCase();
+
+  if (
+    !normalizedFormat
+  ) {
+    normalizedFormat =
+      /\.(jpg|jpeg|png)(\?.*)?$/i.test(
+        path ||
+        filename
+      )
+        ? "image"
+        : "copc";
+  }
 
   return {
     id: id,
@@ -1256,8 +1302,7 @@ function normalizeScan(
     url: url,
 
     format:
-      scan.format ||
-      "copc",
+      normalizedFormat,
 
     sizeBytes:
       Number(
@@ -1663,6 +1708,19 @@ function createScanCard(
   card.className =
     "scan-card";
 
+  var imageScan =
+    isImageScan(
+      scan
+    );
+
+  if (
+    imageScan
+  ) {
+    card.classList.add(
+      "image-card"
+    );
+  }
+
   if (
     state.activeScan &&
     state.activeScan.id ===
@@ -1688,6 +1746,17 @@ function createScanCard(
 
   icon.className =
     "scan-card-icon";
+
+  /*
+    Optional visual distinction for images.
+    You can style these characters with CSS,
+    or remove this assignment if your icon is
+    handled entirely by CSS.
+  */
+  icon.textContent =
+    imageScan
+      ? "▧"
+      : "";
 
   var name =
     document.createElement(
@@ -1718,6 +1787,7 @@ function createScanCard(
       "loading"
     );
   } else if (
+    imageScan ||
     state.loadedClouds.has(
       scan.id
     )
@@ -1732,15 +1802,31 @@ function createScanCard(
       scan.id
     );
 
+  /*
+    Images are considered loaded because
+    they are regular browser resources rather
+    than Potree point clouds.
+  */
   var isLoaded =
+    imageScan ||
     Boolean(
       pointcloud
     );
 
-  var isVisible =
-    isLoaded &&
-    pointcloud.visible !==
-    false;
+  var isVisible;
+
+  if (
+    imageScan
+  ) {
+    isVisible =
+      state.activeImageId ===
+      scan.id;
+  } else {
+    isVisible =
+      isLoaded &&
+      pointcloud.visible !==
+      false;
+  }
 
   var visibilityToggle =
     document.createElement(
@@ -1760,13 +1846,17 @@ function createScanCard(
       : "·";
 
   visibilityToggle.title =
-    isLoaded
-      ? (
-          isVisible
-            ? "Hide scan"
-            : "Show scan"
-        )
-      : "Load scan";
+    imageScan
+      ? "Open image"
+      : (
+          isLoaded
+            ? (
+                isVisible
+                  ? "Hide scan"
+                  : "Show scan"
+              )
+            : "Load scan"
+        );
 
   visibilityToggle.setAttribute(
     "role",
@@ -1790,7 +1880,9 @@ function createScanCard(
 
   visibilityToggle.addEventListener(
     "click",
-    function (event) {
+    function (
+      event
+    ) {
       event.preventDefault();
       event.stopPropagation();
 
@@ -1802,7 +1894,9 @@ function createScanCard(
 
   visibilityToggle.addEventListener(
     "keydown",
-    function (event) {
+    function (
+      event
+    ) {
       if (
         event.key ===
           "Enter" ||
@@ -1849,7 +1943,12 @@ function createScanCard(
     );
 
   format.textContent =
-    "COPC";
+    imageScan
+      ? String(
+          scan.format ||
+          "IMAGE"
+        ).toUpperCase()
+      : "COPC";
 
   var size =
     document.createElement(
@@ -2077,34 +2176,562 @@ function renderLibrary() {
   );
 }
 
+function openImagePopup(scan) {
+  if (
+    !scan ||
+    !scan.url
+  ) {
+    setStatus(
+      "This image has no valid URL.",
+      "error"
+    );
+
+    return;
+  }
+
+  var popup =
+    getElement(
+      "imagePopup"
+    );
+
+  var image =
+    getElement(
+      "imagePopupImage"
+    );
+
+  var title =
+    getElement(
+      "imagePopupTitle"
+    );
+
+  if (
+    !popup ||
+    !image
+  ) {
+    setStatus(
+      "Image popup is unavailable.",
+      "error"
+    );
+
+    return;
+  }
+
+  if (title) {
+    title.textContent =
+      scan.name ||
+      scan.filename ||
+      "Image";
+  }
+
+  image.alt =
+    scan.name ||
+    scan.filename ||
+    "Image";
+
+  image.src =
+    scan.url;
+
+  popup.classList.remove(
+    "hidden"
+  );
+
+  state.activeImageId =
+    scan.id;
+
+  if (
+    !popup.dataset.positioned
+  ) {
+    popup.style.left =
+      "80px";
+
+    popup.style.top =
+      "80px";
+
+    popup.style.width =
+      "620px";
+
+    popup.style.height =
+      "460px";
+
+    popup.dataset.positioned =
+      "true";
+  }
+
+  renderLibrary();
+
+  setStatus(
+    scan.name +
+    " opened",
+    "idle"
+  );
+}
+
+function closeImagePopup() {
+  var popup =
+    getElement(
+      "imagePopup"
+    );
+
+  var image =
+    getElement(
+      "imagePopupImage"
+    );
+
+  if (
+    popup
+  ) {
+    popup.classList.add(
+      "hidden"
+    );
+  }
+
+  if (
+    image
+  ) {
+    image.removeAttribute(
+      "src"
+    );
+  }
+
+  state.activeImageId =
+    null;
+
+  renderLibrary();
+}
+
+function bindImagePopup() {
+  var popup =
+    getElement(
+      "imagePopup"
+    );
+
+  var titlebar =
+    getElement(
+      "imagePopupTitlebar"
+    );
+
+  var closeButton =
+    getElement(
+      "imagePopupClose"
+    );
+
+  if (
+    !popup ||
+    !titlebar
+  ) {
+    console.warn(
+      "Image popup elements were not found."
+    );
+
+    return;
+  }
+
+  if (
+    closeButton
+  ) {
+    closeButton.addEventListener(
+      "click",
+      function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        closeImagePopup();
+      }
+    );
+  }
+
+  /*
+    Dragging by the title bar.
+  */
+  titlebar.addEventListener(
+    "pointerdown",
+    function (event) {
+      if (
+        event.target ===
+        closeButton
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      var rect =
+        popup.getBoundingClientRect();
+
+      var startX =
+        event.clientX;
+
+      var startY =
+        event.clientY;
+
+      var startLeft =
+        rect.left;
+
+      var startTop =
+        rect.top;
+
+      titlebar.setPointerCapture(
+        event.pointerId
+      );
+
+      function move(moveEvent) {
+        var left =
+          startLeft +
+          moveEvent.clientX -
+          startX;
+
+        var top =
+          startTop +
+          moveEvent.clientY -
+          startY;
+
+        var maxLeft =
+          window.innerWidth -
+          popup.offsetWidth;
+
+        var maxTop =
+          window.innerHeight -
+          popup.offsetHeight;
+
+        popup.style.left =
+          clamp(
+            left,
+            0,
+            Math.max(
+              maxLeft,
+              0
+            )
+          ) + "px";
+
+        popup.style.top =
+          clamp(
+            top,
+            0,
+            Math.max(
+              maxTop,
+              0
+            )
+          ) + "px";
+      }
+
+      function end() {
+        titlebar.removeEventListener(
+          "pointermove",
+          move
+        );
+
+        titlebar.removeEventListener(
+          "pointerup",
+          end
+        );
+
+        titlebar.removeEventListener(
+          "pointercancel",
+          end
+        );
+      }
+
+      titlebar.addEventListener(
+        "pointermove",
+        move
+      );
+
+      titlebar.addEventListener(
+        "pointerup",
+        end
+      );
+
+      titlebar.addEventListener(
+        "pointercancel",
+        end
+      );
+    }
+  );
+
+  /*
+    Resizing from edges and corners.
+  */
+  var handles =
+    popup.querySelectorAll(
+      ".image-resize-handle"
+    );
+
+  handles.forEach(
+    function (handle) {
+      handle.addEventListener(
+        "pointerdown",
+        function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+
+          var direction =
+            Array.from(
+              handle.classList
+            ).find(
+              function (className) {
+                return (
+                  className.indexOf(
+                    "image-resize-"
+                  ) === 0 &&
+                  className !==
+                    "image-resize-handle"
+                );
+              }
+            );
+
+          if (
+            !direction
+          ) {
+            return;
+          }
+
+          direction =
+            direction.replace(
+              "image-resize-",
+              ""
+            );
+
+          var rect =
+            popup.getBoundingClientRect();
+
+          var startX =
+            event.clientX;
+
+          var startY =
+            event.clientY;
+
+          var startLeft =
+            rect.left;
+
+          var startTop =
+            rect.top;
+
+          var startWidth =
+            rect.width;
+
+          var startHeight =
+            rect.height;
+
+          var minimumWidth =
+            240;
+
+          var minimumHeight =
+            160;
+
+          handle.setPointerCapture(
+            event.pointerId
+          );
+
+          function resize(moveEvent) {
+            var dx =
+              moveEvent.clientX -
+              startX;
+
+            var dy =
+              moveEvent.clientY -
+              startY;
+
+            var left =
+              startLeft;
+
+            var top =
+              startTop;
+
+            var width =
+              startWidth;
+
+            var height =
+              startHeight;
+
+            if (
+              direction.indexOf(
+                "e"
+              ) !== -1
+            ) {
+              width =
+                Math.max(
+                  minimumWidth,
+                  startWidth + dx
+                );
+            }
+
+            if (
+              direction.indexOf(
+                "s"
+              ) !== -1
+            ) {
+              height =
+                Math.max(
+                  minimumHeight,
+                  startHeight + dy
+                );
+            }
+
+            if (
+              direction.indexOf(
+                "w"
+              ) !== -1
+            ) {
+              width =
+                Math.max(
+                  minimumWidth,
+                  startWidth - dx
+                );
+
+              left =
+                startLeft +
+                startWidth -
+                width;
+            }
+
+            if (
+              direction.indexOf(
+                "n"
+              ) !== -1
+            ) {
+              height =
+                Math.max(
+                  minimumHeight,
+                  startHeight - dy
+                );
+
+              top =
+                startTop +
+                startHeight -
+                height;
+            }
+
+            if (
+              left < 0
+            ) {
+              width +=
+                left;
+
+              left =
+                0;
+            }
+
+            if (
+              top < 0
+            ) {
+              height +=
+                top;
+
+              top =
+                0;
+            }
+
+            popup.style.left =
+              left + "px";
+
+            popup.style.top =
+              top + "px";
+
+            popup.style.width =
+              Math.max(
+                width,
+                minimumWidth
+              ) + "px";
+
+            popup.style.height =
+              Math.max(
+                height,
+                minimumHeight
+              ) + "px";
+          }
+
+          function end() {
+            handle.removeEventListener(
+              "pointermove",
+              resize
+            );
+
+            handle.removeEventListener(
+              "pointerup",
+              end
+            );
+
+            handle.removeEventListener(
+              "pointercancel",
+              end
+            );
+          }
+
+          handle.addEventListener(
+            "pointermove",
+            resize
+          );
+
+          handle.addEventListener(
+            "pointerup",
+            end
+          );
+
+          handle.addEventListener(
+            "pointercancel",
+            end
+          );
+        }
+      );
+    }
+  );
+}
+
+
+
 /* -------------------------------------------------------------------------- */
 /* POINT-CLOUD LOADING                                                        */
 /* -------------------------------------------------------------------------- */
-function selectScan(scan) {
-  if (!scan) {
+function selectScan(
+  scan
+) {
+  if (
+    !scan
+  ) {
+    return;
+  }
+
+  /*
+    Images open in the floating popup.
+    They do not become the active Potree scan.
+  */
+  if (
+    isImageScan(
+      scan
+    )
+  ) {
+    openImagePopup(
+      scan
+    );
+
     return;
   }
 
   var pointcloud =
-    state.loadedClouds.get(scan.id);
+    state.loadedClouds.get(
+      scan.id
+    );
 
   /*
-   * If the scan is not loaded yet,
-   * loading it will also make it active.
-   */
-  if (!pointcloud) {
-    loadScan(scan);
+    Loading an unloaded point cloud
+    also makes it the active scan.
+  */
+  if (
+    !pointcloud
+  ) {
+    loadScan(
+      scan
+    );
+
     return;
   }
 
   /*
-   * IMPORTANT:
-   * Selecting a scan changes ONLY the
-   * active scan.
-   *
-   * It must NOT change visibility of
-   * any other scan.
-   */
+    Selecting a loaded scan changes only
+    the active scan. Other visibility states
+    remain unchanged.
+  */
   setActiveScan(
     scan,
     pointcloud
@@ -2113,7 +2740,8 @@ function selectScan(scan) {
   renderLibrary();
 
   setStatus(
-    scan.name + " selected",
+    scan.name +
+    " selected",
     "idle"
   );
 }
@@ -2126,6 +2754,24 @@ function loadScan(
   ) {
     return Promise.resolve(
       null
+    );
+  }
+
+  /*
+    Images are not loaded through Potree.
+    They are opened in the floating image popup.
+  */
+  if (
+    isImageScan(
+      scan
+    )
+  ) {
+    openImagePopup(
+      scan
+    );
+
+    return Promise.resolve(
+      scan
     );
   }
 
@@ -2142,28 +2788,35 @@ function loadScan(
     );
   }
 
+  /*
+    If the point cloud is already loaded,
+    activate it instead of loading it again.
+  */
   if (
-  state.loadedClouds.has(
-    scan.id
-  )
-) {
-  var existingCloud =
-    state.loadedClouds.get(
+    state.loadedClouds.has(
       scan.id
+    )
+  ) {
+    var existingCloud =
+      state.loadedClouds.get(
+        scan.id
+      );
+
+    setActiveScan(
+      scan,
+      existingCloud
     );
 
-  setActiveScan(
-    scan,
-    existingCloud
-  );
+    fitActiveScan();
 
-  fitActiveScan();
+    return Promise.resolve(
+      existingCloud
+    );
+  }
 
-  return Promise.resolve(
-    existingCloud
-  );
-}
-
+  /*
+    Prevent duplicate loading requests.
+  */
   if (
     scan.loading
   ) {
@@ -2198,11 +2851,20 @@ function loadScan(
   console.log(
     "Loading scan:",
     {
-      id: scan.id,
-      name: scan.name,
-      path: scan.path,
-      url: scan.url,
-      documentBaseURI: document.baseURI
+      id:
+        scan.id,
+
+      name:
+        scan.name,
+
+      path:
+        scan.path,
+
+      url:
+        scan.url,
+
+      documentBaseURI:
+        document.baseURI
     }
   );
 
@@ -2210,7 +2872,9 @@ function loadScan(
     scan
   )
     .then(
-      function (pointcloud) {
+      function (
+        pointcloud
+      ) {
         if (
           !pointcloud
         ) {
@@ -2253,10 +2917,12 @@ function loadScan(
           false;
 
         setActiveScan(
-          scan
+          scan,
+          pointcloud
         );
 
         renderLibrary();
+
         hideLoading();
 
         setViewerStatus(
@@ -2271,26 +2937,29 @@ function loadScan(
         );
 
         window.setTimeout(
-  function () {
-    if (
-      state.activeCloud ===
-      pointcloud
-    ) {
-      fitActiveScan();
-    }
-  },
-  500
-);
+          function () {
+            if (
+              state.activeCloud ===
+              pointcloud
+            ) {
+              fitActiveScan();
+            }
+          },
+          500
+        );
 
         return pointcloud;
       }
     )
     .catch(
-      function (error) {
+      function (
+        error
+      ) {
         scan.loading =
           false;
 
         hideLoading();
+
         renderLibrary();
 
         console.error(
@@ -2313,6 +2982,7 @@ function loadScan(
       }
     );
 }
+
 
 function loadCopcPointCloud(
   scan
@@ -2542,11 +3212,33 @@ function toggleScanVisibility(
     return;
   }
 
+  /*
+    Images use the popup as their visibility
+    state. They are only closed through the X
+    button, so clicking the library visibility
+    control opens the image.
+  */
+  if (
+    isImageScan(
+      scan
+    )
+  ) {
+    openImagePopup(
+      scan
+    );
+
+    return;
+  }
+
   var pointcloud =
     state.loadedClouds.get(
       scan.id
     );
 
+  /*
+    If the point cloud is not loaded yet,
+    loadScan() will load and display it.
+  */
   if (
     !pointcloud
   ) {
@@ -4546,7 +5238,24 @@ function bindNavigationKeyboard() {
 
   document.addEventListener(
     "keydown",
-    function (event) {
+    function (
+      event
+    ) {
+      /*
+        Do not use W/A/S/D/E/C for Potree
+        navigation while interacting with the
+        image popup.
+      */
+      if (
+        event.target &&
+        event.target.closest &&
+        event.target.closest(
+          "#imagePopup"
+        )
+      ) {
+        return;
+      }
+
       if (
         isTypingInField(
           event.target
@@ -4566,6 +5275,9 @@ function bindNavigationKeyboard() {
         return;
       }
 
+      /*
+        Comma and period change navigation speed.
+      */
       if (
         key === "," ||
         key === "."
@@ -4597,7 +5309,23 @@ function bindNavigationKeyboard() {
 
   document.addEventListener(
     "keyup",
-    function (event) {
+    function (
+      event
+    ) {
+      /*
+        Do not change navigation keys when
+        releasing a key while inside the popup.
+      */
+      if (
+        event.target &&
+        event.target.closest &&
+        event.target.closest(
+          "#imagePopup"
+        )
+      ) {
+        return;
+      }
+
       var key =
         getNavigationKey(
           event
