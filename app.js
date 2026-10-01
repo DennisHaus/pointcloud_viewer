@@ -2195,6 +2195,17 @@ function loadScan(
     "loading"
   );
 
+  console.log(
+    "Loading scan:",
+    {
+      id: scan.id,
+      name: scan.name,
+      path: scan.path,
+      url: scan.url,
+      documentBaseURI: document.baseURI
+    }
+  );
+
   return loadCopcPointCloud(
     scan
   )
