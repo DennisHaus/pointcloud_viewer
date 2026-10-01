@@ -70,11 +70,11 @@ var CONFIG = {
 var state = {
   catalog: [],
   loadedClouds: new Map(),
+  openImages: new Map(),
   activeScan: null,
   activeCloud: null,
   activeBounds: null,
   sectionVolume: null,
-  activeImageId: null,
   navigationSpeed:
     Number(
       CONFIG.navigationSpeed
@@ -82,7 +82,8 @@ var state = {
     0.35
 };
 
-var viewer = null;
+var nextImagePopupZIndex = 10000;
+
 
 
 /* -------------------------------------------------------------------------- */
@@ -98,7 +99,6 @@ document.addEventListener(
 
 function initialize() {
   bindEvents();
-  bindImagePopup();
   initializeControls();
 
   if (!initializeViewer()) {
@@ -1743,6 +1743,8 @@ function createScanCard(
     document.createElement(
       "div"
     );
+    icon.className =
+  "scan-card-icon";
 
   var name =
     document.createElement(
@@ -1811,12 +1813,13 @@ function createScanCard(
   var isVisible;
 
   if (
-    imageScan
-  ) {
-    isVisible =
-      state.activeImageId ===
-      scan.id;
-  } else {
+  imageScan
+) {
+  isVisible =
+    state.openImages.has(
+      scan.id
+    );
+} else {
     isVisible =
       isLoaded &&
       pointcloud.visible !==
@@ -2186,216 +2189,246 @@ function openImagePopup(
     return;
   }
 
-  var popup =
-    getElement(
-      "imagePopup"
-    );
-
-  var image =
-    getElement(
-      "imagePopupImage"
-    );
-
-  var title =
-    getElement(
-      "imagePopupTitle"
+  var existingPopup =
+    state.openImages.get(
+      scan.id
     );
 
   if (
-    !popup ||
-    !image
+    existingPopup
   ) {
+    bringImagePopupToFront(
+      existingPopup
+    );
+
+    return;
+  }
+
+  var container =
+    getElement(
+      "imagePopupContainer"
+    );
+
+  if (
+    !container
+  ) {
+    console.error(
+      "imagePopupContainer was not found."
+    );
+
     setStatus(
-      "Image popup is unavailable.",
+      "Image popup container is unavailable.",
       "error"
     );
 
     return;
   }
 
-  if (
+  var popup =
+    document.createElement(
+      "div"
+    );
+
+  popup.className =
+    "image-popup";
+
+  popup.dataset.scanId =
+    scan.id;
+
+  var offset =
+    state.openImages.size *
+    30;
+
+  popup.style.left =
+    80 +
+    offset +
+    "px";
+
+  popup.style.top =
+    80 +
+    offset +
+    "px";
+
+  popup.style.zIndex =
+    String(
+      nextImagePopupZIndex++
+    );
+
+  var titlebar =
+    document.createElement(
+      "div"
+    );
+
+  titlebar.className =
+    "image-popup-titlebar";
+
+  var title =
+    document.createElement(
+      "span"
+    );
+
+  title.className =
+    "image-popup-title";
+
+  title.textContent =
+    scan.name ||
+    scan.filename ||
+    "Image";
+
+  var closeButton =
+    document.createElement(
+      "button"
+    );
+
+  closeButton.type =
+    "button";
+
+  closeButton.className =
+    "image-popup-close";
+
+  closeButton.textContent =
+    "×";
+
+  closeButton.title =
+    "Close image";
+
+  closeButton.setAttribute(
+    "aria-label",
+    "Close image"
+  );
+
+  titlebar.appendChild(
     title
-  ) {
-    title.textContent =
-      scan.name ||
-      scan.filename ||
-      "Image";
-  }
+  );
+
+  titlebar.appendChild(
+    closeButton
+  );
+
+  var content =
+    document.createElement(
+      "div"
+    );
+
+  content.className =
+    "image-popup-content";
+
+  var image =
+    document.createElement(
+      "img"
+    );
+
+  image.src =
+    scan.url;
 
   image.alt =
     scan.name ||
     scan.filename ||
     "Image";
 
-  state.activeImageId =
-    scan.id;
+  content.appendChild(
+    image
+  );
 
-  /*
-    Set the image URL.
-  */
-  image.src =
-    scan.url;
+  popup.appendChild(
+    titlebar
+  );
 
-  /*
-    Set the popup ratio after the image
-    dimensions are available.
-  */
-  function applyImageAspectRatio() {
-    if (
-      !image.naturalWidth ||
-      !image.naturalHeight
+  popup.appendChild(
+    content
+  );
+
+  [
+    "ne",
+    "se",
+    "sw",
+    "nw"
+  ].forEach(
+    function (
+      direction
     ) {
-      return;
+      var handle =
+        document.createElement(
+          "div"
+        );
+
+      handle.className =
+        "image-resize-handle " +
+        "image-resize-" +
+        direction;
+
+      handle.dataset.direction =
+        direction;
+
+      popup.appendChild(
+        handle
+      );
     }
+  );
 
-    var aspectRatio =
-      image.naturalWidth /
-      image.naturalHeight;
+  container.appendChild(
+    popup
+  );
 
-    if (
-      !isFinite(
-        aspectRatio
-      ) ||
-      aspectRatio <= 0
+  state.openImages.set(
+    scan.id,
+    popup
+  );
+
+  closeButton.addEventListener(
+    "click",
+    function (
+      event
     ) {
-      return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      closeImagePopup(
+        scan.id
+      );
     }
+  );
 
-    popup.dataset.imageAspectRatio =
-      String(
-        aspectRatio
+  popup.addEventListener(
+    "pointerdown",
+    function () {
+      bringImagePopupToFront(
+        popup
       );
-
-    /*
-      Initial popup width.
-    */
-    var width =
-      popup.offsetWidth ||
-      620;
-
-    /*
-      Keep the whole popup at the same
-      aspect ratio as the image.
-    */
-    var height =
-      width /
-      aspectRatio;
-
-    var minimumWidth =
-      240;
-
-    var minimumHeight =
-      160;
-
-    width =
-      Math.max(
-        width,
-        minimumWidth
-      );
-
-    height =
-      Math.max(
-        height,
-        minimumHeight
-      );
-
-    /*
-      Recalculate width if minimum height
-      affected the ratio.
-    */
-    width =
-      height *
-      aspectRatio;
-
-    /*
-      Do not make the initial window larger
-      than the viewport.
-    */
-    var maximumWidth =
-      window.innerWidth *
-      0.8;
-
-    var maximumHeight =
-      window.innerHeight *
-      0.8;
-
-    if (
-      width >
-      maximumWidth
-    ) {
-      width =
-        maximumWidth;
-
-      height =
-        width /
-        aspectRatio;
     }
+  );
 
-    if (
-      height >
-      maximumHeight
-    ) {
-      height =
-        maximumHeight;
+  bindImagePopupDragging(
+    popup,
+    titlebar,
+    closeButton
+  );
 
-      width =
-        height *
-        aspectRatio;
-    }
+  bindImagePopupResizing(
+    popup,
+    image
+  );
 
-    popup.style.width =
-      Math.round(
-        width
-      ) +
-      "px";
-
-    popup.style.height =
-      Math.round(
-        height
-      ) +
-      "px";
-
-    popup.style.aspectRatio =
-      String(
-        aspectRatio
+  image.addEventListener(
+    "load",
+    function () {
+      setImagePopupAspectRatio(
+        popup,
+        image
       );
-  }
+    }
+  );
 
-  /*
-    If the image is already cached,
-    naturalWidth is immediately available.
-  */
   if (
     image.complete &&
     image.naturalWidth >
     0
   ) {
-    applyImageAspectRatio();
-  } else {
-    image.onload =
-      applyImageAspectRatio;
+    setImagePopupAspectRatio(
+      popup,
+      image
+    );
   }
-
-  popup.classList.remove(
-    "hidden"
-  );
-
-  /*
-    Apply once more after showing the popup,
-    because offsetWidth is reliable when visible.
-  */
-  window.requestAnimationFrame(
-    function () {
-      if (
-        image.naturalWidth >
-        0
-      ) {
-        applyImageAspectRatio();
-      }
-    }
-  );
-
-  renderLibrary();
 
   setStatus(
     scan.name +
@@ -2404,86 +2437,169 @@ function openImagePopup(
   );
 }
 
-function closeImagePopup() {
+
+function closeImagePopup(
+  scanId
+) {
   var popup =
-    getElement(
-      "imagePopup"
-    );
-
-  var image =
-    getElement(
-      "imagePopupImage"
+    state.openImages.get(
+      scanId
     );
 
   if (
-    popup
+    !popup
   ) {
-    popup.classList.add(
-      "hidden"
-    );
-  }
-
-  if (
-    image
-  ) {
-    image.removeAttribute(
-      "src"
-    );
-  }
-
-  state.activeImageId =
-    null;
-
-  renderLibrary();
-}
-
-function bindImagePopup() {
-  var popup =
-    getElement(
-      "imagePopup"
-    );
-
-  var titlebar =
-    getElement(
-      "imagePopupTitlebar"
-    );
-
-  var closeButton =
-    getElement(
-      "imagePopupClose"
-    );
-
-  if (
-    !popup ||
-    !titlebar
-  ) {
-    console.warn(
-      "Image popup elements were not found."
-    );
-
     return;
   }
 
-  if (
-    closeButton
-  ) {
-    closeButton.addEventListener(
-      "click",
-      function (event) {
-        event.preventDefault();
-        event.stopPropagation();
+  popup.remove();
 
-        closeImagePopup();
-      }
-    );
-  }
+  state.openImages.delete(
+    scanId
+  );
 
   /*
-    Dragging by the title bar.
+    Do not call renderLibrary().
+    Rebuilding the library would reset
+    the folder state.
   */
+  setStatus(
+    "Image closed",
+    "idle"
+  );
+}
+
+
+function bringImagePopupToFront(
+  popup
+) {
+  if (
+    !popup
+  ) {
+    return;
+  }
+
+  popup.style.zIndex =
+    String(
+      nextImagePopupZIndex++
+    );
+}
+
+
+function setImagePopupAspectRatio(
+  popup,
+  image
+) {
+  if (
+    !popup ||
+    !image ||
+    !image.naturalWidth ||
+    !image.naturalHeight
+  ) {
+    return;
+  }
+
+  var aspectRatio =
+    image.naturalWidth /
+    image.naturalHeight;
+
+  if (
+    !isFinite(
+      aspectRatio
+    ) ||
+    aspectRatio <= 0
+  ) {
+    return;
+  }
+
+  popup.dataset.aspectRatio =
+    String(
+      aspectRatio
+    );
+
+  var width =
+    popup.offsetWidth ||
+    620;
+
+  var height =
+    width /
+    aspectRatio;
+
+  var minimumWidth =
+    240;
+
+  var minimumHeight =
+    minimumWidth /
+    aspectRatio;
+
+  if (
+    height <
+    minimumHeight
+  ) {
+    height =
+      minimumHeight;
+
+    width =
+      height *
+      aspectRatio;
+  }
+
+  var maximumWidth =
+    window.innerWidth *
+    0.8;
+
+  var maximumHeight =
+    window.innerHeight *
+    0.8;
+
+  if (
+    width >
+    maximumWidth
+  ) {
+    width =
+      maximumWidth;
+
+    height =
+      width /
+      aspectRatio;
+  }
+
+  if (
+    height >
+    maximumHeight
+  ) {
+    height =
+      maximumHeight;
+
+    width =
+      height *
+      aspectRatio;
+  }
+
+  popup.style.width =
+    Math.round(
+      width
+    ) +
+    "px";
+
+  popup.style.height =
+    Math.round(
+      height
+    ) +
+    "px";
+}
+
+
+function bindImagePopupDragging(
+  popup,
+  titlebar,
+  closeButton
+) {
   titlebar.addEventListener(
     "pointerdown",
-    function (event) {
+    function (
+      event
+    ) {
       if (
         event.target ===
         closeButton
@@ -2493,6 +2609,10 @@ function bindImagePopup() {
 
       event.preventDefault();
       event.stopPropagation();
+
+      bringImagePopupToFront(
+        popup
+      );
 
       var rect =
         popup.getBoundingClientRect();
@@ -2509,11 +2629,9 @@ function bindImagePopup() {
       var startTop =
         rect.top;
 
-      titlebar.setPointerCapture(
-        event.pointerId
-      );
-
-      function move(moveEvent) {
+      function move(
+        moveEvent
+      ) {
         var left =
           startLeft +
           moveEvent.clientX -
@@ -2540,7 +2658,8 @@ function bindImagePopup() {
               maxLeft,
               0
             )
-          ) + "px";
+          ) +
+          "px";
 
         popup.style.top =
           clamp(
@@ -2550,46 +2669,50 @@ function bindImagePopup() {
               maxTop,
               0
             )
-          ) + "px";
+          ) +
+          "px";
       }
 
       function end() {
-        titlebar.removeEventListener(
+        window.removeEventListener(
           "pointermove",
           move
         );
 
-        titlebar.removeEventListener(
+        window.removeEventListener(
           "pointerup",
           end
         );
 
-        titlebar.removeEventListener(
+        window.removeEventListener(
           "pointercancel",
           end
         );
       }
 
-      titlebar.addEventListener(
+      window.addEventListener(
         "pointermove",
         move
       );
 
-      titlebar.addEventListener(
+      window.addEventListener(
         "pointerup",
         end
       );
 
-      titlebar.addEventListener(
+      window.addEventListener(
         "pointercancel",
         end
       );
     }
   );
+}
 
-  /*
-    Resizing from edges and corners.
-  */
+
+function bindImagePopupResizing(
+  popup,
+  image
+) {
   var handles =
     popup.querySelectorAll(
       ".image-resize-handle"
@@ -2607,44 +2730,31 @@ function bindImagePopup() {
           event.preventDefault();
           event.stopPropagation();
 
-          var direction =
-            Array.from(
-              handle.classList
-            ).find(
-              function (
-                className
-              ) {
-                return (
-                  className.indexOf(
-                    "image-resize-"
-                  ) === 0 &&
-                  className !==
-                    "image-resize-handle"
-                );
-              }
-            );
-
-          if (
-            !direction
-          ) {
-            return;
-          }
-
-          direction =
-            direction.replace(
-              "image-resize-",
-              ""
-            );
+          bringImagePopupToFront(
+            popup
+          );
 
           var aspectRatio =
             Number(
-              popup.dataset.imageAspectRatio
+              popup.dataset.aspectRatio
             );
 
-          /*
-            Do not resize until the image
-            aspect ratio is known.
-          */
+          if (
+            !isFinite(
+              aspectRatio
+            ) ||
+            aspectRatio <= 0
+          ) {
+            if (
+              image.naturalWidth &&
+              image.naturalHeight
+            ) {
+              aspectRatio =
+                image.naturalWidth /
+                image.naturalHeight;
+            }
+          }
+
           if (
             !isFinite(
               aspectRatio
@@ -2653,6 +2763,9 @@ function bindImagePopup() {
           ) {
             return;
           }
+
+          var direction =
+            handle.dataset.direction;
 
           var rect =
             popup.getBoundingClientRect();
@@ -2678,17 +2791,6 @@ function bindImagePopup() {
           var minimumWidth =
             240;
 
-          var minimumHeight =
-            Math.max(
-              160,
-              minimumWidth /
-              aspectRatio
-            );
-
-          handle.setPointerCapture(
-            event.pointerId
-          );
-
           function resize(
             moveEvent
           ) {
@@ -2700,70 +2802,36 @@ function bindImagePopup() {
               moveEvent.clientY -
               startY;
 
-            /*
-              Calculate a candidate width from
-              horizontal pointer movement.
-            */
-            var widthFromX;
+            var widthFromX =
+              (
+                direction === "ne" ||
+                direction === "se"
+              )
+                ? startWidth + dx
+                : startWidth - dx;
 
-            if (
-              direction === "ne" ||
-              direction === "se"
-            ) {
-              widthFromX =
-                startWidth +
-                dx;
-            } else {
-              widthFromX =
-                startWidth -
-                dx;
-            }
-
-            /*
-              Calculate a candidate width from
-              vertical pointer movement.
-            */
-            var heightFromY;
-
-            if (
-              direction === "se" ||
-              direction === "sw"
-            ) {
-              heightFromY =
-                startHeight +
-                dy;
-            } else {
-              heightFromY =
-                startHeight -
-                dy;
-            }
+            var heightFromY =
+              (
+                direction === "se" ||
+                direction === "sw"
+              )
+                ? startHeight + dy
+                : startHeight - dy;
 
             var widthFromY =
               heightFromY *
               aspectRatio;
 
-            /*
-              Use whichever movement is larger.
-              This makes diagonal corner dragging
-              feel natural while preserving ratio.
-            */
-            var width;
-
-            if (
+            var width =
               Math.abs(
                 dx
-              ) *
-              aspectRatio >=
+              ) >=
               Math.abs(
-                dy
+                dy *
+                aspectRatio
               )
-            ) {
-              width =
-                widthFromX;
-            } else {
-              width =
-                widthFromY;
-            }
+                ? widthFromX
+                : widthFromY;
 
             width =
               Math.max(
@@ -2775,9 +2843,6 @@ function bindImagePopup() {
               width /
               aspectRatio;
 
-            /*
-              Keep the opposite corner fixed.
-            */
             var left =
               startLeft;
 
@@ -2802,92 +2867,6 @@ function bindImagePopup() {
                 startTop +
                 startHeight -
                 height;
-            }
-
-            /*
-              Keep the complete popup inside
-              the browser viewport.
-            */
-            if (
-              left < 0
-            ) {
-              left =
-                0;
-
-              width =
-                startLeft +
-                startWidth;
-
-              width =
-                Math.max(
-                  width,
-                  minimumWidth
-                );
-
-              height =
-                width /
-                aspectRatio;
-            }
-
-            if (
-              top < 0
-            ) {
-              top =
-                0;
-
-              height =
-                startTop +
-                startHeight;
-
-              height =
-                Math.max(
-                  height,
-                  minimumHeight
-                );
-
-              width =
-                height *
-                aspectRatio;
-            }
-
-            if (
-              left +
-              width >
-              window.innerWidth
-            ) {
-              width =
-                window.innerWidth -
-                left;
-
-              width =
-                Math.max(
-                  width,
-                  minimumWidth
-                );
-
-              height =
-                width /
-                aspectRatio;
-            }
-
-            if (
-              top +
-              height >
-              window.innerHeight
-            ) {
-              height =
-                window.innerHeight -
-                top;
-
-              height =
-                Math.max(
-                  height,
-                  minimumHeight
-                );
-
-              width =
-                height *
-                aspectRatio;
             }
 
             popup.style.left =
@@ -2916,33 +2895,33 @@ function bindImagePopup() {
           }
 
           function end() {
-            handle.removeEventListener(
+            window.removeEventListener(
               "pointermove",
               resize
             );
 
-            handle.removeEventListener(
+            window.removeEventListener(
               "pointerup",
               end
             );
 
-            handle.removeEventListener(
+            window.removeEventListener(
               "pointercancel",
               end
             );
           }
 
-          handle.addEventListener(
+          window.addEventListener(
             "pointermove",
             resize
           );
 
-          handle.addEventListener(
+          window.addEventListener(
             "pointerup",
             end
           );
 
-          handle.addEventListener(
+          window.addEventListener(
             "pointercancel",
             end
           );
@@ -2951,8 +2930,6 @@ function bindImagePopup() {
     }
   );
 }
-
-
 
 /* -------------------------------------------------------------------------- */
 /* POINT-CLOUD LOADING                                                        */
@@ -3256,7 +3233,6 @@ function loadScan(
       }
     );
 }
-
 
 function loadCopcPointCloud(
   scan
@@ -5524,7 +5500,7 @@ function bindNavigationKeyboard() {
         event.target &&
         event.target.closest &&
         event.target.closest(
-          "#imagePopup"
+          ".image-popup"
         )
       ) {
         return;

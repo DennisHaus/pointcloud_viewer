@@ -47,26 +47,27 @@
 <body>
   <div class="app-shell">
 
-    <!-- RIGHT-SIDE HEADER ----------------------------------------------- -->
+    <!-- TOP BAR --------------------------------------------------------- -->
 
     <header class="topbar">
       <div class="brand">
-          <div
-            id="brandEyebrow"
-            class="eyebrow"
-            ></div>
-          <div
-            id="brandTitle"
-            class="brand-title"
-          ></div>
-          <div
-            id="brandSubtitle"
-            class="brand-subtitle"
-          ></div>
+        <div
+          id="brandEyebrow"
+          class="eyebrow"
+        ></div>
+
+        <div
+          id="brandTitle"
+          class="brand-title"
+        ></div>
+
+        <div
+          id="brandSubtitle"
+          class="brand-subtitle"
+        ></div>
       </div>
 
       <div class="topbar-actions">
-
         <a
           id="addModel"
           class="button button-secondary"
@@ -94,45 +95,30 @@
             aria-label="Screenshot resolution"
             title="1x-5x Viewer Resolution"
           >
-            <option value="1">
-            1x
-            </option>
-
-            <option value="2">
-              2x
-            </option>
-
-            <option value="3" selected>
-              3x
-            </option>
-
-            <option value="4">
-              4x
-            </option>
-
-            <option value="5">
-              5x
-            </option>
+            <option value="1">1x</option>
+            <option value="2">2x</option>
+            <option value="3" selected>3x</option>
+            <option value="4">4x</option>
+            <option value="5">5x</option>
           </select>
         </div>
 
         <button
-        id="OpenDescription"
-        class="toolbar-button"
-        type="button"
+          id="OpenDescription"
+          class="toolbar-button"
+          type="button"
         >
-        Read Me
-      </button>
-
+          Read Me
+        </button>
       </div>
     </header>
 
 
-    <!-- MAIN WORKSPACE --------------------------------------------------- -->
+    <!-- MAIN WORKSPACE -------------------------------------------------- -->
 
     <main class="workspace">
 
-      <!-- SCAN LIBRARY --------------------------------------------------- -->
+      <!-- SCAN LIBRARY -------------------------------------------------- -->
 
       <aside class="library-panel">
         <div class="panel-header">
@@ -150,39 +136,35 @@
           </div>
 
           <div class="panel-header-actions">
-              <button
-                id="toggleLibrary"
-                class="icon-button dropdown-toggle"
-                type="button"
-                title="Open or close scan library"
-                aria-expanded="true"
-                aria-controls="libraryDropdownContent"
+            <button
+              id="toggleLibrary"
+              class="icon-button dropdown-toggle"
+              type="button"
+              title="Open or close scan library"
+              aria-expanded="true"
+              aria-controls="libraryDropdownContent"
+            >
+              <svg
+                class="dropdown-arrow-svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
               >
-                <svg
-                  class="dropdown-arrow-svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-
                 <polyline points="18 10 12 4 6 10"></polyline>
-
-                <!-- Unterer Pfeil (zeigt nach unten v) -->
                 <polyline points="6 14 12 20 18 14"></polyline>
-                </svg>
-              </button>
-
+              </svg>
+            </button>
 
             <button
               id="refreshLibrary"
               class="icon-button"
               title="Refresh library"
-              type="button-noB"
+              type="button"
             >
               ↻
             </button>
@@ -216,7 +198,7 @@
       </aside>
 
 
-      <!-- VIEWER --------------------------------------------------------- -->
+      <!-- VIEWER -------------------------------------------------------- -->
 
       <section class="viewer-panel">
         <div
@@ -241,7 +223,7 @@
           </div>
 
           <div class="viewer-help">
-            Orbit: leftMouse · Pan: rightMouse · Zoom: wheel · arrow-Keys · AWSD-Keys· ./, Speed
+            Orbit: leftMouse · Pan: rightMouse · Zoom: wheel · arrow-Keys · AWSD-Keys · ./, Speed
           </div>
         </div>
 
@@ -256,60 +238,94 @@
           </div>
         </div>
 
-      <div class="viewer-toolbar">
+        <div class="viewer-toolbar">
           <button
             id="resetView"
+            type="button"
             title="Zoom to All"
-            style="background: none; border: none; cursor: pointer;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <!-- Äußerer Rahmen -->
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <!-- Alternativ: Vier expandierende Pfeile für "Fit All" -->
-              <path d="m15 9 3-3m0 0h-4m4 0v4M9 15l-3 3m0 0h4m-4 0v-4" />
+            style="background: none; border: none; cursor: pointer;"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect
+                x="3"
+                y="3"
+                width="18"
+                height="18"
+                rx="2"
+              />
+
+              <path
+                d="m15 9 3-3m0 0h-4m4 0v4M9 15l-3 3m0 0h4m-4 0v-4"
+              />
             </svg>
           </button>
 
-<!--
-          <button
-            id="orbitMode"
-            class="toolbar-button active"
-            type="button"
-          >
-            Orbit
-          </button>
--->
           <button
             id="fitView"
-            title="Zoom to Selected" style="background: none; border: none; cursor: pointer;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <!-- Fokus-Ecken -->
+            type="button"
+            title="Zoom to Selected"
+            style="background: none; border: none; cursor: pointer;"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <path d="M3 7V5a2 2 0 0 1 2-2h2" />
               <path d="M17 3h2a2 2 0 0 1 2 2v2" />
               <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
               <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-              <!-- Zentrales Element -->
-              <circle cx="12" cy="12" r="2" fill="currentColor" />
+              <circle
+                cx="12"
+                cy="12"
+                r="2"
+                fill="currentColor"
+              />
             </svg>
-            </button>
+          </button>
 
-            <button
+          <button
             id="downloadScan"
-            title="Download" style="background: none; border: none; cursor: pointer;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <!-- Der nach unten zeigende Pfeil -->
-                <path d="M12 5v11" />
-                <path d="m19 12-7 7-7-7" />
-              </svg>
-            </button>
+            type="button"
+            title="Download"
+            style="background: none; border: none; cursor: pointer;"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 5v11" />
+              <path d="m19 12-7 7-7-7" />
+            </svg>
+          </button>
         </div>
       </section>
 
 
-      <!-- INSPECTOR ------------------------------------------------------ -->
+      <!-- INSPECTOR ----------------------------------------------------- -->
 
       <aside class="inspector-panel">
         <div class="inspector-dropdown">
-
           <div
             id="inspectorDropdownContent"
             class="panel-dropdown-content hidden"
@@ -374,7 +390,6 @@
                   </div>
                 </div>
               </section>
-
 
               <section class="inspector-section">
                 <div class="section-heading">
@@ -492,7 +507,6 @@
                 />
               </section>
 
-
               <section class="inspector-section">
                 <div class="section-heading">
                   Sections
@@ -609,7 +623,6 @@
                 </div>
               </section>
 
-
               <section class="inspector-section">
                 <div class="section-heading">
                   <span>
@@ -662,15 +675,15 @@
             aria-expanded="false"
             aria-controls="inspectorDropdownContent"
           >
-          <span class="inspector-toggle-text">
-            <span class="panel-title">
-              Inspector
-            </span>
+            <span class="inspector-toggle-text">
+              <span class="panel-title">
+                Inspector
+              </span>
 
-            <span class="panel-subtitle">
-              Active scan properties
+              <span class="panel-subtitle">
+                Active scan properties
+              </span>
             </span>
-          </span>
 
             <svg
               class="dropdown-arrow-svg"
@@ -683,23 +696,16 @@
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-
-            <polyline points="18 10 12 4 6 10"></polyline>
-
-            <!-- Unterer Pfeil (zeigt nach unten v) -->
-            <polyline points="6 14 12 20 18 14"></polyline>
-
-
+              <polyline points="18 10 12 4 6 10"></polyline>
+              <polyline points="6 14 12 20 18 14"></polyline>
             </svg>
           </button>
-
         </div>
       </aside>
-
     </main>
 
 
-    <!-- STATUS BAR ------------------------------------------------------- -->
+    <!-- STATUS BAR ------------------------------------------------------ -->
 
     <footer class="statusbar">
       <span id="statusMessage">
@@ -708,7 +714,7 @@
 
       <div>
         <span>
-          Accepted: .copc.laz
+          Accepted: .copc.laz, .las, .laz, .jpg, .jpeg, .png
         </span>
 
         <span>
@@ -716,47 +722,22 @@
         </span>
       </div>
     </footer>
-
   </div>
 
+
+  <!-- DYNAMIC IMAGE POPUPS ---------------------------------------------- -->
+
+  <!--
+    JavaScript creates one popup per image inside this container.
+    Do not put imagePopupImage, title bars, or resize handles here.
+  -->
   <div
-    id="imagePopup"
-    class="image-popup hidden"
-    aria-label="Image preview"
-  >
-    <div
-      id="imagePopupTitlebar"
-      class="image-popup-titlebar"
-    >
-      <span id="imagePopupTitle">
-        Image
-      </span>
+    id="imagePopupContainer"
+    class="image-popup-container"
+  ></div>
 
-      <button
-        id="imagePopupClose"
-        class="image-popup-close"
-        type="button"
-        aria-label="Close image"
-        title="Close image"
-      >
-        ×
-      </button>
-    </div>
 
-    <div class="image-popup-content">
-      <img
-        id="imagePopupImage"
-        src=""
-        alt=""
-      />
-    </div>
-
-    <div class="image-resize-handle image-resize-ne"></div>
-    <div class="image-resize-handle image-resize-se"></div>
-    <div class="image-resize-handle image-resize-sw"></div>
-    <div class="image-resize-handle image-resize-nw"></div>
-  </div>
-
+  <!-- DESCRIPTION DIALOG ----------------------------------------------- -->
 
   <dialog
     id="descriptionDialog"
@@ -764,7 +745,6 @@
     aria-labelledby="descriptionTitle"
   >
     <div class="description-dialog-inner">
-
       <div class="description-dialog-header">
         <h2 id="descriptionTitle">
           Spatial Library - Read Me
@@ -781,10 +761,14 @@
       </div>
 
       <div class="description-dialog-body">
-  <div id="descriptionContent"></div>
-</div>
+        <div id="descriptionContent"></div>
+      </div>
+    </div>
+  </dialog>
 
-  <!-- Potree dependencies -->
+
+  <!-- POTREE DEPENDENCIES ----------------------------------------------- -->
+
   <script src="./libs/jquery/jquery-3.1.1.min.js"></script>
   <script src="./libs/spectrum/spectrum.js"></script>
   <script src="./libs/jquery-ui/jquery-ui.min.js"></script>
@@ -796,18 +780,26 @@
   <script src="./libs/i18next/i18next.js"></script>
   <script src="./libs/jstree/jstree.js"></script>
 
-  <!-- COPC support -->
+
+  <!-- COPC SUPPORT ------------------------------------------------------ -->
+
   <script src="./libs/copc/index.js"></script>
 
-  <!-- Potree -->
+
+  <!-- POTREE ------------------------------------------------------------ -->
+
   <script src="./build/potree/potree.js"></script>
 
-  <!-- LAS/LAZ support -->
+
+  <!-- LAS/LAZ SUPPORT --------------------------------------------------- -->
+
   <script src="./libs/plasio/js/laslaz.js"></script>
 
-  <!-- Application code must load last -->
+
+  <!-- APPLICATION ------------------------------------------------------- -->
+
   <script src="./location-config.js"></script>
-<script src="./location-loader.js"></script>
-<script src="./app.js"></script>
+  <script src="./location-loader.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
