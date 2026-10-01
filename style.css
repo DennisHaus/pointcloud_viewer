@@ -1701,7 +1701,7 @@ button:active {
   padding: 0 8px 0 14px;
 
   color: white;
-  background: #242a33;
+  background: black;
 
   border-radius: 8px 8px 0 0;
 
@@ -1743,7 +1743,7 @@ button:active {
 }
 
 .image-popup-close:hover {
-  background: #c0392b;
+  background: #202226;
 }
 
 .image-popup-content {
@@ -1789,37 +1789,6 @@ button:active {
 
 /* Edges */
 
-.image-resize-n {
-  top: -4px;
-  left: 8px;
-  right: 8px;
-  height: 8px;
-  cursor: ns-resize;
-}
-
-.image-resize-e {
-  top: 8px;
-  right: -4px;
-  bottom: 8px;
-  width: 8px;
-  cursor: ew-resize;
-}
-
-.image-resize-s {
-  left: 8px;
-  right: 8px;
-  bottom: -4px;
-  height: 8px;
-  cursor: ns-resize;
-}
-
-.image-resize-w {
-  top: 8px;
-  left: -4px;
-  bottom: 8px;
-  width: 8px;
-  cursor: ew-resize;
-}
 
 /* Corners */
 
