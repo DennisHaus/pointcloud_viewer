@@ -2018,7 +2018,7 @@ function renderLibraryTree(
         "scan-folder";
 
       folder.open =
-        true;
+        false;
 
       var summary =
         document.createElement(

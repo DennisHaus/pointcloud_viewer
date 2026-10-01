@@ -20,13 +20,6 @@ SUPPORTED_SUFFIXES = (
 )
 
 
-IMAGE_SUFFIXES = (
-    ".png",
-    ".jpg",
-    ".jpeg",
-)
-
-
 def normalize_path(value):
     value = str(value or "").replace("\\", "/")
 
@@ -43,7 +36,7 @@ def get_format(filename):
         return "png"
 
     if (
-        lower_name.endswith(".jpg") ||
+        lower_name.endswith(".jpg") or
         lower_name.endswith(".jpeg")
     ):
         return "jpg"
@@ -90,7 +83,10 @@ def slugify(value):
         value
     )
 
-    return value.strip("-").lower() or "scan"
+    return (
+        value.strip("-").lower()
+        or "scan"
+    )
 
 
 def human_name(filename):
@@ -162,7 +158,12 @@ def load_existing_catalog():
             if scan.get("path")
         }
 
-    except Exception:
+    except Exception as error:
+        print(
+            "Could not read existing catalog:",
+            error
+        )
+
         return {}
 
 
@@ -170,8 +171,7 @@ def is_supported_file(file):
     if not file.is_file():
         return False
 
-    filename =
-        file.name.lower()
+    filename = file.name.lower()
 
     return filename.endswith(
         SUPPORTED_SUFFIXES
@@ -179,11 +179,9 @@ def is_supported_file(file):
 
 
 def create_catalog():
-    existing =
-        load_existing_catalog()
+    existing = load_existing_catalog()
 
-    scans =
-        []
+    scans = []
 
     if not SCANS_DIR.exists():
         print(
@@ -192,88 +190,93 @@ def create_catalog():
 
         return
 
-    files =
-        sorted(
-            file
-            for file in SCANS_DIR.rglob("*")
-            if is_supported_file(file)
-        )
+    files = sorted(
+        file
+        for file in SCANS_DIR.rglob("*")
+        if is_supported_file(file)
+    )
+
+    print(
+        "Supported files found:",
+        len(files)
+    )
 
     for file in files:
-        relative_path =
-            file.relative_to(
-                ROOT
-            ).as_posix()
-
-        catalog_path =
-            "./" + relative_path
-
-        previous =
-            existing.get(
-                normalize_path(
-                    catalog_path
-                ),
-                {}
-            )
-
-        file_format =
-            get_format(
-                file.name
-            )
-
-        scan =
-            {
-                "id": previous.get(
-                    "id",
-                    slugify(
-                        relative_path
-                    )
-                ),
-
-                "name": previous.get(
-                    "name",
-                    human_name(
-                        file.name
-                    )
-                ),
-
-                "filename": file.name,
-
-                "path": catalog_path,
-
-                "url": catalog_path,
-
-                "format": file_format,
-
-                "sizeBytes": file.stat().st_size,
-
-                "pointCount": previous.get(
-                    "pointCount",
-                    None
-                ),
-
-                "crs": previous.get(
-                    "crs",
-                    None
-                ),
-
-                "uploadedAt": previous.get(
-                    "uploadedAt",
-                    get_git_date(
-                        relative_path
-                    )
-                )
-            }
-
-        scans.append(
-            scan
+        relative_path = (
+            file.relative_to(ROOT)
+            .as_posix()
         )
 
-    catalog =
-        {
-            "version": 1,
-            "scans": scans
+        catalog_path = (
+            "./" + relative_path
+        )
+
+        previous = existing.get(
+            normalize_path(
+                catalog_path
+            ),
+            {}
+        )
+
+        file_format = get_format(
+            file.name
+        )
+
+        scan = {
+            "id": previous.get(
+                "id",
+                slugify(
+                    relative_path
+                )
+            ),
+
+            "name": previous.get(
+                "name",
+                human_name(
+                    file.name
+                )
+            ),
+
+            "filename": file.name,
+
+            "path": catalog_path,
+
+            "url": catalog_path,
+
+            "format": file_format,
+
+            "sizeBytes": file.stat().st_size,
+
+            "pointCount": previous.get(
+                "pointCount",
+                None
+            ),
+
+            "crs": previous.get(
+                "crs",
+                None
+            ),
+
+            "uploadedAt": previous.get(
+                "uploadedAt",
+                get_git_date(
+                    relative_path
+                )
+            )
         }
+
+        scans.append(scan)
+
+        print(
+            "Added:",
+            relative_path,
+            "(" + file_format + ")"
+        )
+
+    catalog = {
+        "version": 1,
+        "scans": scans
+    }
 
     with CATALOG_FILE.open(
         "w",
@@ -286,9 +289,7 @@ def create_catalog():
             ensure_ascii=False
         )
 
-        file.write(
-            "\n"
-        )
+        file.write("\n")
 
     print(
         "Generated catalog.json with "
