@@ -2676,7 +2676,7 @@ function bindImagePopup() {
       );
     }
   );
-
+}
 
 
 
@@ -8952,3 +8952,6 @@ function formatCoordinate(
     3
   );
 }
+
+
+bindDescriptionDialog();
