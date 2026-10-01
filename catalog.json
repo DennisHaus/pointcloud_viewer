@@ -108,6 +108,18 @@
       "pointCount": null,
       "crs": null,
       "uploadedAt": "2026-10-01"
+    },
+    {
+      "id": "scans-test",
+      "name": "Test",
+      "filename": "Test.png",
+      "path": "./scans/Test.png",
+      "url": "./scans/Test.png",
+      "format": "png",
+      "sizeBytes": 1577842,
+      "pointCount": null,
+      "crs": null,
+      "uploadedAt": "2026-10-01"
     }
   ]
 }
